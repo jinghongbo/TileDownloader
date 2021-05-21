@@ -248,28 +248,31 @@ namespace TileDownloader.ViewModels
                         {
                             tasks.Add(Task.Run(() =>
                             {
-                                try
+                                for (int i = 0; i < 3; i++)
                                 {
-                                    var z = tileInfo.Index.Level;
-                                    var x = tileInfo.Index.Col;
-                                    var y = tileInfo.Index.Row;
-                                    var table = PakBlock.GetTable(z, x, y);
-                                    if (!freesql.Select<PakBlock>().AsTable((_, n) => table).Any(b =>
-                                        b.X == x && b.Y == y && b.Z == z && b.Tile != null))
+                                    try
                                     {
-                                        var tile = source.GetTile(tileInfo);
-                                        freesql.Insert<PakBlock>().AsTable(_ => table)
-                                            .AppendData(new PakBlock { X = x, Y = y, Z = z, Tile = tile })
-                                            .ExecuteAffrows();
+                                        var z = tileInfo.Index.Level;
+                                        var x = tileInfo.Index.Col;
+                                        var y = tileInfo.Index.Row;
+                                        var table = PakBlock.GetTable(z, x, y);
+                                        if (!freesql.Select<PakBlock>().AsTable((_, n) => table).Any(b =>
+                                            b.X == x && b.Y == y && b.Z == z && b.Tile != null))
+                                        {
+                                            var tile = source.GetTile(tileInfo);
+                                            freesql.Insert<PakBlock>().AsTable(_ => table)
+                                                .AppendData(new PakBlock { X = x, Y = y, Z = z, Tile = tile })
+                                                .ExecuteAffrows();
+                                        }
+                                        return true;
                                     }
+                                    catch (Exception e)
+                                    {
+                                        item.Message = e.Message;
+                                    }
+                                }
 
-                                    return true;
-                                }
-                                catch (Exception e)
-                                {
-                                    item.Message = e.Message;
-                                    return false;
-                                }
+                                return false;
                             }));
 
                             if (tasks.Count >= Concurrent)

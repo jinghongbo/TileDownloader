@@ -16,6 +16,7 @@ using System.Windows;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
+using Microsoft.Win32;
 
 namespace TileDownloader.ViewModels
 {
@@ -268,7 +269,7 @@ _browseCmd ?? (_browseCmd = new DelegateCommand(ExecuteCommandName));
 
         void ExecuteCommandName()
         {
-            var dialog = new Microsoft.Win32.OpenFileDialog() { };
+            var dialog = new SaveFileDialog() { DefaultExt = ".pak", Filter = "PAK|*.pak" };
             if (dialog.ShowDialog() == true)
             {
 

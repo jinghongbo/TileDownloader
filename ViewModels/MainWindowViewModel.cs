@@ -251,8 +251,8 @@ namespace TileDownloader.ViewModels
                                 try
                                 {
                                     var z = tileInfo.Index.Level;
-                                    var x = tileInfo.Index.Row;
-                                    var y = tileInfo.Index.Col;
+                                    var x = tileInfo.Index.Col;
+                                    var y = tileInfo.Index.Row;
                                     var table = PakBlock.GetTable(z, x, y);
                                     if (!freesql.Select<PakBlock>().AsTable((_, n) => table).Any(b =>
                                         b.X == x && b.Y == y && b.Z == z && b.Tile != null))

@@ -14,5 +14,7 @@ namespace TileDownloader.Models
         public string ApiKey { get; set; }
         public string Name { get; set; }
         public string UserAgent { get; set; }
+
+        public string Referer { get; set; }
     }
 }

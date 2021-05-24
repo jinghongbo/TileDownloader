@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using System.Windows;
 using BruTile;
@@ -34,7 +35,7 @@ namespace TileDownloader.ViewModels
         private DownloadSource _selectedSource;
         private List<DownloadSource> _sources = JsonConvert.DeserializeObject<List<DownloadSource>>(File.ReadAllText("sources.json"));
 
-        public string Title { get; set; } = "瓦片下载器";
+        public string Title { get; set; } = "Tile Downloader";
 
         public string FilePath
         {
@@ -43,14 +44,7 @@ namespace TileDownloader.ViewModels
         }
 
         public int Concurrent { get; set; } = 10;
-        public double MinX { get; set; } = 111;
-
-        public double MinY { get; set; } = 41;
-
-        public double MaxX { get; set; } = 114;
-
-        public double MaxY { get; set; } = 44;
-
+        public Extent Extent { get; set; } = new Extent(-180, -85, 180, 85);
         public int MaxLevel { get; set; } = 15;
 
 
@@ -85,7 +79,7 @@ namespace TileDownloader.ViewModels
         public DelegateCommand BrowseCmd =>
             _browseCmd ??= new DelegateCommand(ExecuteBrowse);
 
-    
+
         public void ExecuteDownload()
         {
             if (SelectedSource == null)
@@ -105,6 +99,11 @@ namespace TileDownloader.ViewModels
                 Status = new ObservableCollection<DownloadState>();
                 var freesql = new FreeSqlBuilder().UseConnectionString(DataType.Sqlite, $"data source={FilePath}")
                     .UseAutoSyncStructure(true).Build();
+
+                var client = new HttpClient();
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Referer", SelectedSource.Referer);
+                client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", SelectedSource.UserAgent);
+
                 var schema = SelectedSource.TileSchema switch
                 {
                     nameof(GlobalSphericalMercator) => new GlobalSphericalMercator(),
@@ -112,13 +111,17 @@ namespace TileDownloader.ViewModels
                 };
                 var source = new HttpTileSource(schema, SelectedSource.UrlFormatter,
                     SelectedSource.ServerNodes, SelectedSource.ApiKey, SelectedSource.Name,
-                    userAgent: SelectedSource.UserAgent);
+                    tileFetcher: (url) =>
+                    {
+                        return client.GetByteArrayAsync(url).ConfigureAwait(false).GetAwaiter().GetResult();
+
+                    });
                 var info = new PakInfo
                 {
-                    MinX = MinX,
-                    MinY = MinY,
-                    MaxX = MaxX,
-                    MaxY = MaxY,
+                    MinX = Extent.MinX,
+                    MinY = Extent.MinY,
+                    MaxX = Extent.MaxX,
+                    MaxY = Extent.MaxY,
                     Type = "image",
                     Source = source.Name,
                     MinLevel = 0,
@@ -217,5 +220,7 @@ namespace TileDownloader.ViewModels
             var dialog = new SaveFileDialog { DefaultExt = ".pak", Filter = "PAK|*.pak" };
             if (dialog.ShowDialog() == true) FilePath = dialog.FileName;
         }
+
+         
     }
 }

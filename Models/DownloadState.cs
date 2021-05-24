@@ -2,7 +2,7 @@
 
 namespace TileDownloader.Models
 {
-    public class DownloadItem : BindableBase
+    public class DownloadState : BindableBase
     {
         private int level;
         private long total;

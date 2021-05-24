@@ -1,4 +1,4 @@
-﻿<Window x:Class="TileDownloader.Views.MainWindow"
+﻿ <Window x:Class="TileDownloader.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:prism="http://prismlibrary.com/"
@@ -11,9 +11,8 @@
         TextOptions.TextFormattingMode="Ideal"
         TextOptions.TextRenderingMode="Auto"
         Background="{DynamicResource MaterialDesignPaper}"
-        FontFamily="{DynamicResource MaterialDesignFont}" >
+        FontFamily="{DynamicResource MaterialDesignFont}"     >
     <materialDesign:Card Margin="10" Padding="10">
-
         <Grid  >
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
@@ -76,7 +75,7 @@
                 <Label Grid.Row="2" Content="User Agent" HorizontalAlignment="Center" VerticalAlignment="Center"></Label>
                 <TextBox Grid.Row="2" Grid.Column="1" Margin="5" Text="{Binding SelectedSource.UserAgent}"></TextBox>
             </Grid>
-            <DataGrid IsReadOnly="True" Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Margin="5" ItemsSource="{Binding DownloadItems}">
+            <DataGrid IsReadOnly="True" Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Margin="5" ItemsSource="{Binding Status}">
 
             </DataGrid>
             <Label Grid.Row="4" Content="文件路径" HorizontalAlignment="Center" VerticalAlignment="Center"></Label>

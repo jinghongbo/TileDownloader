@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -10,6 +11,7 @@ using BruTile.Predefined;
 using BruTile.Web;
 using FreeSql;
 using Microsoft.Win32;
+using Newtonsoft.Json;
 using Prism.Commands;
 using Prism.Mvvm;
 using ProjNet;
@@ -24,101 +26,13 @@ namespace TileDownloader.ViewModels
 
         private DelegateCommand _downloadCmd;
 
-        private ObservableCollection<DownloadItem> _downloadItems;
+        private ObservableCollection<DownloadState> _status;
         private string _filePath;
 
         private double _progress;
 
         private DownloadSource _selectedSource;
-
-        private List<DownloadSource> _sources = new List<DownloadSource>
-        {
-            new DownloadSource(
-                new GlobalSphericalMercator(),
-                "http://{s}.tianditu.gov.cn/DataServer?T=vec_w&x={x}&y={y}&l={z}&tk={k}",
-                new[] {"t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7"},
-                "5d22d49fdc586cb5caed68bfb12d1e6b",
-                "天地图矢量底图",
-                userAgent:
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
-            ),
-            new DownloadSource(
-                new GlobalSphericalMercator(),
-                "http://{s}.tianditu.gov.cn/DataServer?T=cva_w&x={x}&y={y}&l={z}&tk={k}",
-                new[] {"t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7"},
-                "5d22d49fdc586cb5caed68bfb12d1e6b",
-                "天地图矢量注记",
-                userAgent:
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
-            ),
-            new DownloadSource(
-                new GlobalSphericalMercator(),
-                "http://{s}.tianditu.gov.cn/DataServer?T=img_w&x={x}&y={y}&l={z}&tk={k}",
-                new[] {"t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7"},
-                "5d22d49fdc586cb5caed68bfb12d1e6b",
-                "天地图影像底图",
-                userAgent:
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
-            ),
-            new DownloadSource(
-                new GlobalSphericalMercator(),
-                "http://{s}.tianditu.gov.cn/DataServer?T=cia_w&x={x}&y={y}&l={z}&tk={k}",
-                new[] {"t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7"},
-                "5d22d49fdc586cb5caed68bfb12d1e6b",
-                "天地图影像注记",
-                userAgent:
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
-            ),
-            new DownloadSource(
-                new GlobalSphericalMercator(),
-                "http://{s}.tianditu.gov.cn/DataServer?T=ter_w&x={x}&y={y}&l={z}&tk={k}",
-                new[] {"t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7"},
-                "5d22d49fdc586cb5caed68bfb12d1e6b",
-                "天地图地形晕渲",
-                userAgent:
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
-            ),
-            new DownloadSource(
-                new GlobalSphericalMercator(),
-                "http://{s}.tianditu.gov.cn/DataServer?T=cta_w&x={x}&y={y}&l={z}&tk={k}",
-                new[] {"t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7"},
-                "5d22d49fdc586cb5caed68bfb12d1e6b",
-                "天地图地形注记",
-                userAgent:
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
-            ),
-            new DownloadSource(
-                new GlobalSphericalMercator(),
-                "http://{s}.tianditu.gov.cn/DataServer?T=ibo_w&x={x}&y={y}&l={z}&tk={k}",
-                new[] {"t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7"},
-                "5d22d49fdc586cb5caed68bfb12d1e6b",
-                "天地图全球境界",
-                userAgent:
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
-            ),
-            new DownloadSource(
-                new GlobalSphericalMercator(),
-                "http://{s}.tianditu.gov.cn/DataServer?T=eva_w&x={x}&y={y}&l={z}&tk={k}",
-                new[] {"t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7"},
-                "5d22d49fdc586cb5caed68bfb12d1e6b",
-                "天地图矢量英文注记",
-                userAgent:
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
-            ),
-            new DownloadSource(
-                new GlobalSphericalMercator(),
-                "http://{s}.tianditu.gov.cn/DataServer?T=eia_w&x={x}&y={y}&l={z}&tk={k}",
-                new[] {"t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7"},
-                "5d22d49fdc586cb5caed68bfb12d1e6b",
-                "天地图影像英文注记",
-                userAgent:
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
-            )
-        };
-
-        private double _speed;
-
-        private string message;
+        private List<DownloadSource> _sources = JsonConvert.DeserializeObject<List<DownloadSource>>(File.ReadAllText("sources.json"));
 
         public string Title { get; set; } = "瓦片下载器";
 
@@ -139,17 +53,7 @@ namespace TileDownloader.ViewModels
 
         public int MaxLevel { get; set; } = 15;
 
-        public double Speed
-        {
-            get => _speed;
-            set => SetProperty(ref _speed, value);
-        }
 
-        public string Message
-        {
-            get => message;
-            set => SetProperty(ref message, value);
-        }
 
         public List<DownloadSource> Sources
         {
@@ -163,10 +67,10 @@ namespace TileDownloader.ViewModels
             set => SetProperty(ref _selectedSource, value);
         }
 
-        public ObservableCollection<DownloadItem> DownloadItems
+        public ObservableCollection<DownloadState> Status
         {
-            get => _downloadItems;
-            set => SetProperty(ref _downloadItems, value);
+            get => _status;
+            set => SetProperty(ref _status, value);
         }
 
         public double Progress
@@ -179,9 +83,9 @@ namespace TileDownloader.ViewModels
             _downloadCmd ??= new DelegateCommand(ExecuteDownload);
 
         public DelegateCommand BrowseCmd =>
-            _browseCmd ??= new DelegateCommand(ExecuteCommandName);
+            _browseCmd ??= new DelegateCommand(ExecuteBrowse);
 
-
+    
         public void ExecuteDownload()
         {
             if (SelectedSource == null)
@@ -198,13 +102,17 @@ namespace TileDownloader.ViewModels
 
             try
             {
-                DownloadItems = new ObservableCollection<DownloadItem>();
+                Status = new ObservableCollection<DownloadState>();
                 var freesql = new FreeSqlBuilder().UseConnectionString(DataType.Sqlite, $"data source={FilePath}")
                     .UseAutoSyncStructure(true).Build();
-                var source = new HttpTileSource(SelectedSource.TileSchema, SelectedSource.UrlFormatter,
+                var schema = SelectedSource.TileSchema switch
+                {
+                    nameof(GlobalSphericalMercator) => new GlobalSphericalMercator(),
+                    _ => new TileSchema(),
+                };
+                var source = new HttpTileSource(schema, SelectedSource.UrlFormatter,
                     SelectedSource.ServerNodes, SelectedSource.ApiKey, SelectedSource.Name,
-                    SelectedSource.PersistentCache, SelectedSource.TileFetcher, SelectedSource.Attribution,
-                    SelectedSource.UserAgent);
+                    userAgent: SelectedSource.UserAgent);
                 var info = new PakInfo
                 {
                     MinX = MinX,
@@ -232,7 +140,7 @@ namespace TileDownloader.ViewModels
                 for (var level = info.MinLevel; level <= info.MaxLevel; level++)
                 {
                     var range = TileTransform.WorldToTile(extent, level, source.Schema);
-                    DownloadItems.Add(new DownloadItem
+                    Status.Add(new DownloadState
                     {
                         Level = level,
                         Total = range.ColCount * range.RowCount
@@ -242,9 +150,9 @@ namespace TileDownloader.ViewModels
                 Task.Run(async () =>
                 {
                     var tasks = new List<Task<bool>>();
-                    foreach (var item in DownloadItems)
+                    foreach (var state in Status)
                     {
-                        foreach (var tileInfo in source.Schema.GetTileInfos(extent, item.Level))
+                        foreach (var tileInfo in source.Schema.GetTileInfos(extent, state.Level))
                         {
                             tasks.Add(Task.Run(() =>
                             {
@@ -268,7 +176,7 @@ namespace TileDownloader.ViewModels
                                     }
                                     catch (Exception e)
                                     {
-                                        item.Message = e.Message;
+                                        state.Message = e.Message;
                                     }
                                 }
 
@@ -276,9 +184,9 @@ namespace TileDownloader.ViewModels
                             }));
 
                             if (tasks.Count >= Concurrent)
-                                await RunTasksAsync(tasks, item);
+                                await RunTasksAsync(tasks, state);
                         }
-                        await RunTasksAsync(tasks, item);
+                        await RunTasksAsync(tasks, state);
                     }
 
                     MessageBox.Show("下载完成");
@@ -290,7 +198,7 @@ namespace TileDownloader.ViewModels
             }
         }
 
-        private async Task RunTasksAsync(List<Task<bool>> tasks, DownloadItem item)
+        private async Task RunTasksAsync(List<Task<bool>> tasks, DownloadState item)
         {
             var stopwatch = Stopwatch.StartNew();
             var results = await Task.WhenAll(tasks);
@@ -299,12 +207,12 @@ namespace TileDownloader.ViewModels
             item.Fail += results.Count(x => !x);
             item.Speed = tasks.Count / stopwatch.Elapsed.TotalSeconds;
             item.Progress = (item.Success + item.Fail) * 100D / item.Total;
-            Progress = DownloadItems.Sum(x => x.Success + x.Fail) * 100D / DownloadItems.Sum(x => x.Total);
+            Progress = Status.Sum(x => x.Success + x.Fail) * 100D / Status.Sum(x => x.Total);
 
             tasks.Clear();
         }
 
-        private void ExecuteCommandName()
+        private void ExecuteBrowse()
         {
             var dialog = new SaveFileDialog { DefaultExt = ".pak", Filter = "PAK|*.pak" };
             if (dialog.ShowDialog() == true) FilePath = dialog.FileName;

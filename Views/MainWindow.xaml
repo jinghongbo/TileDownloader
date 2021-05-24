@@ -65,7 +65,7 @@
                     <RowDefinition Height="35"/>
                     <RowDefinition Height="35"/>
                 </Grid.RowDefinitions>
-                <Label Content="请求地址"/>
+                <Label Content="下载地址"/>
                 <TextBox Grid.Row="0" Grid.Column="1" Margin="5" Text="{Binding SelectedSource.UrlFormatter}"/>
                 <Label Grid.Row="1" Content="Api Key"/>
                 <TextBox Grid.Row="1" Grid.Column="1" Margin="5" Text="{Binding SelectedSource.ApiKey}"  />
@@ -73,7 +73,23 @@
                 <TextBox Grid.Row="2" Grid.Column="1" Margin="5" Text="{Binding SelectedSource.UserAgent}"/>
 
             </Grid>
-            <DataGrid IsReadOnly="True" Grid.Row="3" Grid.Column="0"   Margin="5" ItemsSource="{Binding Status}"/>
+            <DataGrid IsReadOnly="True" AutoGenerateColumns="False" Grid.Row="3" Grid.Column="0"   Margin="5" ItemsSource="{Binding Status}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="层级" Binding="{Binding Level}" Width="Auto"/>
+                    <DataGridTextColumn Header="总量" Binding="{Binding Total}" Width="Auto"/>
+                    <DataGridTextColumn Header="成功" Binding="{Binding Success}" Width="Auto"/>
+                    <DataGridTextColumn Header="失败" Binding="{Binding Fail}" Width="Auto"/>
+                    <DataGridTextColumn Header="速度" Binding="{Binding Speed,StringFormat=F}" Width="Auto"/>
+                    <DataGridTemplateColumn Header="进度" Width="100">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <ProgressBar Minimum="0" Maximum="100" Value="{Binding Progress}"></ProgressBar>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTextColumn Header="信息" Binding="{Binding Message}" Width="*"/>
+                </DataGrid.Columns>
+            </DataGrid>
             <Grid Grid.Row="4">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="100"/>
@@ -87,10 +103,13 @@
             <Grid Grid.Row="5" Grid.ColumnSpan="2">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="220"/>
                     <ColumnDefinition Width="100"/>
                 </Grid.ColumnDefinitions>
                 <ProgressBar Margin="5" Value="{Binding Progress}" Height="20" Minimum="0" Maximum="100"/>
-                <Button Content="下载" Command="{Binding DownloadCmd}" Grid.Column="1" Margin="5"/>
+
+                <Label Content="{Binding Message}" Grid.Column="1"></Label>
+                <Button Content="下载" Command="{Binding DownloadCmd}" Grid.Column="2" Margin="5"/>
             </Grid>
         </Grid>
     </materialDesign:Card>

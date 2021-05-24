@@ -23,6 +23,7 @@ namespace TileDownloader.ViewModels
 {
     public class MainWindowViewModel : BindableBase
     {
+        private bool _downloading;
         private DelegateCommand _browseCmd;
 
         private DelegateCommand _downloadCmd;
@@ -40,12 +41,25 @@ namespace TileDownloader.ViewModels
         public string FilePath
         {
             get => _filePath;
-            set => SetProperty(ref _filePath, value);
+            set
+            {
+                SetProperty(ref _filePath, value);
+                DownloadCmd.RaiseCanExecuteChanged();
+            }
         }
 
         public int Concurrent { get; set; } = 10;
         public Extent Extent { get; set; } = new Extent(-180, -85, 180, 85);
-        public int MaxLevel { get; set; } = 15;
+        public int MaxLevel { get; set; } = 9;
+
+        private string _message;
+        public string Message
+        {
+            get { return _message; }
+            set { SetProperty(ref _message, value); }
+        }
+
+        public DateTime StartTime { get; set; }
 
 
 
@@ -58,7 +72,11 @@ namespace TileDownloader.ViewModels
         public DownloadSource SelectedSource
         {
             get => _selectedSource;
-            set => SetProperty(ref _selectedSource, value);
+            set
+            {
+                SetProperty(ref _selectedSource, value);
+                DownloadCmd.RaiseCanExecuteChanged();
+            }
         }
 
         public ObservableCollection<DownloadState> Status
@@ -74,32 +92,39 @@ namespace TileDownloader.ViewModels
         }
 
         public DelegateCommand DownloadCmd =>
-            _downloadCmd ??= new DelegateCommand(ExecuteDownload);
+            _downloadCmd ??= new DelegateCommand(ExecuteDownload, () =>
+            {
+                if (Downloading || string.IsNullOrEmpty(FilePath) || SelectedSource == null)
+                {
+                    return false;
+                }
+                else
+                {
+                    return true;
+                }
+            });
 
         public DelegateCommand BrowseCmd =>
             _browseCmd ??= new DelegateCommand(ExecuteBrowse);
 
+        public bool Downloading
+        {
+            get => _downloading; set
+            {
+                SetProperty(ref _downloading, value);
+                DownloadCmd.RaiseCanExecuteChanged();
+            }
+        }
 
         public void ExecuteDownload()
         {
-            if (SelectedSource == null)
-            {
-                MessageBox.Show("请选择下载来源");
-                return;
-            }
-
-            if (string.IsNullOrEmpty(FilePath))
-            {
-                MessageBox.Show("请选择下载文件");
-                return;
-            }
-
             try
             {
+                StartTime = DateTime.Now;
+                Downloading = true;
                 Status = new ObservableCollection<DownloadState>();
                 var freesql = new FreeSqlBuilder().UseConnectionString(DataType.Sqlite, $"data source={FilePath}")
                     .UseAutoSyncStructure(true).Build();
-
                 var client = new HttpClient();
                 client.DefaultRequestHeaders.TryAddWithoutValidation("Referer", SelectedSource.Referer);
                 client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", SelectedSource.UserAgent);
@@ -191,27 +216,28 @@ namespace TileDownloader.ViewModels
                         }
                         await RunTasksAsync(tasks, state);
                     }
-
-                    MessageBox.Show("下载完成");
+                    Downloading = false;
+                    Message = "下载完成";
                 });
             }
             catch (Exception e)
             {
-                MessageBox.Show(e.Message);
+                Message = "异常:" + e.Message;
             }
         }
 
-        private async Task RunTasksAsync(List<Task<bool>> tasks, DownloadState item)
+        private async Task RunTasksAsync(List<Task<bool>> tasks, DownloadState state)
         {
             var stopwatch = Stopwatch.StartNew();
             var results = await Task.WhenAll(tasks);
 
-            item.Success += results.Count(x => x);
-            item.Fail += results.Count(x => !x);
-            item.Speed = tasks.Count / stopwatch.Elapsed.TotalSeconds;
-            item.Progress = (item.Success + item.Fail) * 100D / item.Total;
-            Progress = Status.Sum(x => x.Success + x.Fail) * 100D / Status.Sum(x => x.Total);
+            state.Success += results.Count(x => x);
+            state.Fail += results.Count(x => !x);
+            state.Speed = tasks.Count / stopwatch.Elapsed.TotalSeconds;
+            state.Progress = (state.Success + state.Fail) * 100D / state.Total;
 
+            Progress = Status.Sum(x => x.Success + x.Fail) * 100D / Status.Sum(x => x.Total);
+            Message = $"{(DateTime.Now - StartTime) / Status.Sum(x => x.Success + x.Fail) * Status.Sum(x => x.Total):%d\\天%h\\时%m\\分%s\\秒}";
             tasks.Clear();
         }
 
@@ -219,8 +245,9 @@ namespace TileDownloader.ViewModels
         {
             var dialog = new SaveFileDialog { DefaultExt = ".pak", Filter = "PAK|*.pak" };
             if (dialog.ShowDialog() == true) FilePath = dialog.FileName;
+
         }
 
-         
+
     }
 }

@@ -1,4 +1,5 @@
 ﻿using Prism.Mvvm;
+using System;
 
 namespace TileDownloader.Models
 {
@@ -48,7 +49,7 @@ namespace TileDownloader.Models
             get => speed;
             set => SetProperty(ref speed, value);
         }
-
+   
         public string Message
         {
             get => message;

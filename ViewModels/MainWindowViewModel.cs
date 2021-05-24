@@ -125,9 +125,6 @@ namespace TileDownloader.ViewModels
                 Status = new ObservableCollection<DownloadState>();
                 var freesql = new FreeSqlBuilder().UseConnectionString(DataType.Sqlite, $"data source={FilePath}")
                     .UseAutoSyncStructure(true).Build();
-                var client = new HttpClient();
-                client.DefaultRequestHeaders.TryAddWithoutValidation("Referer", SelectedSource.Referer);
-                client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", SelectedSource.UserAgent);
 
                 var schema = SelectedSource.TileSchema switch
                 {
@@ -138,6 +135,10 @@ namespace TileDownloader.ViewModels
                     SelectedSource.ServerNodes, SelectedSource.ApiKey, SelectedSource.Name,
                     tileFetcher: (url) =>
                     {
+                        using var client = new HttpClient();
+                        client.DefaultRequestHeaders.TryAddWithoutValidation("Referer", SelectedSource.Referer);
+                        client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", SelectedSource.UserAgent);
+
                         return client.GetByteArrayAsync(url).ConfigureAwait(false).GetAwaiter().GetResult();
 
                     });
@@ -237,7 +238,7 @@ namespace TileDownloader.ViewModels
             state.Progress = (state.Success + state.Fail) * 100D / state.Total;
 
             Progress = Status.Sum(x => x.Success + x.Fail) * 100D / Status.Sum(x => x.Total);
-            Message = $"{(DateTime.Now - StartTime) / Status.Sum(x => x.Success + x.Fail) * Status.Sum(x => x.Total):%d\\天%h\\时%m\\分%s\\秒}";
+            Message = $"{(DateTime.Now - StartTime) / Status.Sum(x => x.Success + x.Fail) * Status.Sum(x => x.Total - x.Success - x.Fail):%d\\天%h\\时%m\\分%s\\秒}";
             tasks.Clear();
         }
 

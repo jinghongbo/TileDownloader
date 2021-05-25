@@ -126,5 +126,54 @@
     "Name": "Google Maps - Hybrid",
     "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62",
     "Referer": "http://maps.google.com/"
+  },
+  {
+    "TileSchema": "GlobalSphericalMercator",
+    "UrlFormatter": "http://mt{s}.google.cn/maps/vt?lyrs=m&gl=CN&x={x}&y={y}&z={z}",
+    "ServerNodes": [ "0", "1", "2", "3" ],
+    "Name": "Google China Maps - Roadmap",
+    "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
+  },
+  {
+    "TileSchema": "GlobalSphericalMercator",
+    "UrlFormatter": "http://mt{s}.google.cn/maps/vt?lyrs=p&gl=CN&x={x}&y={y}&z={z}",
+    "ServerNodes": [ "0", "1", "2", "3" ],
+    "Name": "Google China Maps - Terrain",
+    "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
+  },
+  {
+    "TileSchema": "GlobalSphericalMercator",
+    "UrlFormatter": "http://mt{s}.google.cn/maps/vt?lyrs=r&gl=CN&x={x}&y={y}&z={z}",
+    "ServerNodes": [ "0", "1", "2", "3" ],
+    "Name": "Google China Maps - Altered roadmap",
+    "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
+  },
+  {
+    "TileSchema": "GlobalSphericalMercator",
+    "UrlFormatter": "http://mt{s}.google.cn/maps/vt?lyrs=s&gl=CN&x={x}&y={y}&z={z}",
+    "ServerNodes": [ "0", "1", "2", "3" ],
+    "Name": "Google China Maps - Satellite only",
+    "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
+  },
+  {
+    "TileSchema": "GlobalSphericalMercator",
+    "UrlFormatter": "http://mt{s}.google.cn/maps/vt?lyrs=h&gl=CN&x={x}&y={y}&z={z}",
+    "ServerNodes": [ "0", "1", "2", "3" ],
+    "Name": "Google China Maps - Road only",
+    "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
+  },
+  {
+    "TileSchema": "GlobalSphericalMercator",
+    "UrlFormatter": "http://mt{s}.google.cn/maps/vt?lyrs=t&gl=CN&x={x}&y={y}&z={z}",
+    "ServerNodes": [ "0", "1", "2", "3" ],
+    "Name": "Google China Maps - Terrain only",
+    "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
+  },
+  {
+    "TileSchema": "GlobalSphericalMercator",
+    "UrlFormatter": "http://mt{s}.google.cn/maps/vt?lyrs=y&gl=CN&x={x}&y={y}&z={z}",
+    "ServerNodes": [ "0", "1", "2", "3" ],
+    "Name": "Google China Maps - Hybrid",
+    "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
   }
 ]

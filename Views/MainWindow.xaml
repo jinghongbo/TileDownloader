@@ -79,7 +79,7 @@
                     <DataGridTextColumn Header="总量" Binding="{Binding Total}" Width="Auto"/>
                     <DataGridTextColumn Header="成功" Binding="{Binding Success}" Width="Auto"/>
                     <DataGridTextColumn Header="失败" Binding="{Binding Fail}" Width="Auto"/>
-                    <DataGridTextColumn Header="速度" Binding="{Binding Speed,StringFormat=F}" Width="Auto"/>
+                    <DataGridTextColumn Header="速度" Binding="{Binding Speed,StringFormat=F0}" Width="Auto"/>
                     <DataGridTemplateColumn Header="进度" Width="100">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
@@ -103,7 +103,7 @@
             <Grid Grid.Row="5" Grid.ColumnSpan="2">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="220"/>
+                    <ColumnDefinition Width="120"/>
                     <ColumnDefinition Width="100"/>
                 </Grid.ColumnDefinitions>
                 <ProgressBar Margin="5" Value="{Binding Progress}" Height="20" Minimum="0" Maximum="100"/>

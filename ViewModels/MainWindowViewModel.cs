@@ -238,7 +238,8 @@ namespace TileDownloader.ViewModels
             state.Progress = (state.Success + state.Fail) * 100D / state.Total;
 
             Progress = Status.Sum(x => x.Success + x.Fail) * 100D / Status.Sum(x => x.Total);
-            Message = $"{(DateTime.Now - StartTime) / Status.Sum(x => x.Success + x.Fail) * Status.Sum(x => x.Total - x.Success - x.Fail):%d\\天%h\\时%m\\分%s\\秒}";
+            var time = (DateTime.Now - StartTime) / Status.Sum(x => x.Success + x.Fail) * Status.Sum(x => x.Total - x.Success - x.Fail);
+            Message = time.Days >= 1 ? time.ToString("d'天'h'时'm'分's'秒'") : time.ToString("h'时'm'分's'秒'");
             tasks.Clear();
         }
 

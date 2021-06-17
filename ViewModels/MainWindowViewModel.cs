@@ -121,10 +121,9 @@ namespace TileDownloader.ViewModels
             try
             {
                 StartTime = DateTime.Now;
-                Downloading = true;
                 Status = new ObservableCollection<DownloadState>();
-                var freesql = new FreeSqlBuilder().UseConnectionString(DataType.Sqlite, $"data source={FilePath}")
-                    .UseAutoSyncStructure(true).Build();
+                using var freesql = new FreeSqlBuilder().UseConnectionString(DataType.Sqlite, $"data source={FilePath}")
+                       .UseAutoSyncStructure(true).Build();
 
                 var schema = SelectedSource.TileSchema switch
                 {
@@ -154,17 +153,24 @@ namespace TileDownloader.ViewModels
                     MaxLevel = MaxLevel
                 };
 
+                var services = new CoordinateSystemServices();
                 var wgs84 = GeographicCoordinateSystem.WGS84;
                 var webMercator = ProjectedCoordinateSystem.WebMercator;
-                var services = new CoordinateSystemServices();
                 var transformation = services.CreateTransformation(wgs84, webMercator);
-
-                freesql.Delete<PakInfo>().Where(x => true).ExecuteAffrows();
-                freesql.Insert<PakInfo>().AppendData(info).ExecuteAffrows();
-
                 var (minX, minY) = transformation.MathTransform.Transform(info.MinX, info.MinY);
                 var (maxX, maxY) = transformation.MathTransform.Transform(info.MaxX, info.MaxY);
                 var extent = new Extent(minX, minY, maxX, maxY);
+
+                if (extent.Area < 0)
+                {
+                    MessageBox.Show("面积太小");
+                    return;
+                }
+                Downloading = true;
+                freesql.Delete<PakInfo>().Where(x => true).ExecuteAffrows();
+                freesql.Insert<PakInfo>().AppendData(info).ExecuteAffrows();
+
+
 
                 for (var level = info.MinLevel; level <= info.MaxLevel; level++)
                 {
@@ -238,8 +244,25 @@ namespace TileDownloader.ViewModels
             state.Progress = (state.Success + state.Fail) * 100D / state.Total;
 
             Progress = Status.Sum(x => x.Success + x.Fail) * 100D / Status.Sum(x => x.Total);
-            var time = (DateTime.Now - StartTime) / Status.Sum(x => x.Success + x.Fail) * Status.Sum(x => x.Total - x.Success - x.Fail);
-            Message = time.Days >= 1 ? time.ToString("d'天'h'时'm'分's'秒'") : time.ToString("h'时'm'分's'秒'");
+            var timeSpan = (DateTime.Now - StartTime) / Status.Sum(x => x.Success + x.Fail) * Status.Sum(x => x.Total - x.Success - x.Fail);
+
+            Message = "预计";
+            if (timeSpan.Days > 1)
+            {
+                Message += $"{timeSpan.Days:#}天";
+            }
+            if (timeSpan.Hours > 1)
+            {
+                Message += $"{timeSpan.Hours:#}时";
+            }
+            if (timeSpan.Minutes > 1)
+            {
+                Message += $"{timeSpan.Minutes:#}分";
+            }
+            if (timeSpan.Seconds > 1)
+            {
+                Message += $"{timeSpan.Seconds:#}秒";
+            }
             tasks.Clear();
         }
 

@@ -48,12 +48,15 @@
                     <ColumnDefinition />
                     <ColumnDefinition Width="100"/>
                     <ColumnDefinition Width="100"/>
+                    <ColumnDefinition Width="100"/>
+                    <ColumnDefinition Width="100"/>
                 </Grid.ColumnDefinitions>
                 <Label Grid.Column="0" Content="下载范围" />
-                <TextBox  Grid.Column="1"  HorizontalContentAlignment="Center" Margin="5" Text="{Binding Extent, Converter={StaticResource ExtentCvt}}"/>
+                <TextBox  Grid.Column="1"    Margin="5" Text="{Binding Extent, Converter={StaticResource ExtentCvt}}"/>
                 <Label Grid.Column="2"  Content="最大级别" Margin="5"/>
                 <TextBox  Grid.Column="3" Margin="5"  Text="{Binding MaxLevel}" Cursor="IBeam"/>
-
+                <Label Grid.Column="4"  Content="并发数量" Margin="5"/>
+                <TextBox  Grid.Column="5" Margin="5"  Text="{Binding ConcurrentCount}" Cursor="IBeam"/>
             </Grid>
             <Grid Grid.Row="2">
                 <Grid.ColumnDefinitions>

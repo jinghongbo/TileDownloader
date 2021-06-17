@@ -48,7 +48,7 @@ namespace TileDownloader.ViewModels
             }
         }
 
-        public int Concurrent { get; set; } = 10;
+        public int ConcurrentCount { get; set; } = 10;
         public Extent Extent { get; set; } = new Extent(-180, -85, 180, 85);
         public int MaxLevel { get; set; } = 9;
 
@@ -122,8 +122,6 @@ namespace TileDownloader.ViewModels
             {
                 StartTime = DateTime.Now;
                 Status = new ObservableCollection<DownloadState>();
-                using var freesql = new FreeSqlBuilder().UseConnectionString(DataType.Sqlite, $"data source={FilePath}")
-                       .UseAutoSyncStructure(true).Build();
 
                 var schema = SelectedSource.TileSchema switch
                 {
@@ -167,9 +165,6 @@ namespace TileDownloader.ViewModels
                     return;
                 }
                 Downloading = true;
-                freesql.Delete<PakInfo>().Where(x => true).ExecuteAffrows();
-                freesql.Insert<PakInfo>().AppendData(info).ExecuteAffrows();
-
 
 
                 for (var level = info.MinLevel; level <= info.MaxLevel; level++)
@@ -184,6 +179,13 @@ namespace TileDownloader.ViewModels
 
                 Task.Run(async () =>
                 {
+                    using var freesql = new FreeSqlBuilder().UseConnectionString(DataType.Sqlite, $"data source={FilePath}")
+                   .UseAutoSyncStructure(true).Build();
+
+                    await freesql.Delete<PakInfo>().Where(x => true).ExecuteAffrowsAsync();
+                    await freesql.Insert<PakInfo>().AppendData(info).ExecuteAffrowsAsync();
+
+
                     var tasks = new List<Task<bool>>();
                     foreach (var state in Status)
                     {
@@ -218,10 +220,13 @@ namespace TileDownloader.ViewModels
                                 return false;
                             }));
 
-                            if (tasks.Count >= Concurrent)
+                            if (tasks.Count >= ConcurrentCount)
                                 await RunTasksAsync(tasks, state);
                         }
-                        await RunTasksAsync(tasks, state);
+                        if (tasks.Count>0)
+                        {
+                            await RunTasksAsync(tasks, state);
+                        }
                     }
                     Downloading = false;
                     Message = "下载完成";
@@ -246,23 +251,24 @@ namespace TileDownloader.ViewModels
             Progress = Status.Sum(x => x.Success + x.Fail) * 100D / Status.Sum(x => x.Total);
             var timeSpan = (DateTime.Now - StartTime) / Status.Sum(x => x.Success + x.Fail) * Status.Sum(x => x.Total - x.Success - x.Fail);
 
-            Message = "预计";
+            var message = "预计";
             if (timeSpan.Days > 1)
             {
-                Message += $"{timeSpan.Days:#}天";
+                message += $"{timeSpan.Days:#}天";
             }
             if (timeSpan.Hours > 1)
             {
-                Message += $"{timeSpan.Hours:#}时";
+                message += $"{timeSpan.Hours:#}时";
             }
             if (timeSpan.Minutes > 1)
             {
-                Message += $"{timeSpan.Minutes:#}分";
+                message += $"{timeSpan.Minutes:#}分";
             }
             if (timeSpan.Seconds > 1)
             {
-                Message += $"{timeSpan.Seconds:#}秒";
+                message += $"{timeSpan.Seconds:#}秒";
             }
+            Message = message;
             tasks.Clear();
         }
 

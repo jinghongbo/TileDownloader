@@ -15,7 +15,7 @@ namespace TileDownloader.Models
 
         public PropertyInfo Property { get; }
         public object Instance { get; }
-        public object Value { get => Property.GetValue(Instance); set => Property.SetValue(Instance, value); }
+        public object Value { get => Property.GetValue(Instance); set => Property.SetValue(Instance, Convert.ChangeType(value, Property.PropertyType)); }
 
         public Argument(object instance, PropertyInfo property)
         {

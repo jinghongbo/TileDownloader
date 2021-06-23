@@ -1,156 +1,186 @@
 ﻿[
   {
+    "Schema": "GlobalSphericalMercator",
     "Url": "http://{s}.tianditu.gov.cn/DataServer?T=vec_w&x={x}&y={y}&l={z}&tk={k}",
-    "Nodes": [ "t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7" ],
+    "Servers": "t0,t1,t2t3,t4,t5,t6,t7",
     "Key": "5d22d49fdc586cb5caed68bfb12d1e6b",
     "Name": "天地图 - 矢量底图",
     "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
   },
   {
+    "Schema": "GlobalSphericalMercator",
     "Url": "http://{s}.tianditu.gov.cn/DataServer?T=cva_w&x={x}&y={y}&l={z}&tk={k}",
-    "Nodes": [ "t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7" ],
+    "Servers": "t0,t1,t2t3,t4,t5,t6,t7",
     "Key": "5d22d49fdc586cb5caed68bfb12d1e6b",
     "Name": "天地图 - 矢量注记",
     "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
   },
   {
+    "Schema": "GlobalSphericalMercator",
     "Url": "http://{s}.tianditu.gov.cn/DataServer?T=img_w&x={x}&y={y}&l={z}&tk={k}",
-    "Nodes": [ "t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7" ],
+    "Servers": "t0,t1,t2t3,t4,t5,t6,t7",
     "Key": "5d22d49fdc586cb5caed68bfb12d1e6b",
     "Name": "天地图 - 影像底图",
     "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
   },
   {
+    "Schema": "GlobalSphericalMercator",
     "Url": "http://{s}.tianditu.gov.cn/DataServer?T=cia_w&x={x}&y={y}&l={z}&tk={k}",
-    "Nodes": [ "t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7" ],
+    "Servers": "t0,t1,t2t3,t4,t5,t6,t7",
     "Key": "5d22d49fdc586cb5caed68bfb12d1e6b",
     "Name": "天地图 - 影像注记",
     "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
   },
   {
+    "Schema": "GlobalSphericalMercator",
     "Url": "http://{s}.tianditu.gov.cn/DataServer?T=ter_w&x={x}&y={y}&l={z}&tk={k}",
-    "Nodes": [ "t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7" ],
+    "Servers": "t0,t1,t2t3,t4,t5,t6,t7",
     "Key": "5d22d49fdc586cb5caed68bfb12d1e6b",
     "Name": "天地图 - 地形晕渲",
     "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
   },
   {
+    "Schema": "GlobalSphericalMercator",
     "Url": "http://{s}.tianditu.gov.cn/DataServer?T=cta_w&x={x}&y={y}&l={z}&tk={k}",
-    "Nodes": [ "t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7" ],
+    "Servers": "t0,t1,t2t3,t4,t5,t6,t7",
     "Key": "5d22d49fdc586cb5caed68bfb12d1e6b",
     "Name": "天地图 - 地形注记",
     "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
   },
   {
+    "Schema": "GlobalSphericalMercator",
     "Url": "http://{s}.tianditu.gov.cn/DataServer?T=ibo_w&x={x}&y={y}&l={z}&tk={k}",
-    "Nodes": [ "t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7" ],
+    "Servers": "t0,t1,t2t3,t4,t5,t6,t7",
     "Key": "5d22d49fdc586cb5caed68bfb12d1e6b",
     "Name": "天地图 - 全球境界",
     "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
   },
   {
+    "Schema": "GlobalSphericalMercator",
     "Url": "http://{s}.tianditu.gov.cn/DataServer?T=eva_w&x={x}&y={y}&l={z}&tk={k}",
-    "Nodes": [ "t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7" ],
+    "Servers": "t0,t1,t2t3,t4,t5,t6,t7",
     "Key": "5d22d49fdc586cb5caed68bfb12d1e6b",
     "Name": "天地图 - 矢量英文注记",
     "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
   },
   {
+    "Schema": "GlobalSphericalMercator",
     "Url": "http://{s}.tianditu.gov.cn/DataServer?T=eia_w&x={x}&y={y}&l={z}&tk={k}",
-    "Nodes": [ "t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7" ],
+    "Servers": "t0,t1,t2t3,t4,t5,t6,t7",
     "Key": "5d22d49fdc586cb5caed68bfb12d1e6b",
     "Name": "天地图 - 影像英文注记",
     "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
   },
   {
+    "Schema": "GlobalSphericalMercator",
     "Url": "http://mt{s}.google.com/vt/lyrs=m&hl=zh&x={x}&y={y}&z={z}",
-    "Nodes": [ "0", "1", "2", "3" ],
+    "Servers": "0,1,2,3",
     "Name": "Google Maps - Roadmap",
     "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62",
     "Referer": "http://maps.google.com/"
   },
   {
+    "Schema": "GlobalSphericalMercator",
     "Url": "http://mt{s}.google.com/vt/lyrs=p&hl=zh&x={x}&y={y}&z={z}",
-    "Nodes": [ "0", "1", "2", "3" ],
+    "Servers": "0,1,2,3",
     "Name": "Google Maps - Terrain",
     "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62",
     "Referer": "http://maps.google.com/"
   },
   {
+    "Schema": "GlobalSphericalMercator",
     "Url": "http://mt{s}.google.com/vt/lyrs=r&hl=zh&x={x}&y={y}&z={z}",
-    "Nodes": [ "0", "1", "2", "3" ],
+    "Servers": "0,1,2,3",
     "Name": "Google Maps - Altered roadmap",
     "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62",
     "Referer": "http://maps.google.com/"
   },
   {
+    "Schema": "GlobalSphericalMercator",
     "Url": "http://mt{s}.google.com/vt/lyrs=s&hl=zh&x={x}&y={y}&z={z}",
-    "Nodes": [ "0", "1", "2", "3" ],
+    "Servers": "0,1,2,3",
     "Name": "Google Maps - Satellite only",
     "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62",
     "Referer": "http://maps.google.com/"
   },
   {
+    "Schema": "GlobalSphericalMercator",
     "Url": "http://mt{s}.google.com/vt/lyrs=h&hl=zh&x={x}&y={y}&z={z}",
-    "Nodes": [ "0", "1", "2", "3" ],
+    "Servers": "0,1,2,3",
     "Name": "Google Maps - Road only",
     "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62",
     "Referer": "http://maps.google.com/"
   },
   {
+    "Schema": "GlobalSphericalMercator",
     "Url": "http://mt{s}.google.com/vt/lyrs=t&hl=zh&x={x}&y={y}&z={z}",
-    "Nodes": [ "0", "1", "2", "3" ],
+    "Servers": "0,1,2,3",
     "Name": "Google Maps - Terrain only",
     "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62",
     "Referer": "http://maps.google.com/"
   },
   {
+    "Schema": "GlobalSphericalMercator",
     "Url": "http://mt{s}.google.com/vt/lyrs=y&hl=zh&x={x}&y={y}&z={z}",
-    "Nodes": [ "0", "1", "2", "3" ],
+    "Servers": "0,1,2,3",
     "Name": "Google Maps - Hybrid",
     "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62",
     "Referer": "http://maps.google.com/"
   },
   {
+    "Schema": "GlobalSphericalMercator",
     "Url": "http://mt{s}.google.cn/maps/vt?lyrs=m&gl=CN&x={x}&y={y}&z={z}",
-    "Nodes": [ "0", "1", "2", "3" ],
+    "Servers": "0,1,2,3",
     "Name": "Google China Maps - Roadmap",
     "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
   },
   {
+    "Schema": "GlobalSphericalMercator",
     "Url": "http://mt{s}.google.cn/maps/vt?lyrs=p&gl=CN&x={x}&y={y}&z={z}",
-    "Nodes": [ "0", "1", "2", "3" ],
+    "Servers": "0,1,2,3",
     "Name": "Google China Maps - Terrain",
     "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
   },
   {
+    "Schema": "GlobalSphericalMercator",
     "Url": "http://mt{s}.google.cn/maps/vt?lyrs=r&gl=CN&x={x}&y={y}&z={z}",
-    "Nodes": [ "0", "1", "2", "3" ],
+    "Servers": "0,1,2,3",
     "Name": "Google China Maps - Altered roadmap",
     "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
   },
   {
+    "Schema": "GlobalSphericalMercator",
     "Url": "http://mt{s}.google.cn/maps/vt?lyrs=s&gl=CN&x={x}&y={y}&z={z}",
-    "Nodes": [ "0", "1", "2", "3" ],
+    "Servers": "0,1,2,3",
     "Name": "Google China Maps - Satellite only",
     "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
   },
   {
+    "Schema": "GlobalSphericalMercator",
     "Url": "http://mt{s}.google.cn/maps/vt?lyrs=h&gl=CN&x={x}&y={y}&z={z}",
-    "Nodes": [ "0", "1", "2", "3" ],
+    "Servers": "0,1,2,3",
     "Name": "Google China Maps - Road only",
     "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
   },
   {
+    "Schema": "GlobalSphericalMercator",
     "Url": "http://mt{s}.google.cn/maps/vt?lyrs=t&gl=CN&x={x}&y={y}&z={z}",
-    "Nodes": [ "0", "1", "2", "3" ],
+    "Servers": "0,1,2,3",
     "Name": "Google China Maps - Terrain only",
     "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
   },
   {
+    "Schema": "GlobalSphericalMercator",
     "Url": "http://mt{s}.google.cn/maps/vt?lyrs=y&gl=CN&x={x}&y={y}&z={z}",
-    "Nodes": [ "0", "1", "2", "3" ],
+    "Servers": "0,1,2,3",
     "Name": "Google China Maps - Hybrid",
     "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
+  },
+  {
+    "Type": "GSCloud",
+    "Name": "ASTER GDEM 30M 分辨率数字高程数据",
+    "ProductId": "301",
+    "Url": "http://www.gscloud.cn",
+    "Cookies": "user_id=442722; csrftoken=HVr4Ufjo9fccyziGCgKCbsN5AvTINgu4SDcPkpliQPy0JLnbdSrfYtOBZ5ah9VIi; sessionid=73glwcmwykdmv2vku9oedg0u4qojzgil"
   }
 ]

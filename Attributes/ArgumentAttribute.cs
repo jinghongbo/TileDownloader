@@ -8,9 +8,12 @@ namespace TileDownloader.Attributes
 {
     public class ArgumentAttribute : Attribute
     {
+        public string Name { get; set; }
+        public bool IsReadOnly { get; set; }
+
         public ArgumentAttribute(string name)
         {
-
+            Name = name;
         }
     }
 }

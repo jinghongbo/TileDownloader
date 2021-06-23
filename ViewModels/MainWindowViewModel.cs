@@ -34,7 +34,7 @@ namespace TileDownloader.ViewModels
         private double _progress;
 
         private DownloadSource _selectedSource;
-        private List<DownloadSource> _sources = JsonConvert.DeserializeObject<List<DownloadSource>>(File.ReadAllText("sources.json"));
+        private List<DownloadSource> _sources = JsonConvert.DeserializeObject<List<DownloadSource>>(File.ReadAllText("Sources.json"));
 
         public string Title { get; set; } = "Tile Downloader";
 

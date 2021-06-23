@@ -1,20 +1,18 @@
-﻿using BruTile;
-using BruTile.Cache;
-using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace TileDownloader.Models
+﻿namespace TileDownloader.Models
 {
+    /// <summary>
+    /// 来源
+    /// </summary>
     public class DownloadSource
     {
-        public string TileSchema { get; set; }
-        public string UrlFormatter { get; set; }
-        public string[] ServerNodes { get; set; }
-        public string ApiKey { get; set; }
         public string Name { get; set; }
+        public string Url { get; set; }
+        public string Key { get; set; }
+        public string[] Nodes { get; set; }
         public string UserAgent { get; set; }
-
         public string Referer { get; set; }
+        public string Cookies { get; set; }
+
+
     }
 }

@@ -123,13 +123,9 @@ namespace TileDownloader.ViewModels
                 StartTime = DateTime.Now;
                 Status = new ObservableCollection<DownloadState>();
 
-                var schema = SelectedSource.TileSchema switch
-                {
-                    nameof(GlobalSphericalMercator) => new GlobalSphericalMercator(),
-                    _ => new TileSchema(),
-                };
-                var source = new HttpTileSource(schema, SelectedSource.UrlFormatter,
-                    SelectedSource.ServerNodes, SelectedSource.ApiKey, SelectedSource.Name,
+                var schema = new GlobalSphericalMercator();
+                var source = new HttpTileSource(schema, SelectedSource.Url,
+                    SelectedSource.Nodes, SelectedSource.Key, SelectedSource.Name,
                     tileFetcher: (url) =>
                     {
                         using var client = new HttpClient();

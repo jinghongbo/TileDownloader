@@ -179,8 +179,8 @@
   {
     "Type": "GSCloud",
     "Name": "ASTER GDEM 30M 分辨率数字高程数据",
-    "ProductId": "301",
+    "ProductId": "310",
     "Url": "http://www.gscloud.cn",
-    "Cookies": "user_id=442722; csrftoken=HVr4Ufjo9fccyziGCgKCbsN5AvTINgu4SDcPkpliQPy0JLnbdSrfYtOBZ5ah9VIi; sessionid=73glwcmwykdmv2vku9oedg0u4qojzgil"
+    "Cookies": "csrftoken=HVr4Ufjo9fccyziGCgKCbsN5AvTINgu4SDcPkpliQPy0JLnbdSrfYtOBZ5ah9VIi,sessionid=73glwcmwykdmv2vku9oedg0u4qojzgil"
   }
 ]

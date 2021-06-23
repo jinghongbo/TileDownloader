@@ -20,5 +20,10 @@ namespace TileDownloader.Models
         public DateTime StartTime { get; set; }
 
         public TimeSpan TimeLeft { get; set; }
+
+        public void Notify()
+        {
+            this.RaisePropertyChanged();
+        }
     }
 }

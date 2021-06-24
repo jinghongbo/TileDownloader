@@ -3,6 +3,7 @@ using Prism.Commands;
 using Prism.Mvvm;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.IO;
 using System.Threading.Tasks;
 using TileDownloader.Converters;
@@ -14,16 +15,14 @@ namespace TileDownloader.ViewModels
     {
         private DelegateCommand _downloadCmd;
 
-        private ObservableCollection<DownloadTask> _downloadTasks;
+        private List<DownloadTask> _downloadTasks;
 
         private DownloadSource _source;
 
         public MainWindowViewModel()
         {
             Sources = JsonConvert.DeserializeObject<List<DownloadSource>>(File.ReadAllText("Sources.json"), new DownloadSourceConverter());
-            DownloadTasks = new ObservableCollection<DownloadTask>();
         }
-
 
 
         public List<DownloadSource> Sources { get; set; }
@@ -47,7 +46,7 @@ namespace TileDownloader.ViewModels
             set { SetProperty(ref _arguments, value); }
         }
 
-        public ObservableCollection<DownloadTask> DownloadTasks
+        public List<DownloadTask> DownloadTasks
         {
             get => _downloadTasks;
             set => SetProperty(ref _downloadTasks, value);
@@ -58,6 +57,7 @@ namespace TileDownloader.ViewModels
 
         public async void ExecuteDownload()
         {
+            DownloadTasks = await Source.GetDownloadTasksAsync();
             await Source.DownloadAsync(DownloadTasks);
         }
     }

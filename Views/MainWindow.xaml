@@ -24,18 +24,17 @@
             <Setter Property="HorizontalContentAlignment" Value="Left" />
         </Style>
     </Window.Resources>
-    <md:Card Margin="10">
-        <Grid>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-                <RowDefinition Height="Auto" />
-            </Grid.RowDefinitions>
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <GroupBox Header="下载参数" Margin="5">
             <Grid Grid.Row="0" Margin="5">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
                 <Grid Grid.Row="0">
                     <Grid.ColumnDefinitions>
@@ -45,9 +44,9 @@
                     <Label Grid.Column="0" Content="下载来源" />
                     <ComboBox Grid.Column="1" Margin="5"  SelectedIndex="0" ItemsSource="{Binding Sources}" SelectedItem="{Binding Source}" DisplayMemberPath="Name" />
                 </Grid>
-                <Grid Grid.Row="1">
+                <ScrollViewer Grid.Row="1">
 
-                    <ItemsControl ItemsSource="{Binding Arguments}">
+                    <ItemsControl ItemsSource="{Binding Arguments}" >
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Grid>
@@ -67,36 +66,36 @@
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                     </ItemsControl>
-                </Grid>
+                </ScrollViewer>
             </Grid>
-            <Grid Grid.Row="1" Margin="5">
-                <DataGrid   IsReadOnly="True" AutoGenerateColumns="False" Grid.ColumnSpan="3"  ItemsSource="{Binding DownloadTasks}">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="名称" Binding="{Binding Name}" Width="Auto" />
-                        <DataGridTextColumn Header="总量" Binding="{Binding Total}" Width="Auto" />
-                        <DataGridTextColumn Header="成功" Binding="{Binding Success}" Width="Auto" />
-                        <DataGridTextColumn Header="失败" Binding="{Binding Fail}" Width="Auto" />
-                        <!--<DataGridTextColumn Header="剩余" Binding="{Binding TimeLeft}" Width="Auto" />-->
-                        <DataGridTextColumn Header="错误" Binding="{Binding ErrorMessage}" Width="*" />
-                        <DataGridTemplateColumn Header="进度" Width="*">
-                            <DataGridTemplateColumn.CellTemplate>
-                                <DataTemplate>
-                                    <ProgressBar Minimum="0" Maximum="100" Value="{Binding Progress}" Height="Auto" Margin="5"></ProgressBar>
-                                </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                        </DataGridTemplateColumn>
-                    </DataGrid.Columns>
-                </DataGrid>
-            </Grid>
+        </GroupBox>
+        <GroupBox Header="下载任务" Grid.Row="1" Margin="5">
+            <DataGrid   IsReadOnly="True" AutoGenerateColumns="False" Grid.ColumnSpan="3"  ItemsSource="{Binding DownloadTasks}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="名称" Binding="{Binding Name}" Width="Auto" />
+                    <DataGridTextColumn Header="总量" Binding="{Binding Total}" Width="Auto" />
+                    <DataGridTextColumn Header="成功" Binding="{Binding Success}" Width="Auto" />
+                    <DataGridTextColumn Header="失败" Binding="{Binding Fail}" Width="Auto" />
+                    <!--<DataGridTextColumn Header="剩余" Binding="{Binding TimeLeft}" Width="Auto" />-->
+                    <DataGridTextColumn Header="错误" Binding="{Binding ErrorMessage}" Width="*" />
+                    <DataGridTemplateColumn Header="进度" Width="*">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <ProgressBar Minimum="0" Maximum="100" Value="{Binding Progress}" Height="Auto" Margin="5"></ProgressBar>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+        </GroupBox>
 
-            <Grid Grid.Row="2" Margin="5">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition />
-                    <ColumnDefinition Width="120" />
-                </Grid.ColumnDefinitions>
-                <!--<ProgressBar Margin="5" Height="Auto" ></ProgressBar>-->
-                <Button Content="下载" Command="{Binding DownloadCmd}" Grid.Column="1" Margin="5" />
-            </Grid>
+        <Grid Grid.Row="2" Margin="5">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition />
+                <ColumnDefinition Width="120" />
+            </Grid.ColumnDefinitions>
+            <!--<ProgressBar Margin="5" Height="Auto" ></ProgressBar>-->
+            <Button Content="下载" Command="{Binding DownloadCmd}" Grid.Column="1" Margin="5" />
         </Grid>
-    </md:Card>
+    </Grid>
 </Window>

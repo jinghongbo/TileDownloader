@@ -1,10 +1,11 @@
-﻿using System.Collections.ObjectModel;
+﻿using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using TileDownloader.Attributes;
 
 namespace TileDownloader.Models
 {
-    public class DownloadSource
+    public abstract class DownloadSource
     {
         public string Name { get; set; }
 
@@ -33,9 +34,8 @@ namespace TileDownloader.Models
 
         [Argument("重试")]
         public int Retry { get; set; } = 4;
-        public virtual Task DownloadAsync(ObservableCollection<DownloadTask> downloadTasks)
-        {
-            throw new System.Exception();
-        }
+        public abstract Task DownloadAsync(List<DownloadTask> downloadTasks);
+
+        public abstract Task<List<DownloadTask>> GetDownloadTasksAsync();
     }
 }

@@ -1,5 +1,7 @@
 ﻿using Prism.Mvvm;
 using System;
+using System.ComponentModel;
+using System.Diagnostics;
 
 namespace TileDownloader.Models
 {
@@ -22,6 +24,13 @@ namespace TileDownloader.Models
         public string ErrorMessage { get => _errorMessage; set => SetProperty(ref _errorMessage, value); }
         public DateTime StartTime { get => _startTime; set => SetProperty(ref _startTime, value); }
         public TimeSpan TimeLeft { get => _timeLeft; set => SetProperty(ref _timeLeft, value); }
+
+
+        public int Level { get; set; }
+        public BruTile.Extent Extent { get; set; }
+
+        public string ProductId { get; set; }
+        public string DataId { get; set; }
 
     }
 }

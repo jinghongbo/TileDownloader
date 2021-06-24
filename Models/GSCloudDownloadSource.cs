@@ -3,8 +3,8 @@ using NetTopologySuite.IO.Converters;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,6 +14,10 @@ namespace TileDownloader.Models
 {
     public class GSCloudDownloadSource : DownloadSource
     {
+        public GSCloudDownloadSource()
+        {
+        }
+
         public class GSCloudPage<T>
         {
             [JsonProperty("keyid")]
@@ -50,76 +54,74 @@ namespace TileDownloader.Models
         [Argument("输出目录")]
         public string OutputDir { get; set; } = "gscloud";
 
-
-        public override async Task DownloadAsync(ObservableCollection<DownloadTask> downloadTasks)
+        public override async Task DownloadAsync(List<DownloadTask> downloadTasks)
         {
-            downloadTasks.Clear();
             Directory.CreateDirectory(OutputDir);
 
             using var handler = new HttpClientHandler();
-            var baseUrl = new Uri(Url);
-            handler.CookieContainer.SetCookies(baseUrl, Cookies);
+            var baseUri = new Uri(Url);
+            handler.CookieContainer.SetCookies(baseUri, Cookies);
             using var client = new HttpClient(handler);
-            client.BaseAddress = baseUrl;
+            client.BaseAddress = baseUri;
 
             client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", UserAgent);
             client.DefaultRequestHeaders.TryAddWithoutValidation("Referer", Referer);
 
-            var list = new List<GSCloudData>();
-            var offset = 0;
-            var pageSize = 100;
-            do
-            {
-                var page = await SearchAsync(client, offset, pageSize);
-
-                list.AddRange(page.Data);
-                offset += pageSize;
-                if (offset > page.Total)
-                {
-                    break;
-                }
-            } while (true);
-
-            using var semaphore = new SemaphoreSlim(Concurrent);
             var tasks = new List<Task>();
-            foreach (var data in list)
+            using var semaphore = new  SemaphoreSlim(Concurrent);
+            foreach (var downloadTask in downloadTasks)
             {
-                if (data.DataExists == 1)
+                await semaphore.WaitAsync();
+                var task = Task.Run(async () =>
                 {
-                    await semaphore.WaitAsync();
-                    var downloadTask = new DownloadTask()
+                    try
                     {
-                        Name = data.DataId,
-                        Total = 1,
-                    };
+                        var file = Path.Combine(OutputDir, $"{downloadTask.DataId}.zip");
+                        if (File.Exists(file))
+                        {
+                            downloadTask.Progress = 100;
+                            return;
+                        }
 
-                    downloadTasks.Add(downloadTask);
+                        for (int i = 0; i < Retry; i++)
+                        {
+                            try
+                            {
+                                using var res = await client.GetAsync($"sources/download/{downloadTask.ProductId}/{downloadTask.DataId}", HttpCompletionOption.ResponseHeadersRead);
+                                downloadTask.Total = res.Content.Headers.ContentLength.Value;
+                                await using var stream = await res.Content.ReadAsStreamAsync();
+                                var tmp = Path.GetTempFileName();
+                                await using var output = File.Create(tmp);
 
-                    var task = Task.Run(async () =>
+                                var bufferSize = 2048;
+                                var buffer = new byte[bufferSize];
+                                var result = new List<byte>();
+
+                                var readBytes = 0;
+                                while ((readBytes = stream.Read(buffer)) != 0)
+                                {
+                                    await output.WriteAsync(buffer, 0, readBytes);
+                                    downloadTask.Success += readBytes;
+                                    downloadTask.Progress = (downloadTask.Success) * 100D / downloadTask.Total;
+                                }
+
+                                File.Move(tmp, file);
+                                break;
+                            }
+                            catch (Exception e)
+                            {
+                                downloadTask.ErrorMessage = (e.InnerException ?? e).Message;
+                            }
+                        }
+                    }
+                    finally
                     {
-                        try
-                        {
-                            var file = System.IO.Path.Combine(OutputDir, $"{data.DataId}.zip");
-                            await using var output = System.IO.File.Create(file);
-                            await using var stream = await client.GetStreamAsync($"sources/download/{data.ProductId}/{data.DataId}");
-                            await stream.CopyToAsync(output);
-
-                            downloadTask.Success++;
-                        }
-                        catch (Exception e)
-                        {
-                            downloadTask.Fail++;
-                            downloadTask.ErrorMessage = e.Message;
-                        }
-                        finally
-                        {
-                            semaphore.Release();
-                        }
-                    });
-                    tasks.Add(task);
-                }
+                        semaphore.Release();
+                    }
+                });
+                tasks.Add(task);
+                tasks = tasks.Where(x => x.Status == TaskStatus.RanToCompletion).ToList();
             }
-
             await Task.WhenAll(tasks);
         }
 
@@ -143,6 +145,51 @@ namespace TileDownloader.Models
 
             var page = JsonConvert.DeserializeObject<GSCloudPage<GSCloudData>>(json, serializerSettings);
             return page;
+        }
+
+        public override async Task<List<DownloadTask>> GetDownloadTasksAsync()
+        {
+            var downloadTasks = new List<DownloadTask>();
+            using var handler = new HttpClientHandler();
+            var baseUri = new Uri(Url);
+            handler.CookieContainer.SetCookies(baseUri, Cookies);
+            using var client = new HttpClient(handler);
+            client.BaseAddress = baseUri;
+
+            client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", UserAgent);
+            client.DefaultRequestHeaders.TryAddWithoutValidation("Referer", Referer);
+
+            var list = new List<GSCloudData>();
+            var offset = 0;
+            var pageSize = 100;
+            do
+            {
+                var page = await SearchAsync(client, offset, pageSize);
+
+                list.AddRange(page.Data);
+                offset += pageSize;
+                if (offset > page.Total)
+                {
+                    break;
+                }
+            } while (true);
+
+            foreach (var data in list)
+            {
+                if (data.DataExists != 1)
+                {
+                    continue;
+                }
+                var downloadTask = new DownloadTask()
+                {
+                    Name = data.DataId,
+                    ProductId = data.ProductId,
+                    DataId = data.DataId,
+                };
+                downloadTasks.Add(downloadTask);
+            }
+
+            return downloadTasks;
         }
     }
 }

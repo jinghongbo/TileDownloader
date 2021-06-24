@@ -11,7 +11,7 @@ namespace MapDownloader
     {
         protected override Window CreateShell()
         {
-            return Container.Resolve<MainWindow>();
+            return Container.Resolve<MapWindow>();
         }
 
         protected override void RegisterTypes(IContainerRegistry containerRegistry)

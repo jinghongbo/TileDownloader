@@ -5,6 +5,7 @@
     xmlns:av="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:map="clr-namespace:MapControl;assembly=MapControl.WPF"
     mc:Ignorable="av" x:Class="MapDownloader.Views.MainWindow"
     prism:ViewModelLocator.AutoWireViewModel="True"
     Title="地图下载器" Height="600" Width="800"
@@ -37,12 +38,35 @@
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
                 <Grid Grid.Row="0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition></RowDefinition>
+                        <RowDefinition></RowDefinition>
+                    </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="120" />
                         <ColumnDefinition />
                     </Grid.ColumnDefinitions>
-                    <Label Grid.Column="0" Content="下载来源" />
+                    <Label Grid.Column="0" Content="来源" />
                     <ComboBox Grid.Column="1" Margin="5"  SelectedIndex="0" ItemsSource="{Binding Sources}" SelectedItem="{Binding Source}" DisplayMemberPath="Name" />
+                    <Label Grid.Column="0" Grid.Row="1" Content="范围" />
+                    <Grid Grid.Column="1" Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox  Margin="5" x:Name="txtRange"  />
+                        <md:PopupBox Grid.Column="1" Margin="5" >
+                            <map:Map Height="500" Width="500" >
+                                <map:Map.MapLayer>
+                                    <map:MapTileLayer  >
+                                        <map:MapTileLayer.TileSource>
+                                            <map:TileSource UriFormat="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"></map:TileSource>
+                                        </map:MapTileLayer.TileSource>
+                                    </map:MapTileLayer>
+                                </map:Map.MapLayer>
+                            </map:Map>
+                        </md:PopupBox>
+                    </Grid>
                 </Grid>
                 <ScrollViewer Grid.Row="1">
 

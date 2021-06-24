@@ -7,7 +7,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="av" x:Class="MapDownloader.Views.MainWindow"
     prism:ViewModelLocator.AutoWireViewModel="True"
-    Title="Map Downloader" Height="600" Width="800"
+    Title="地图下载器" Height="600" Width="800"
     TextElement.Foreground="{DynamicResource MaterialDesignBody}"
     Background="{DynamicResource MaterialDesignPaper}"
     WindowState="Maximized"

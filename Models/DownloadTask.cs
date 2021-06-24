@@ -3,7 +3,7 @@ using System;
 using System.ComponentModel;
 using System.Diagnostics;
 
-namespace TileDownloader.Models
+namespace MapDownloader.Models
 {
     public class DownloadTask : BindableBase
     {

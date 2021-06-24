@@ -1,8 +1,8 @@
 ﻿using Prism.Ioc;
 using System.Windows;
-using TileDownloader.Views;
+using MapDownloader.Views;
 
-namespace TileDownloader
+namespace MapDownloader
 {
     /// <summary>
     /// Interaction logic for App.xaml

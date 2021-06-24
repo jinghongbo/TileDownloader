@@ -2,7 +2,7 @@
 using System.Windows;
 using System.Windows.Threading;
 
-namespace TileDownloader.Views
+namespace MapDownloader.Views
 {
     /// <summary>
     /// Interaction logic for MainWindow.xaml

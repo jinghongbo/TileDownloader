@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace TileDownloader.Attributes
+namespace MapDownloader.Attributes
 {
     public class ArgumentAttribute : Attribute
     {

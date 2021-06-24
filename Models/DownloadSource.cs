@@ -1,9 +1,9 @@
 ﻿using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
-using TileDownloader.Attributes;
+using MapDownloader.Attributes;
 
-namespace TileDownloader.Models
+namespace MapDownloader.Models
 {
     public abstract class DownloadSource
     {

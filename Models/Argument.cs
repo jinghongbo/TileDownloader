@@ -4,9 +4,9 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using TileDownloader.Attributes;
+using MapDownloader.Attributes;
 
-namespace TileDownloader.Models
+namespace MapDownloader.Models
 {
     public class Argument
     {

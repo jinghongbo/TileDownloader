@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Data;
 
-namespace TileDownloader.Converters
+namespace MapDownloader.Converters
 {
     public class ExtentConverter : IValueConverter
     {

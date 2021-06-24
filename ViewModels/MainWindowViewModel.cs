@@ -6,10 +6,10 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Threading.Tasks;
-using TileDownloader.Converters;
-using TileDownloader.Models;
+using MapDownloader.Converters;
+using MapDownloader.Models;
 
-namespace TileDownloader.ViewModels
+namespace MapDownloader.ViewModels
 {
     public class MainWindowViewModel : BindableBase
     {

@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace TileDownloader.Models
+namespace MapDownloader.Models
 {
     [Table(Name = "blocks")]
     public class PakBlock

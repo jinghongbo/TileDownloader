@@ -3,7 +3,7 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net5.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
-    <AssemblyName>TileDownloader</AssemblyName>
+    <AssemblyName>MapDownloader</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="Properties\**" />

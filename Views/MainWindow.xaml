@@ -5,7 +5,7 @@
     xmlns:av="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    mc:Ignorable="av" x:Class="TileDownloader.Views.MainWindow"
+    mc:Ignorable="av" x:Class="MapDownloader.Views.MainWindow"
     prism:ViewModelLocator.AutoWireViewModel="True"
     Title="Map Downloader" Height="600" Width="800"
     TextElement.Foreground="{DynamicResource MaterialDesignBody}"

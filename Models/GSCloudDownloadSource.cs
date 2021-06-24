@@ -8,9 +8,9 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using TileDownloader.Attributes;
+using MapDownloader.Attributes;
 
-namespace TileDownloader.Models
+namespace MapDownloader.Models
 {
     public class GSCloudDownloadSource : DownloadSource
     { 

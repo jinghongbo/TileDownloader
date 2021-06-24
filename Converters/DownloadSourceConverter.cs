@@ -1,9 +1,9 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
-using TileDownloader.Models;
+using MapDownloader.Models;
 
-namespace TileDownloader.Converters
+namespace MapDownloader.Converters
 {
     public class DownloadSourceConverter : JsonConverter
     {

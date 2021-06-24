@@ -1,18 +1,14 @@
 ﻿using NetTopologySuite.Geometries;
 using NetTopologySuite.IO.Converters;
 using Newtonsoft.Json;
-using Prism.Mvvm;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
+using System.IO;
 using System.Net.Http;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows;
 using TileDownloader.Attributes;
-using TileDownloader.Models;
 
 namespace TileDownloader.Models
 {
@@ -22,17 +18,19 @@ namespace TileDownloader.Models
         {
             [JsonProperty("keyid")]
             public string KeyId { get; set; }
+
             [JsonProperty("total")]
             public int Total { get; set; }
+
             [JsonProperty("pageSize")]
             public int PageSize { get; set; }
+
             [JsonProperty("data")]
             public List<T> Data { get; set; }
         }
 
         public class GSCloudData
         {
-
             [JsonProperty("dataid")]
             public string DataId { get; set; }
 
@@ -53,10 +51,10 @@ namespace TileDownloader.Models
         public string OutputDir { get; set; } = "gscloud";
 
 
-
         public override async Task DownloadAsync(ObservableCollection<DownloadTask> downloadTasks)
         {
-            System.IO.Directory.CreateDirectory(OutputDir);
+            downloadTasks.Clear();
+            Directory.CreateDirectory(OutputDir);
 
             using var handler = new HttpClientHandler();
             var baseUrl = new Uri(Url);
@@ -72,7 +70,7 @@ namespace TileDownloader.Models
             var pageSize = 100;
             do
             {
-                var page = await this.SearchAsync(client, offset, pageSize);
+                var page = await SearchAsync(client, offset, pageSize);
 
                 list.AddRange(page.Data);
                 offset += pageSize;
@@ -94,10 +92,8 @@ namespace TileDownloader.Models
                         Name = data.DataId,
                         Total = 1,
                     };
-                    Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        downloadTasks.Add(downloadTask);
-                    });
+
+                    downloadTasks.Add(downloadTask);
 
                     var task = Task.Run(async () =>
                     {
@@ -108,34 +104,27 @@ namespace TileDownloader.Models
                             await using var stream = await client.GetStreamAsync($"sources/download/{data.ProductId}/{data.DataId}");
                             await stream.CopyToAsync(output);
 
-
                             downloadTask.Success++;
-                            downloadTask.Notify();
                         }
-                        catch(Exception e)
+                        catch (Exception e)
                         {
                             downloadTask.Fail++;
-                            downloadTask.Notify();
+                            downloadTask.ErrorMessage = e.Message;
                         }
                         finally
                         {
                             semaphore.Release();
                         }
-
                     });
                     tasks.Add(task);
                 }
             }
 
             await Task.WhenAll(tasks);
-
         }
-
 
         private async Task<GSCloudPage<GSCloudData>> SearchAsync(HttpClient client, int offset = 0, int pageSize = 10)
         {
-
-
             var serializerSettings = new JsonSerializerSettings();
             serializerSettings.Converters.Add(new GeometryConverter());
             serializerSettings.Converters.Add(new CoordinateConverter());
@@ -155,8 +144,5 @@ namespace TileDownloader.Models
             var page = JsonConvert.DeserializeObject<GSCloudPage<GSCloudData>>(json, serializerSettings);
             return page;
         }
-
-
-
     }
 }

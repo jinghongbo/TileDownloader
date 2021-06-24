@@ -1,4 +1,6 @@
-﻿using System.Windows;
+﻿using System;
+using System.Windows;
+using System.Windows.Threading;
 
 namespace TileDownloader.Views
 {
@@ -9,7 +11,9 @@ namespace TileDownloader.Views
     {
         public MainWindow()
         {
-            InitializeComponent();
-        }
+            InitializeComponent(); 
+
+
+        } 
     }
 }

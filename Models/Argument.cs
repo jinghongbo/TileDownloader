@@ -12,7 +12,7 @@ namespace TileDownloader.Models
     {
         public string Name { get; set; }
         public bool IsReadOnly { get; set; }
-
+        public string Width { get; set; } = "240";
         public PropertyInfo Property { get; }
         public object Instance { get; }
         public object Value { get => Property.GetValue(Instance); set => Property.SetValue(Instance, Convert.ChangeType(value, Property.PropertyType)); }

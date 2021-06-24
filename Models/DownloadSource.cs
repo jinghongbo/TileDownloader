@@ -6,7 +6,6 @@ namespace TileDownloader.Models
 {
     public class DownloadSource
     {
-        [Argument("名称", IsReadOnly = true)]
         public string Name { get; set; }
 
         [Argument("地址")]
@@ -30,14 +29,11 @@ namespace TileDownloader.Models
         [Argument("范围")]
         public string Range { get; set; } = "POLYGON ((30 10, 40 40, 20 40, 10 20, 30 10))";
         [Argument("并发")]
-        public int Concurrent { get; set; } = 10;
+        public int Concurrent { get; set; } = 4;
 
         [Argument("重试")]
-        public int Retry { get; set; } = 3;
-
-        [Argument("路径")]
-        public string Path { get; set; } = "";
-        public virtual Task DownloadAsync(ObservableCollection<DownloadTask> tasks)
+        public int Retry { get; set; } = 4;
+        public virtual Task DownloadAsync(ObservableCollection<DownloadTask> downloadTasks)
         {
             throw new System.Exception();
         }

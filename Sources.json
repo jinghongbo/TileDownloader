@@ -1,5 +1,12 @@
 ﻿[
   {
+    "Type": "GSCloud",
+    "Name": "ASTER GDEM 30M 分辨率数字高程数据",
+    "ProductId": "310",
+    "Url": "http://www.gscloud.cn",
+    "Cookies": "csrftoken=HVr4Ufjo9fccyziGCgKCbsN5AvTINgu4SDcPkpliQPy0JLnbdSrfYtOBZ5ah9VIi,sessionid=73glwcmwykdmv2vku9oedg0u4qojzgil"
+  },
+  {
     "Type": "Tile",
     "Schema": "GlobalSphericalMercator",
     "Url": "http://{s}.tianditu.gov.cn/DataServer?T=vec_w&x={x}&y={y}&l={z}&tk={k}",
@@ -198,12 +205,5 @@
     "Servers": "0,1,2,3",
     "Name": "Google China Maps - Hybrid",
     "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
-  },
-  {
-    "Type": "GSCloud",
-    "Name": "ASTER GDEM 30M 分辨率数字高程数据",
-    "ProductId": "310",
-    "Url": "http://www.gscloud.cn",
-    "Cookies": "csrftoken=HVr4Ufjo9fccyziGCgKCbsN5AvTINgu4SDcPkpliQPy0JLnbdSrfYtOBZ5ah9VIi,sessionid=73glwcmwykdmv2vku9oedg0u4qojzgil"
   }
 ]

@@ -52,13 +52,38 @@ namespace TileDownloader.ViewModels
             set => SetProperty(ref _downloadTasks, value);
         }
 
+        private bool _downloading;
+        public bool Downloading
+        {
+            get { return _downloading; }
+            set
+            {
+                SetProperty(ref _downloading, value);
+                DownloadCmd.RaiseCanExecuteChanged();
+            }
+        }
+
         public DelegateCommand DownloadCmd =>
-            _downloadCmd ??= new DelegateCommand(ExecuteDownload);
+            _downloadCmd ??= new DelegateCommand(ExecuteDownload, () => !Downloading);
 
         public async void ExecuteDownload()
         {
-            DownloadTasks = await Source.GetDownloadTasksAsync();
-            await Source.DownloadAsync(DownloadTasks);
+            try
+            {
+                Downloading = true;
+                DownloadTasks = await Source.GetDownloadTasksAsync();
+                await Source.DownloadAsync(DownloadTasks);
+                System.Windows.MessageBox.Show("下载完成");
+            }
+            catch (System.Exception e)
+            {
+                System.Windows.MessageBox.Show((e.InnerException ?? e).Message);
+            }
+            finally
+            {
+
+                Downloading = false;
+            }
         }
     }
 }

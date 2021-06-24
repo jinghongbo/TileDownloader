@@ -17,17 +17,23 @@ namespace TileDownloader.Models
 {
     public class TileDownloadSource : DownloadSource
     {
-        [Argument("Schema")]
-        public string Schema { get; set; }
-
-        [Argument("最小级别")]
+        [Argument("最小层级")]
         public int MinLevel { get; set; }
 
-        [Argument("最大级别")]
+        [Argument("最大层级")]
         public int MaxLevel { get; set; } = 15;
 
         [Argument("输出PAK")]
         public string OutputPak { get; set; } = "map.pak";
+
+        [Argument("密钥")]
+        public string Key { get; set; }
+
+        [Argument("节点")]
+        public string Servers { get; set; }
+        [Argument("Schema")]
+        public string Schema { get; set; }
+
 
         public override async Task DownloadAsync(List<DownloadTask> downloadTasks)
         {
@@ -45,19 +51,16 @@ namespace TileDownloader.Models
 
             var tasks = new List<Task>();
 
-            int test = 0;
             using var semaphore = new SemaphoreSlim(Concurrent);
             foreach (var downloadTask in downloadTasks)
             {
-                await semaphore.WaitAsync();
                 foreach (var tileInfo in source.Schema.GetTileInfos(downloadTask.Extent, downloadTask.Level))
                 {
+                    await semaphore.WaitAsync();
                     var task = Task.Run(async () =>
                     {
                         try
                         {
-                            Interlocked.Increment(ref test);
-                            bool successed = false;
                             for (int i = 0; i < Retry; i++)
                             {
                                 try
@@ -78,36 +81,22 @@ namespace TileDownloader.Models
                                             .AppendData(new PakBlock { X = x, Y = y, Z = z, Tile = tile })
                                             .ExecuteAffrows();
                                     }
-                                    successed = true;
+                                    lock (downloadTask)
+                                        downloadTask.Completed++;
                                     break;
                                 }
                                 catch (Exception e)
                                 {
                                     lock (downloadTask)
-                                        downloadTask.ErrorMessage = (e.InnerException ?? e).Message;
+                                        downloadTask.ErrorMessage = "第" + i + "次：" + (e.InnerException ?? e).Message;
                                 }
-                            }
-                            lock (downloadTask)
-                            {
-                                if (successed)
-                                {
-                                    downloadTask.Success++;
-                                }
-                                else
-                                {
-                                    downloadTask.Fail++;
-                                }
-                                downloadTask.Progress = (downloadTask.Success + downloadTask.Fail) * 100D / downloadTask.Total;
-                                //downloadTask.TimeLeft = (DateTime.Now - downloadTask.StartTime) / (100D / downloadTask.Progress);
                             }
                         }
                         finally
                         {
                             semaphore.Release();
-                            Interlocked.Decrement(ref test);
                         }
                     });
-                    Console.WriteLine(test);
                     tasks.Add(task);
                     tasks = tasks.Where(x => x.Status != TaskStatus.RanToCompletion).ToList();
                 }

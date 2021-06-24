@@ -12,12 +12,6 @@ namespace TileDownloader.Models
         [Argument("地址")]
         public string Url { get; set; }
 
-        [Argument("密钥")]
-        public string Key { get; set; }
-
-        [Argument("节点")]
-        public string Servers { get; set; }
-
         [Argument("User Agent")]
         public string UserAgent { get; set; }
 

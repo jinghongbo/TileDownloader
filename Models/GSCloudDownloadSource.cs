@@ -13,10 +13,7 @@ using TileDownloader.Attributes;
 namespace TileDownloader.Models
 {
     public class GSCloudDownloadSource : DownloadSource
-    {
-        public GSCloudDownloadSource()
-        {
-        }
+    { 
 
         public class GSCloudPage<T>
         {
@@ -68,7 +65,7 @@ namespace TileDownloader.Models
             client.DefaultRequestHeaders.TryAddWithoutValidation("Referer", Referer);
 
             var tasks = new List<Task>();
-            using var semaphore = new  SemaphoreSlim(Concurrent);
+            using var semaphore = new SemaphoreSlim(Concurrent);
             foreach (var downloadTask in downloadTasks)
             {
                 await semaphore.WaitAsync();
@@ -77,9 +74,11 @@ namespace TileDownloader.Models
                     try
                     {
                         var file = Path.Combine(OutputDir, $"{downloadTask.DataId}.zip");
+                        var tmp = Path.Combine(OutputDir, $"{downloadTask.DataId}.tmp");
                         if (File.Exists(file))
                         {
-                            downloadTask.Progress = 100;
+                            await using var fs = File.OpenRead(file);
+                            downloadTask.Total = downloadTask.Completed = fs.Length;
                             return;
                         }
 
@@ -90,7 +89,9 @@ namespace TileDownloader.Models
                                 using var res = await client.GetAsync($"sources/download/{downloadTask.ProductId}/{downloadTask.DataId}", HttpCompletionOption.ResponseHeadersRead);
                                 downloadTask.Total = res.Content.Headers.ContentLength.Value;
                                 await using var stream = await res.Content.ReadAsStreamAsync();
-                                var tmp = Path.GetTempFileName();
+
+                                downloadTask.Completed = 0;
+
                                 await using var output = File.Create(tmp);
 
                                 var bufferSize = 2048;
@@ -98,19 +99,20 @@ namespace TileDownloader.Models
                                 var result = new List<byte>();
 
                                 var readBytes = 0;
-                                while ((readBytes = stream.Read(buffer)) != 0)
+                                while (downloadTask.Completed < downloadTask.Total && (readBytes = stream.Read(buffer)) != 0)
                                 {
                                     await output.WriteAsync(buffer, 0, readBytes);
-                                    downloadTask.Success += readBytes;
-                                    downloadTask.Progress = (downloadTask.Success) * 100D / downloadTask.Total;
+                                    downloadTask.Completed += readBytes;
                                 }
+
+                                await output.DisposeAsync();
 
                                 File.Move(tmp, file);
                                 break;
                             }
                             catch (Exception e)
                             {
-                                downloadTask.ErrorMessage = (e.InnerException ?? e).Message;
+                                downloadTask.ErrorMessage = "第" + i + "次：" + (e.InnerException ?? e).Message;
                             }
                         }
                     }

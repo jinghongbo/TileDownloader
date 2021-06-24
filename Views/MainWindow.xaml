@@ -27,7 +27,7 @@
     <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
-            <RowDefinition Height="*" />
+            <RowDefinition Height="2*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <GroupBox Header="下载参数" Margin="5">
@@ -74,17 +74,15 @@
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="名称" Binding="{Binding Name}" Width="Auto" />
                     <DataGridTextColumn Header="总量" Binding="{Binding Total}" Width="Auto" />
-                    <DataGridTextColumn Header="成功" Binding="{Binding Success}" Width="Auto" />
-                    <DataGridTextColumn Header="失败" Binding="{Binding Fail}" Width="Auto" />
-                    <!--<DataGridTextColumn Header="剩余" Binding="{Binding TimeLeft}" Width="Auto" />-->
-                    <DataGridTextColumn Header="错误" Binding="{Binding ErrorMessage}" Width="*" />
-                    <DataGridTemplateColumn Header="进度" Width="*">
+                    <DataGridTextColumn Header="完成" Binding="{Binding Completed}" Width="Auto" />
+                    <DataGridTemplateColumn Header="进度" Width="240">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <ProgressBar Minimum="0" Maximum="100" Value="{Binding Progress}" Height="Auto" Margin="5"></ProgressBar>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
+                    <DataGridTextColumn Header="错误" Binding="{Binding ErrorMessage}" Width="*" />
                 </DataGrid.Columns>
             </DataGrid>
         </GroupBox>

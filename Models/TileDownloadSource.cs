@@ -98,6 +98,10 @@ namespace MapDownloader.Models
             {
                 foreach (var tileInfo in source.Schema.GetTileInfos(downloadTask.Extent, downloadTask.Level))
                 {
+                    if (vm.CancellationTokenSource.IsCancellationRequested)
+                    {
+                        return;
+                    }
                     await semaphore.WaitAsync();
                     var task = Task.Run(async () =>
                     {
@@ -107,6 +111,10 @@ namespace MapDownloader.Models
                             {
                                 try
                                 {
+                                    if (vm.CancellationTokenSource.IsCancellationRequested)
+                                    {
+                                        return;
+                                    }
                                     var z = tileInfo.Index.Level;
                                     var x = tileInfo.Index.Col;
                                     var y = tileInfo.Index.Row;
@@ -117,11 +125,11 @@ namespace MapDownloader.Models
                                     {
                                         var uri = source.GetUri(tileInfo);
 
-                                        var tile = await client.GetByteArrayAsync(uri);
+                                        var tile = await client.GetByteArrayAsync(uri, vm.CancellationTokenSource.Token);
 
-                                        freesql.Insert<PakBlock>().AsTable(_ => table)
-                                            .AppendData(new PakBlock { X = x, Y = y, Z = z, Tile = tile })
-                                            .ExecuteAffrows();
+                                        await freesql.Insert<PakBlock>().AsTable(_ => table)
+                                               .AppendData(new PakBlock { X = x, Y = y, Z = z, Tile = tile })
+                                               .ExecuteAffrowsAsync(vm.CancellationTokenSource.Token);
                                     }
                                     lock (downloadTask)
                                     {
@@ -142,7 +150,7 @@ namespace MapDownloader.Models
                         {
                             semaphore.Release();
                         }
-                    });
+                    }, vm.CancellationTokenSource.Token);
 
                     tasks.Add(task);
                     tasks = tasks.Where(x => x.Status != TaskStatus.RanToCompletion).ToList();

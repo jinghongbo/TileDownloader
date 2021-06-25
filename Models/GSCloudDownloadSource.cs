@@ -76,7 +76,7 @@ namespace MapDownloader.Models
             var pageSize = 100;
             do
             {
-                var page = await SearchAsync(client, vm.Range, offset, pageSize);
+                var page = await SearchAsync(client, vm.Range, offset, pageSize, vm.CancellationTokenSource.Token);
 
                 list.AddRange(page.Data);
                 offset += pageSize;
@@ -132,6 +132,10 @@ namespace MapDownloader.Models
             using var semaphore = new SemaphoreSlim(vm.Concurrent);
             foreach (var downloadTask in vm.Tasks)
             {
+                if (vm.CancellationTokenSource.IsCancellationRequested)
+                {
+                    return;
+                }
                 await semaphore.WaitAsync();
                 var task = Task.Run(async () =>
                 {
@@ -150,10 +154,14 @@ namespace MapDownloader.Models
                         {
                             try
                             {
-                                using var res = await client.GetAsync($"sources/download/{downloadTask.ProductId}/{downloadTask.DataId}", HttpCompletionOption.ResponseHeadersRead);
+                                if (vm.CancellationTokenSource.IsCancellationRequested)
+                                {
+                                    return;
+                                }
+                                using var res = await client.GetAsync($"sources/download/{downloadTask.ProductId}/{downloadTask.DataId}", HttpCompletionOption.ResponseHeadersRead, vm.CancellationTokenSource.Token);
                                 downloadTask.Total = res.Content.Headers.ContentLength.Value;
                                 downloadTask.Completed = 0;
-                                await using var stream = await res.Content.ReadAsStreamAsync();
+                                await using var stream = await res.Content.ReadAsStreamAsync(vm.CancellationTokenSource.Token);
                                 await using var output = File.Create(tmp);
 
                                 var bufferSize = 2048;
@@ -163,7 +171,7 @@ namespace MapDownloader.Models
                                 var readBytes = 0;
                                 while (downloadTask.Completed < downloadTask.Total && (readBytes = stream.Read(buffer)) != 0)
                                 {
-                                    await output.WriteAsync(buffer, 0, readBytes);
+                                    await output.WriteAsync(buffer, 0, readBytes, vm.CancellationTokenSource.Token);
                                     downloadTask.Completed += readBytes;
                                     vm.Progress = vm.Tasks.Sum(x => x.Progress) / vm.Tasks.Count;
 
@@ -186,14 +194,14 @@ namespace MapDownloader.Models
                     {
                         semaphore.Release();
                     }
-                });
+                }, vm.CancellationTokenSource.Token);
                 tasks.Add(task);
                 tasks = tasks.Where(x => x.Status != TaskStatus.RanToCompletion).ToList();
             }
             await Task.WhenAll(tasks);
         }
 
-        private async Task<GSCloudPage<GSCloudData>> SearchAsync(HttpClient client, string range, int offset = 0, int pageSize = 10)
+        private async Task<GSCloudPage<GSCloudData>> SearchAsync(HttpClient client, string range, int offset, int pageSize, CancellationToken cancellationToken)
         {
             var serializerSettings = new JsonSerializerSettings();
             serializerSettings.Converters.Add(new GeometryConverter());
@@ -207,7 +215,7 @@ namespace MapDownloader.Models
             {
                 {nameof(tableInfo),JsonConvert.SerializeObject(tableInfo,serializerSettings) },
                 {nameof(query),JsonConvert.SerializeObject(query,serializerSettings)  },
-            }));
+            }), cancellationToken);
 
             var json = await res.Content.ReadAsStringAsync();
 

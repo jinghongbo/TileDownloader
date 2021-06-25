@@ -10,6 +10,7 @@ using MapDownloader.Converters;
 using MapDownloader.Models;
 using Microsoft.Win32;
 using System;
+using System.Threading;
 
 namespace MapDownloader.ViewModels
 {
@@ -106,6 +107,7 @@ namespace MapDownloader.ViewModels
             {
                 SetProperty(ref _downloading, value);
                 DownloadCmd.RaiseCanExecuteChanged();
+                CancelCmd.RaiseCanExecuteChanged();
             }
         }
 
@@ -116,7 +118,7 @@ namespace MapDownloader.ViewModels
         {
             try
             {
-                _cancellationTokenSource = new System.Threading.CancellationTokenSource();
+                CancellationTokenSource = new System.Threading.CancellationTokenSource();
                 Downloading = true;
                 await Source.DownloadAsync(this);
                 Message = "下载完成";
@@ -135,11 +137,10 @@ namespace MapDownloader.ViewModels
         public DelegateCommand CancelCmd =>
             _cancelCmd ?? (_cancelCmd = new DelegateCommand(ExecuteCancel, () => Downloading));
 
-        System.Threading.CancellationTokenSource _cancellationTokenSource;
+        CancellationTokenSource _cancellationTokenSource;
         private void ExecuteCancel()
         {
-            _cancellationTokenSource.Cancel();
-            _cancellationTokenSource.Dispose();
+            CancellationTokenSource.Cancel();
         }
 
 
@@ -148,6 +149,8 @@ namespace MapDownloader.ViewModels
         private DelegateCommand _browseCmd;
         public DelegateCommand BrowseCmd =>
             _browseCmd ?? (_browseCmd = new DelegateCommand(ExecuteBrowse));
+
+        public CancellationTokenSource CancellationTokenSource { get => _cancellationTokenSource; set => _cancellationTokenSource = value; }
 
         private void ExecuteBrowse()
         {

@@ -126,15 +126,28 @@ namespace MapDownloader.ViewModels
             try
             {
                 CancellationTokenSource = new CancellationTokenSource();
+                Progress = 0;
+
                 DownloadTask = Task.Run(async () =>
                {
                    var startTime = DateTime.Now;
                    while (Progress < 100 && !CancellationTokenSource.IsCancellationRequested && Downloading)
                    {
-                       var used = DateTime.Now - startTime;
-                       var left = used / ((100 - Progress) / 100);
-                       Message = $"完成进度:{Progress:F}%,剩余时间:{left},已用时间:{used}";
+                       var progress = Progress;
                        await Task.Delay(100);
+                       if (Progress > 0)
+                       {
+                           try
+                           {
+                               var used = DateTime.Now - startTime;
+                               var left = used / (Progress / 100) - used;
+                               Message = $"完成进度:{Progress:F}%,已用时间:{Format(used)},剩余时间:{Format(left)}";
+                           }
+                           catch (Exception e)
+                           {
+                               Message = e.Message;
+                           }
+                       }
                    }
                }, CancellationTokenSource.Token);
                 Downloading = true;
@@ -197,29 +210,16 @@ namespace MapDownloader.ViewModels
 
         public Task DownloadTask { get; set; }
 
-        //public void UpdateMessageByTime(DateTime startTime)
-        //{
-        //    var used = DateTime.Now - startTime;
-        //    var left = used / (Progress / 100);
-        //    var message = $"{left}/{used}";
-        //    Message = message;
-        //    //if (timeSpan.Days > 1)
-        //    //{
-        //    //    message += $"{timeSpan.Days:#}天";
-        //    //}
-        //    //if (timeSpan.Hours > 1)
-        //    //{
-        //    //    message += $"{timeSpan.Hours:#}时";
-        //    //}
-        //    //if (timeSpan.Minutes > 1)
-        //    //{
-        //    //    message += $"{timeSpan.Minutes:#}分";
-        //    //}
-        //    //if (timeSpan.Seconds > 1)
-        //    //{
-        //    //    message += $"{timeSpan.Seconds:#}秒";
-        //    //}
-        //    //message += "完成";
-        //}
+        public string Format(TimeSpan timeSpan)
+        {
+            if (timeSpan.Days > 1)
+            {
+                return timeSpan.ToString("dd\\.hh\\:mm\\:ss");
+            }
+            else
+            {
+                return timeSpan.ToString("hh\\:mm\\:ss");
+            }
+        }
     }
 }

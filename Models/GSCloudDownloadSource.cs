@@ -9,11 +9,12 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using MapDownloader.Attributes;
+using Newtonsoft.Json.Linq;
 
 namespace MapDownloader.Models
 {
     public class GSCloudDownloadSource : DownloadSource
-    { 
+    {
 
         public class GSCloudPage<T>
         {
@@ -188,6 +189,10 @@ namespace MapDownloader.Models
                     ProductId = data.ProductId,
                     DataId = data.DataId,
                 };
+
+                //var json = await client.GetStringAsync($"/wsd/gscloud_wsd/dataset/select_one?pid={data.ProductId}&dataid={downloadTask.DataId}");
+                //JObject obj = JObject.Parse(json);
+                //downloadTask.Total = obj["filesize"].Value<long>();
                 downloadTasks.Add(downloadTask);
             }
 

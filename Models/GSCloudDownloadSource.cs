@@ -122,7 +122,7 @@ namespace MapDownloader.Models
                     }
                 });
                 tasks.Add(task);
-                tasks = tasks.Where(x => x.Status == TaskStatus.RanToCompletion).ToList();
+                tasks = tasks.Where(x => x.Status != TaskStatus.RanToCompletion).ToList();
             }
             await Task.WhenAll(tasks);
         }

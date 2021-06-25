@@ -21,7 +21,6 @@ namespace MapDownloader.Models
         [Argument("Cookies")]
         public string Cookies { get; set; }
 
-        [Argument("范围")]
         public string Range { get; set; } = "POLYGON ((30 10, 40 40, 20 40, 10 20, 30 10))";
         [Argument("并发")]
         public int Concurrent { get; set; } = 4;

@@ -15,11 +15,6 @@ namespace MapDownloader.Views
 
 
         }
-
-        private void Button_Click(object sender, RoutedEventArgs e)
-        {
-            MapWindow window = new MapWindow();
-            window.ShowDialog();
-        }
+         
     }
 }

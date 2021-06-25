@@ -54,6 +54,9 @@ namespace MapDownloader.Models
 
         public override async Task DownloadAsync(ViewModels.MainWindowViewModel vm)
         {
+
+
+
             Directory.CreateDirectory(vm.Path);
 
             using var handler = new HttpClientHandler();
@@ -126,9 +129,6 @@ namespace MapDownloader.Models
 
 
 
-            var startTime = DateTime.Now;
-
-            var tasks = new List<Task>();
             using var semaphore = new SemaphoreSlim(vm.Concurrent);
             foreach (var downloadTask in vm.Tasks)
             {
@@ -137,68 +137,66 @@ namespace MapDownloader.Models
                     return;
                 }
                 await semaphore.WaitAsync();
-                var task = Task.Run(async () =>
-                {
-                    try
-                    {
-                        var file = Path.Combine(vm.Path, $"{downloadTask.DataId}.zip");
-                        if (File.Exists(file))
-                        {
-                            await using var fs = File.OpenRead(file);
-                            downloadTask.Total = downloadTask.Completed = fs.Length;
-                            return;
-                        }
+                _ = Task.Run(async () =>
+                   {
+                       try
+                       {
+                           var file = Path.Combine(vm.Path, $"{downloadTask.DataId}.zip");
+                           if (File.Exists(file))
+                           {
+                               await using var fs = File.OpenRead(file);
+                               downloadTask.Total = downloadTask.Completed = fs.Length;
+                               vm.Progress = vm.Tasks.Sum(x => x.Progress) / vm.Tasks.Count;
+                               return;
+                           }
 
-                        var tmp = Path.Combine(vm.Path, $"{downloadTask.DataId}.tmp");
-                        for (int i = 0; i < vm.Retry; i++)
-                        {
-                            try
-                            {
-                                if (vm.CancellationTokenSource.IsCancellationRequested)
-                                {
-                                    return;
-                                }
-                                using var res = await client.GetAsync($"sources/download/{downloadTask.ProductId}/{downloadTask.DataId}", HttpCompletionOption.ResponseHeadersRead, vm.CancellationTokenSource.Token);
-                                downloadTask.Total = res.Content.Headers.ContentLength.Value;
-                                downloadTask.Completed = 0;
-                                await using var stream = await res.Content.ReadAsStreamAsync(vm.CancellationTokenSource.Token);
-                                await using var output = File.Create(tmp);
+                           var tmp = Path.Combine(vm.Path, $"{downloadTask.DataId}.tmp");
+                           for (int i = 0; i < vm.Retry; i++)
+                           {
+                               try
+                               {
+                                   if (vm.CancellationTokenSource.IsCancellationRequested)
+                                   {
+                                       return;
+                                   }
+                                   using var res = await client.GetAsync($"sources/download/{downloadTask.ProductId}/{downloadTask.DataId}", HttpCompletionOption.ResponseHeadersRead, vm.CancellationTokenSource.Token);
+                                   downloadTask.Total = res.Content.Headers.ContentLength.Value;
+                                   downloadTask.Completed = 0;
+                                   await using var stream = await res.Content.ReadAsStreamAsync(vm.CancellationTokenSource.Token);
+                                   await using var output = File.Create(tmp);
 
-                                var bufferSize = 2048;
-                                var buffer = new byte[bufferSize];
-                                var result = new List<byte>();
+                                   var bufferSize = 2048;
+                                   var buffer = new byte[bufferSize];
+                                   var result = new List<byte>();
 
-                                var readBytes = 0;
-                                while (downloadTask.Completed < downloadTask.Total && (readBytes = stream.Read(buffer)) != 0)
-                                {
-                                    await output.WriteAsync(buffer, 0, readBytes, vm.CancellationTokenSource.Token);
-                                    downloadTask.Completed += readBytes;
-                                    vm.Progress = vm.Tasks.Sum(x => x.Progress) / vm.Tasks.Count;
-
-                                    vm.UpdateMessageByTime(startTime);
-                                }
-                                await output.DisposeAsync();
-                                File.Move(tmp, file);
-
+                                   var readBytes = 0;
+                                   while (downloadTask.Completed < downloadTask.Total && (readBytes = stream.Read(buffer)) != 0)
+                                   {
+                                       await output.WriteAsync(buffer, 0, readBytes, vm.CancellationTokenSource.Token);
+                                       downloadTask.Completed += readBytes;
+                                       vm.Progress = vm.Tasks.Sum(x => x.Progress) / vm.Tasks.Count;
+                                   }
+                                   await output.DisposeAsync();
+                                   File.Move(tmp, file);
 
 
-                                break;
-                            }
-                            catch (Exception e)
-                            {
-                                downloadTask.Error = "第" + (i + 1) + "次下载失败：" + (e.InnerException ?? e).Message;
-                            }
-                        }
-                    }
-                    finally
-                    {
-                        semaphore.Release();
-                    }
-                }, vm.CancellationTokenSource.Token);
-                tasks.Add(task);
-                tasks = tasks.Where(x => x.Status != TaskStatus.RanToCompletion).ToList();
+
+                                   break;
+                               }
+                               catch (Exception e)
+                               {
+                                   downloadTask.Error = "第" + (i + 1) + "次下载失败：" + (e.InnerException ?? e).Message;
+                               }
+                           }
+                       }
+                       finally
+                       {
+                           semaphore.Release();
+                           downloadTask.Progress = 100;
+                       }
+                   }, vm.CancellationTokenSource.Token);
             }
-            await Task.WhenAll(tasks);
+            await vm.DownloadTask;
         }
 
         private async Task<GSCloudPage<GSCloudData>> SearchAsync(HttpClient client, string range, int offset, int pageSize, CancellationToken cancellationToken)

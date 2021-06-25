@@ -90,9 +90,6 @@ namespace MapDownloader.Models
 
                 vm.Tasks.Add(downloadTask);
             }
-
-            var tasks = new List<Task>();
-
             using var semaphore = new SemaphoreSlim(vm.Concurrent);
             foreach (var downloadTask in vm.Tasks)
             {
@@ -103,61 +100,57 @@ namespace MapDownloader.Models
                         return;
                     }
                     await semaphore.WaitAsync();
-                    var task = Task.Run(async () =>
-                    {
-                        try
-                        {
-                            for (int i = 0; i < vm.Retry; i++)
-                            {
-                                try
-                                {
-                                    if (vm.CancellationTokenSource.IsCancellationRequested)
-                                    {
-                                        return;
-                                    }
-                                    var z = tileInfo.Index.Level;
-                                    var x = tileInfo.Index.Col;
-                                    var y = tileInfo.Index.Row;
+                    _ = Task.Run(async () =>
+                     {
+                         try
+                         {
+                             for (int i = 0; i < vm.Retry; i++)
+                             {
+                                 try
+                                 {
+                                     if (vm.CancellationTokenSource.IsCancellationRequested)
+                                     {
+                                         return;
+                                     }
+                                     var z = tileInfo.Index.Level;
+                                     var x = tileInfo.Index.Col;
+                                     var y = tileInfo.Index.Row;
 
-                                    var table = PakBlock.GetTable(z, x, y);
-                                    if (!freesql.Select<PakBlock>().AsTable((_, n) => table).Any(b =>
-                                        b.X == x && b.Y == y && b.Z == z && b.Tile != null))
-                                    {
-                                        var uri = source.GetUri(tileInfo);
+                                     var table = PakBlock.GetTable(z, x, y);
+                                     if (!freesql.Select<PakBlock>().AsTable((_, n) => table).Any(b =>
+                                         b.X == x && b.Y == y && b.Z == z && b.Tile != null))
+                                     {
+                                         var uri = source.GetUri(tileInfo);
 
-                                        var tile = await client.GetByteArrayAsync(uri, vm.CancellationTokenSource.Token);
+                                         var tile = await client.GetByteArrayAsync(uri, vm.CancellationTokenSource.Token);
 
-                                        await freesql.Insert<PakBlock>().AsTable(_ => table)
-                                               .AppendData(new PakBlock { X = x, Y = y, Z = z, Tile = tile })
-                                               .ExecuteAffrowsAsync(vm.CancellationTokenSource.Token);
-                                    }
-                                    lock (downloadTask)
-                                    {
-                                        downloadTask.Completed++;
-                                        vm.Progress = vm.Tasks.Sum(x => x.Completed) * 100d / vm.Tasks.Sum(x => x.Total);
-                                    }
-                                    vm.UpdateMessageByTime(startTime);
-                                    break;
-                                }
-                                catch (Exception e)
-                                {
-                                    lock (downloadTask)
-                                        downloadTask.Error = "第" + (i + 1) + "次：" + (e.InnerException ?? e).Message;
-                                }
-                            }
-                        }
-                        finally
-                        {
-                            semaphore.Release();
-                        }
-                    }, vm.CancellationTokenSource.Token);
+                                         await freesql.Insert<PakBlock>().AsTable(_ => table)
+                                                .AppendData(new PakBlock { X = x, Y = y, Z = z, Tile = tile })
+                                                .ExecuteAffrowsAsync(vm.CancellationTokenSource.Token);
+                                     }
+                                     break;
+                                 }
+                                 catch (Exception e)
+                                 {
+                                     lock (downloadTask)
+                                         downloadTask.Error = "第" + (i + 1) + "次：" + (e.InnerException ?? e).Message;
+                                 }
+                             }
+                         }
+                         finally
+                         {
+                             lock (downloadTask)
+                             {
+                                 downloadTask.Completed++;
+                                 vm.Progress = vm.Tasks.Sum(x => x.Completed) * 100d / vm.Tasks.Sum(x => x.Total);
+                             }
+                             semaphore.Release();
+                         }
+                     }, vm.CancellationTokenSource.Token);
 
-                    tasks.Add(task);
-                    tasks = tasks.Where(x => x.Status != TaskStatus.RanToCompletion).ToList();
                 }
             }
-
-            await Task.WhenAll(tasks);
+            await vm.DownloadTask;
         }
 
     }

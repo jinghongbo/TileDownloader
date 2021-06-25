@@ -12,31 +12,32 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using MapDownloader.Attributes;
+using System.Net;
 
 namespace MapDownloader.Models
 {
     public class TileDownloadSource : DownloadSource
     {
-        [Argument("最小层级")]
+        [DonwloadArgument("最小层级")]
         public int MinLevel { get; set; }
 
-        [Argument("最大层级")]
+        [DonwloadArgument("最大层级")]
         public int MaxLevel { get; set; } = 15;
 
-        [Argument("输出PAK")]
-        public string OutputPak { get; set; } = "map.pak";
 
-        [Argument("密钥")]
+        [DonwloadArgument("密钥")]
         public string Key { get; set; }
 
-        [Argument("节点")]
-        public string Servers { get; set; }
-        [Argument("Schema")]
+        [DonwloadArgument("子域名")]
+        public string Subdomains { get; set; }
+        [DonwloadArgument("Schema")]
         public string Schema { get; set; }
 
 
-        public override async Task DownloadAsync(List<DownloadTask> downloadTasks)
+        public override async Task DownloadAsync(ViewModels.MainWindowViewModel vm)
         {
+            var startTime = DateTime.Now;
+
             using var handler = new HttpClientHandler();
             using var client = new HttpClient();
             client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", UserAgent);
@@ -44,75 +45,14 @@ namespace MapDownloader.Models
 
             var schema = new GlobalSphericalMercator();
             var source = new HttpTileSource(schema, Url,
-                Servers.Split(","), Key, Name);
+                Subdomains.Split(","), Key, Name);
 
-            using var freesql = new FreeSqlBuilder().UseConnectionString(DataType.Sqlite, $"data source={OutputPak}")
-           .UseAutoSyncStructure(true).Build();
 
-            var tasks = new List<Task>();
-
-            using var semaphore = new SemaphoreSlim(Concurrent);
-            foreach (var downloadTask in downloadTasks)
-            {
-                foreach (var tileInfo in source.Schema.GetTileInfos(downloadTask.Extent, downloadTask.Level))
-                {
-                    await semaphore.WaitAsync();
-                    var task = Task.Run(async () =>
-                    {
-                        try
-                        {
-                            for (int i = 0; i < Retry; i++)
-                            {
-                                try
-                                {
-                                    var z = tileInfo.Index.Level;
-                                    var x = tileInfo.Index.Col;
-                                    var y = tileInfo.Index.Row;
-
-                                    var table = PakBlock.GetTable(z, x, y);
-                                    if (!freesql.Select<PakBlock>().AsTable((_, n) => table).Any(b =>
-                                        b.X == x && b.Y == y && b.Z == z && b.Tile != null))
-                                    {
-                                        var uri = source.GetUri(tileInfo);
-
-                                        var tile = await client.GetByteArrayAsync(uri);
-
-                                        freesql.Insert<PakBlock>().AsTable(_ => table)
-                                            .AppendData(new PakBlock { X = x, Y = y, Z = z, Tile = tile })
-                                            .ExecuteAffrows();
-                                    }
-                                    lock (downloadTask)
-                                        downloadTask.Completed++;
-                                    break;
-                                }
-                                catch (Exception e)
-                                {
-                                    lock (downloadTask)
-                                        downloadTask.ErrorMessage = "第" + i + "次：" + (e.InnerException ?? e).Message;
-                                }
-                            }
-                        }
-                        finally
-                        {
-                            semaphore.Release();
-                        }
-                    });
-                    tasks.Add(task);
-                    tasks = tasks.Where(x => x.Status != TaskStatus.RanToCompletion).ToList();
-                }
-            }
-
-            await Task.WhenAll(tasks);
-        }
-
-        public override async Task<List<DownloadTask>> GetDownloadTasksAsync()
-        {
-            var downloadTasks = new List<DownloadTask>();
-            var schema = new GlobalSphericalMercator();
+            vm.Tasks = new ObservableCollection<DownloadTask>();
 
             var reader = new WKTReader();
 
-            var geom = reader.Read(Range);
+            var geom = reader.Read(vm.Range);
             var envelope = geom.EnvelopeInternal;
 
             var info = new PakInfo
@@ -127,7 +67,7 @@ namespace MapDownloader.Models
                 MaxLevel = MaxLevel
             };
 
-            using var freesql = new FreeSqlBuilder().UseConnectionString(DataType.Sqlite, $"data source={OutputPak}")
+            using var freesql = new FreeSqlBuilder().UseConnectionString(DataType.Sqlite, $"data source={vm.Path}")
            .UseAutoSyncStructure(true).Build();
 
             await freesql.Delete<PakInfo>().Where(x => true).ExecuteAffrowsAsync();
@@ -148,9 +88,69 @@ namespace MapDownloader.Models
                     Extent = extent,
                 };
 
-                downloadTasks.Add(downloadTask);
+                vm.Tasks.Add(downloadTask);
             }
-            return downloadTasks;
+
+            var tasks = new List<Task>();
+
+            using var semaphore = new SemaphoreSlim(vm.Concurrent);
+            foreach (var downloadTask in vm.Tasks)
+            {
+                foreach (var tileInfo in source.Schema.GetTileInfos(downloadTask.Extent, downloadTask.Level))
+                {
+                    await semaphore.WaitAsync();
+                    var task = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            for (int i = 0; i < vm.Retry; i++)
+                            {
+                                try
+                                {
+                                    var z = tileInfo.Index.Level;
+                                    var x = tileInfo.Index.Col;
+                                    var y = tileInfo.Index.Row;
+
+                                    var table = PakBlock.GetTable(z, x, y);
+                                    if (!freesql.Select<PakBlock>().AsTable((_, n) => table).Any(b =>
+                                        b.X == x && b.Y == y && b.Z == z && b.Tile != null))
+                                    {
+                                        var uri = source.GetUri(tileInfo);
+
+                                        var tile = await client.GetByteArrayAsync(uri);
+
+                                        freesql.Insert<PakBlock>().AsTable(_ => table)
+                                            .AppendData(new PakBlock { X = x, Y = y, Z = z, Tile = tile })
+                                            .ExecuteAffrows();
+                                    }
+                                    lock (downloadTask)
+                                    {
+                                        downloadTask.Completed++;
+                                        vm.Progress = vm.Tasks.Sum(x => x.Completed) * 100d / vm.Tasks.Sum(x => x.Total);
+                                    }
+                                    vm.UpdateMessageByTime(startTime);
+                                    break;
+                                }
+                                catch (Exception e)
+                                {
+                                    lock (downloadTask)
+                                        downloadTask.Error = "第" + i + "次：" + (e.InnerException ?? e).Message;
+                                }
+                            }
+                        }
+                        finally
+                        {
+                            semaphore.Release();
+                        }
+                    });
+
+                    tasks.Add(task);
+                    tasks = tasks.Where(x => x.Status != TaskStatus.RanToCompletion).ToList();
+                }
+            }
+
+            await Task.WhenAll(tasks);
         }
+
     }
 }

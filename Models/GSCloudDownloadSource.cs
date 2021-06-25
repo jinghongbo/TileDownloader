@@ -46,15 +46,15 @@ namespace MapDownloader.Models
             public string ProductId { get; set; }
         }
 
-        [Argument("产品编号")]
+        [DonwloadArgument("产品编号")]
         public string ProductId { get; set; }
 
-        [Argument("输出目录")]
-        public string OutputDir { get; set; } = "gscloud";
+        [DonwloadArgument("Cookies")]
+        public string Cookies { get; set; }
 
-        public override async Task DownloadAsync(List<DownloadTask> downloadTasks)
+        public override async Task DownloadAsync(ViewModels.MainWindowViewModel vm)
         {
-            Directory.CreateDirectory(OutputDir);
+            Directory.CreateDirectory(vm.Path);
 
             using var handler = new HttpClientHandler();
             var baseUri = new Uri(Url);
@@ -65,99 +65,8 @@ namespace MapDownloader.Models
             client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", UserAgent);
             client.DefaultRequestHeaders.TryAddWithoutValidation("Referer", Referer);
 
-            var tasks = new List<Task>();
-            using var semaphore = new SemaphoreSlim(Concurrent);
-            foreach (var downloadTask in downloadTasks)
-            {
-                await semaphore.WaitAsync();
-                var task = Task.Run(async () =>
-                {
-                    try
-                    {
-                        var file = Path.Combine(OutputDir, $"{downloadTask.DataId}.zip");
-                        var tmp = Path.Combine(OutputDir, $"{downloadTask.DataId}.tmp");
-                        if (File.Exists(file))
-                        {
-                            await using var fs = File.OpenRead(file);
-                            downloadTask.Total = downloadTask.Completed = fs.Length;
-                            return;
-                        }
 
-                        for (int i = 0; i < Retry; i++)
-                        {
-                            try
-                            {
-                                using var res = await client.GetAsync($"sources/download/{downloadTask.ProductId}/{downloadTask.DataId}", HttpCompletionOption.ResponseHeadersRead);
-                                downloadTask.Total = res.Content.Headers.ContentLength.Value;
-                                await using var stream = await res.Content.ReadAsStreamAsync();
-
-                                downloadTask.Completed = 0;
-
-                                await using var output = File.Create(tmp);
-
-                                var bufferSize = 2048;
-                                var buffer = new byte[bufferSize];
-                                var result = new List<byte>();
-
-                                var readBytes = 0;
-                                while (downloadTask.Completed < downloadTask.Total && (readBytes = stream.Read(buffer)) != 0)
-                                {
-                                    await output.WriteAsync(buffer, 0, readBytes);
-                                    downloadTask.Completed += readBytes;
-                                }
-
-                                await output.DisposeAsync();
-
-                                File.Move(tmp, file);
-                                break;
-                            }
-                            catch (Exception e)
-                            {
-                                downloadTask.ErrorMessage = "第" + i + "次：" + (e.InnerException ?? e).Message;
-                            }
-                        }
-                    }
-                    finally
-                    {
-                        semaphore.Release();
-                    }
-                });
-                tasks.Add(task);
-                tasks = tasks.Where(x => x.Status != TaskStatus.RanToCompletion).ToList();
-            }
-            await Task.WhenAll(tasks);
-        }
-
-        private async Task<GSCloudPage<GSCloudData>> SearchAsync(HttpClient client, int offset = 0, int pageSize = 10)
-        {
-            var serializerSettings = new JsonSerializerSettings();
-            serializerSettings.Converters.Add(new GeometryConverter());
-            serializerSettings.Converters.Add(new CoordinateConverter());
-            var reader = new NetTopologySuite.IO.WKTReader();
-            var geom = reader.Read(Range);
-            var tableInfo = new { offset = offset, pageSize = pageSize };
-            var query = new { productid = new { @in = new[] { ProductId } }, geom_params = new { qtype = 1, value = geom } };
-
-            var res = await client.PostAsync("/wsd/gscloud_wsd/dataset/p_search", new FormUrlEncodedContent(new Dictionary<string, string>()
-            {
-                {nameof(tableInfo),JsonConvert.SerializeObject(tableInfo,serializerSettings) },
-                {nameof(query),JsonConvert.SerializeObject(query,serializerSettings)  },
-            }));
-
-            var json = await res.Content.ReadAsStringAsync();
-
-            var page = JsonConvert.DeserializeObject<GSCloudPage<GSCloudData>>(json, serializerSettings);
-            return page;
-        }
-
-        public override async Task<List<DownloadTask>> GetDownloadTasksAsync()
-        {
-            var downloadTasks = new List<DownloadTask>();
-            using var handler = new HttpClientHandler();
-            var baseUri = new Uri(Url);
-            handler.CookieContainer.SetCookies(baseUri, Cookies);
-            using var client = new HttpClient(handler);
-            client.BaseAddress = baseUri;
+            vm.Tasks = new System.Collections.ObjectModel.ObservableCollection<DownloadTask>();
 
             client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", UserAgent);
             client.DefaultRequestHeaders.TryAddWithoutValidation("Referer", Referer);
@@ -167,7 +76,7 @@ namespace MapDownloader.Models
             var pageSize = 100;
             do
             {
-                var page = await SearchAsync(client, offset, pageSize);
+                var page = await SearchAsync(client, vm.Range, offset, pageSize);
 
                 list.AddRange(page.Data);
                 offset += pageSize;
@@ -189,14 +98,122 @@ namespace MapDownloader.Models
                     ProductId = data.ProductId,
                     DataId = data.DataId,
                 };
+                vm.Tasks.Add(downloadTask);
+                //var file = Path.Combine(vm.Path, $"{downloadTask.DataId}.zip");
+                //if (File.Exists(file))
+                //{
+                //    await using var fs = File.OpenRead(file);
+                //    downloadTask.Total = downloadTask.Completed = fs.Length;
+                //}
+                //else
+                //{
+                //    for (int i = 0; i < vm.Retry; i++)
+                //    {
+                //        try
+                //        {
+                //            using var res = await client.GetAsync($"sources/download/{downloadTask.ProductId}/{downloadTask.DataId}", HttpCompletionOption.ResponseHeadersRead);
+                //            downloadTask.Total = res.Content.Headers.ContentLength.Value;
+                //            continue;
+                //        }
+                //        catch (Exception e)
+                //        {
+                //            downloadTask.Error = "第" + (i + 1) + "次获取失败：" + (e.InnerException ?? e).Message;
+                //        }
+                //    }
 
-                //var json = await client.GetStringAsync($"/wsd/gscloud_wsd/dataset/select_one?pid={data.ProductId}&dataid={downloadTask.DataId}");
-                //JObject obj = JObject.Parse(json);
-                //downloadTask.Total = obj["filesize"].Value<long>();
-                downloadTasks.Add(downloadTask);
+                //}
             }
 
-            return downloadTasks;
+
+
+            var startTime = DateTime.Now;
+
+            var tasks = new List<Task>();
+            using var semaphore = new SemaphoreSlim(vm.Concurrent);
+            foreach (var downloadTask in vm.Tasks)
+            {
+                await semaphore.WaitAsync();
+                var task = Task.Run(async () =>
+                {
+                    try
+                    {
+                        var file = Path.Combine(vm.Path, $"{downloadTask.DataId}.zip");
+                        if (File.Exists(file))
+                        {
+                            await using var fs = File.OpenRead(file);
+                            downloadTask.Total = downloadTask.Completed = fs.Length;
+                            return;
+                        }
+
+                        var tmp = Path.Combine(vm.Path, $"{downloadTask.DataId}.tmp");
+                        for (int i = 0; i < vm.Retry; i++)
+                        {
+                            try
+                            {
+                                using var res = await client.GetAsync($"sources/download/{downloadTask.ProductId}/{downloadTask.DataId}", HttpCompletionOption.ResponseHeadersRead);
+                                downloadTask.Total = res.Content.Headers.ContentLength.Value;
+                                downloadTask.Completed = 0;
+                                await using var stream = await res.Content.ReadAsStreamAsync();
+                                await using var output = File.Create(tmp);
+
+                                var bufferSize = 2048;
+                                var buffer = new byte[bufferSize];
+                                var result = new List<byte>();
+
+                                var readBytes = 0;
+                                while (downloadTask.Completed < downloadTask.Total && (readBytes = stream.Read(buffer)) != 0)
+                                {
+                                    await output.WriteAsync(buffer, 0, readBytes);
+                                    downloadTask.Completed += readBytes;
+                                    vm.Progress = vm.Tasks.Sum(x => x.Progress) / vm.Tasks.Count;
+
+                                    vm.UpdateMessageByTime(startTime);
+                                }
+                                await output.DisposeAsync();
+                                File.Move(tmp, file);
+
+
+
+                                break;
+                            }
+                            catch (Exception e)
+                            {
+                                downloadTask.Error = "第" + (i + 1) + "次下载失败：" + (e.InnerException ?? e).Message;
+                            }
+                        }
+                    }
+                    finally
+                    {
+                        semaphore.Release();
+                    }
+                });
+                tasks.Add(task);
+                tasks = tasks.Where(x => x.Status != TaskStatus.RanToCompletion).ToList();
+            }
+            await Task.WhenAll(tasks);
         }
+
+        private async Task<GSCloudPage<GSCloudData>> SearchAsync(HttpClient client, string range, int offset = 0, int pageSize = 10)
+        {
+            var serializerSettings = new JsonSerializerSettings();
+            serializerSettings.Converters.Add(new GeometryConverter());
+            serializerSettings.Converters.Add(new CoordinateConverter());
+            var reader = new NetTopologySuite.IO.WKTReader();
+            var geom = reader.Read(range);
+            var tableInfo = new { offset = offset, pageSize = pageSize };
+            var query = new { productid = new { @in = new[] { ProductId } }, geom_params = new { qtype = 1, value = geom } };
+
+            var res = await client.PostAsync("/wsd/gscloud_wsd/dataset/p_search", new FormUrlEncodedContent(new Dictionary<string, string>()
+            {
+                {nameof(tableInfo),JsonConvert.SerializeObject(tableInfo,serializerSettings) },
+                {nameof(query),JsonConvert.SerializeObject(query,serializerSettings)  },
+            }));
+
+            var json = await res.Content.ReadAsStringAsync();
+
+            var page = JsonConvert.DeserializeObject<GSCloudPage<GSCloudData>>(json, serializerSettings);
+            return page;
+        }
+
     }
 }

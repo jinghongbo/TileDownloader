@@ -32,37 +32,55 @@
             <RowDefinition Height="2*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-        <GroupBox Header="下载参数" Margin="5">
-            <Grid Grid.Row="0" Margin="5">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
-                <Grid Grid.Row="0">
-                    <Grid.RowDefinitions>
-                        <RowDefinition></RowDefinition>
-                        <RowDefinition></RowDefinition>
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="120" />
-                        <ColumnDefinition />
-                    </Grid.ColumnDefinitions>
-                    <Label Grid.Column="0" Content="来源" />
-                    <ComboBox Grid.Column="1" Margin="5"  SelectedIndex="0" ItemsSource="{Binding Sources}" SelectedItem="{Binding Source}" DisplayMemberPath="Name" />
-                    <Label Grid.Column="0" Grid.Row="1" Content="范围" />
-                    <Grid Grid.Column="1" Grid.Row="1">
+        <GroupBox Header="参数" Margin="5">
+            <ScrollViewer>
+                <StackPanel Margin="5">
+                    <Grid>
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="120" />
                             <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="60" />
                         </Grid.ColumnDefinitions>
-                        <TextBox  Margin="5"   Text="{Binding Source.Range}"/>
-                        <md:PopupBox Grid.Column="1" Margin="5" Padding="0" StaysOpen="True"  >
-                            <c:MapPickControl Height="300" Width="800"  Wkt="{Binding Source.Range,Mode=TwoWay}" ></c:MapPickControl>
+                        <Label Grid.Column="0" Content="来源" />
+                        <ComboBox Grid.Column="1" Margin="5"  SelectedIndex="0" ItemsSource="{Binding Sources}" SelectedItem="{Binding Source}" DisplayMemberPath="Name" />
+                    </Grid>
+                    <Grid  >
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="120" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="60" />
+                        </Grid.ColumnDefinitions>
+                        <Label Grid.Column="0" Content="范围" Margin="5" />
+                        <TextBox  Margin="5" Grid.Column="1"  Text="{Binding Range}"/>
+                        <md:PopupBox Grid.Column="2" Margin="5" Padding="0" StaysOpen="True"  >
+                            <c:MapPickControl Height="300" Width="800"  Wkt="{Binding Range,Mode=TwoWay}" ></c:MapPickControl>
                         </md:PopupBox>
                     </Grid>
-                </Grid>
-                <ScrollViewer Grid.Row="1">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="120" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="60" />
+                            <ColumnDefinition Width="120" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="60" />
+                        </Grid.ColumnDefinitions>
+                        <Label Grid.Column="0" Content="并发" Margin="5" />
+                        <TextBox  Margin="5" Grid.Column="1"  Text="{Binding Concurrent}"/>
+                        <Label Content="重试" Margin="5" Grid.Column="3" />
+                        <TextBox  Margin="5" Grid.Column="4"  Text="{Binding Retry}"/>
 
+                    </Grid>
+                    <Grid  >
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="120" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="60" />
+                        </Grid.ColumnDefinitions>
+                        <Label Grid.Column="0" Content="路径" Margin="5" />
+                        <TextBox  Margin="5" Grid.Column="1"  Text="{Binding Path}"/>
+                        <Button Grid.Column="2" Margin="5" Cursor="Hand" Command="{Binding BrowseCmd}">...</Button>
+                    </Grid>
                     <ItemsControl ItemsSource="{Binding Arguments}" >
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -70,24 +88,19 @@
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="120"></ColumnDefinition>
                                         <ColumnDefinition Width="*"></ColumnDefinition>
+                                        <ColumnDefinition Width="60" />
                                     </Grid.ColumnDefinitions>
                                     <Label Content="{Binding Name}"></Label>
                                     <TextBox Text="{Binding Value}" Margin="5" VerticalContentAlignment="Center" IsReadOnly="{Binding IsReadOnly}" Grid.Column="1" ></TextBox>
                                 </Grid>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <StackPanel>
-                                </StackPanel>
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
                     </ItemsControl>
-                </ScrollViewer>
-            </Grid>
+                </StackPanel>
+            </ScrollViewer>
         </GroupBox>
-        <GroupBox Header="下载任务" Grid.Row="1" Margin="5">
-            <DataGrid   IsReadOnly="True" AutoGenerateColumns="False" Grid.ColumnSpan="3"  ItemsSource="{Binding DownloadTasks}">
+        <GroupBox Header="任务" Grid.Row="1" Margin="5">
+            <DataGrid   IsReadOnly="True" AutoGenerateColumns="False" Grid.ColumnSpan="3"  ItemsSource="{Binding Tasks}">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="名称" Binding="{Binding Name}" Width="Auto" />
                     <DataGridTextColumn Header="总量" Binding="{Binding Total}" Width="Auto" />
@@ -99,7 +112,7 @@
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
-                    <DataGridTextColumn Header="错误" Binding="{Binding ErrorMessage}" Width="*" />
+                    <DataGridTextColumn Header="错误" Binding="{Binding Error}" Width="*" />
                 </DataGrid.Columns>
             </DataGrid>
         </GroupBox>
@@ -108,9 +121,12 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition />
                 <ColumnDefinition Width="120" />
+                <ColumnDefinition Width="120" />
             </Grid.ColumnDefinitions>
-            <!--<ProgressBar Margin="5" Height="Auto" ></ProgressBar>-->
+            <ProgressBar Margin="5" Height="Auto" Minimum="0" Maximum="100" Value="{Binding Progress}" ></ProgressBar>
+            <Label Margin="5"  Content="{Binding Message}" Foreground="White" ></Label>
             <Button Content="下载" Command="{Binding DownloadCmd}" Grid.Column="1" Margin="5" />
+            <Button Content="取消" Command="{Binding CancelCmd}" Grid.Column="2" Margin="5" Cursor="Hand" />
         </Grid>
     </Grid>
 </Window>

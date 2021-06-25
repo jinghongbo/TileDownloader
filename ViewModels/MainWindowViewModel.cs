@@ -8,6 +8,8 @@ using System.IO;
 using System.Threading.Tasks;
 using MapDownloader.Converters;
 using MapDownloader.Models;
+using Microsoft.Win32;
+using System;
 
 namespace MapDownloader.ViewModels
 {
@@ -15,7 +17,7 @@ namespace MapDownloader.ViewModels
     {
         private DelegateCommand _downloadCmd;
 
-        private List<DownloadTask> _downloadTasks;
+        private ObservableCollection<DownloadTask> _tasks;
 
         private DownloadSource _source;
 
@@ -33,23 +35,67 @@ namespace MapDownloader.ViewModels
             set
             {
                 SetProperty(ref _source, value);
-                Arguments = Argument.GetArguments(Source);
+                Arguments = DownloadArgument.GetArguments(Source);
                 DownloadCmd.RaiseCanExecuteChanged();
             }
         }
 
-        private List<Argument> _arguments;
+        private List<DownloadArgument> _arguments;
 
-        public List<Argument> Arguments
+        public List<DownloadArgument> Arguments
         {
             get { return _arguments; }
             set { SetProperty(ref _arguments, value); }
         }
 
-        public List<DownloadTask> DownloadTasks
+        public ObservableCollection<DownloadTask> Tasks
         {
-            get => _downloadTasks;
-            set => SetProperty(ref _downloadTasks, value);
+            get => _tasks;
+            set => SetProperty(ref _tasks, value);
+        }
+        private double _progress;
+        public double Progress
+        {
+            get { return _progress; }
+            set { SetProperty(ref _progress, value); }
+        }
+
+        private string _path;
+        public string Path
+        {
+            get { return _path; }
+            set
+            {
+                SetProperty(ref _path, value);
+                DownloadCmd.RaiseCanExecuteChanged();
+            }
+        }
+        private int _concurrent = 4;
+        public int Concurrent
+        {
+            get { return _concurrent; }
+            set { SetProperty(ref _concurrent, value); }
+        }
+
+        private int _retry = 4;
+        public int Retry
+        {
+            get { return _retry; }
+            set { SetProperty(ref _retry, value); }
+        }
+
+        private string _range = "POLYGON ((103.88 30.81, 103.88 30.56, 104.23 30.56, 104.23 30.81, 103.88 30.81))";
+        public string Range
+        {
+            get { return _range; }
+            set { SetProperty(ref _range, value); }
+        }
+
+        private string _message;
+        public string Message
+        {
+            get { return _message; }
+            set { SetProperty(ref _message, value); }
         }
 
         private bool _downloading;
@@ -64,26 +110,91 @@ namespace MapDownloader.ViewModels
         }
 
         public DelegateCommand DownloadCmd =>
-            _downloadCmd ??= new DelegateCommand(ExecuteDownload, () => !Downloading);
+            _downloadCmd ??= new DelegateCommand(ExecuteDownload, () => !Downloading && !string.IsNullOrEmpty(Path));
 
         public async void ExecuteDownload()
         {
             try
             {
+                _cancellationTokenSource = new System.Threading.CancellationTokenSource();
                 Downloading = true;
-                DownloadTasks = await Source.GetDownloadTasksAsync();
-                await Source.DownloadAsync(DownloadTasks);
-                System.Windows.MessageBox.Show("下载完成");
+                await Source.DownloadAsync(this);
+                Message = "下载完成";
             }
             catch (System.Exception e)
             {
-                System.Windows.MessageBox.Show((e.InnerException ?? e).Message);
+                Message = (e.InnerException ?? e).Message;
             }
             finally
             {
 
                 Downloading = false;
             }
+        }
+        private DelegateCommand _cancelCmd;
+        public DelegateCommand CancelCmd =>
+            _cancelCmd ?? (_cancelCmd = new DelegateCommand(ExecuteCancel, () => Downloading));
+
+        System.Threading.CancellationTokenSource _cancellationTokenSource;
+        private void ExecuteCancel()
+        {
+            _cancellationTokenSource.Cancel();
+            _cancellationTokenSource.Dispose();
+        }
+
+
+
+
+        private DelegateCommand _browseCmd;
+        public DelegateCommand BrowseCmd =>
+            _browseCmd ?? (_browseCmd = new DelegateCommand(ExecuteBrowse));
+
+        private void ExecuteBrowse()
+        {
+            if (Source.Type == "Tile")
+            {
+                var dialog = new SaveFileDialog();
+                dialog.Filter = "pak|*.pak";
+
+                if (dialog.ShowDialog() == true)
+                {
+                    Path = dialog.FileName;
+                }
+            }
+            else if (Source.Type == "GSCloud")
+            {
+
+                var dialog = new SaveFileDialog();
+                dialog.FileName = "[当前目录]";
+                dialog.Filter = "目录|dir";
+                if (dialog.ShowDialog() == true)
+                {
+                    Path = System.IO.Path.GetDirectoryName(dialog.FileName);
+                }
+            }
+        }
+        public void UpdateMessageByTime(DateTime startTime)
+        {
+            var timeSpan = (DateTime.Now - startTime) / (Progress / 100);
+            var message = "预计";
+            if (timeSpan.Days > 1)
+            {
+                message += $"{timeSpan.Days:#}天";
+            }
+            if (timeSpan.Hours > 1)
+            {
+                message += $"{timeSpan.Hours:#}时";
+            }
+            if (timeSpan.Minutes > 1)
+            {
+                message += $"{timeSpan.Minutes:#}分";
+            }
+            if (timeSpan.Seconds > 1)
+            {
+                message += $"{timeSpan.Seconds:#}秒";
+            }
+            message += "完成";
+            Message = message;
         }
     }
 }

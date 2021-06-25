@@ -6,12 +6,12 @@ using System.Threading.Tasks;
 
 namespace MapDownloader.Attributes
 {
-    public class ArgumentAttribute : Attribute
+    public class DonwloadArgumentAttribute : Attribute
     {
         public string Name { get; set; }
         public bool IsReadOnly { get; set; }
 
-        public ArgumentAttribute(string name)
+        public DonwloadArgumentAttribute(string name)
         {
             Name = name;
         }

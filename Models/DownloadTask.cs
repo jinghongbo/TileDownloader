@@ -11,7 +11,7 @@ namespace MapDownloader.Models
         private long _completed;
         private long _total;
         private double _progress;
-        private string _errorMessage;
+        private string _error;
 
         public string Name { get => _name; set => SetProperty(ref _name, value); }
         public long Total
@@ -33,7 +33,7 @@ namespace MapDownloader.Models
         }
         public double Progress { get => _progress; set => SetProperty(ref _progress, value); }
 
-        public string ErrorMessage { get => _errorMessage; set => SetProperty(ref _errorMessage, value); }
+        public string Error { get => _error; set => SetProperty(ref _error, value); }
 
 
         public int Level { get; set; }

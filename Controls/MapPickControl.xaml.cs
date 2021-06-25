@@ -86,9 +86,17 @@ namespace MapDownloader.Controls
                 if (e.NewValue != e.OldValue)
                 {
                     var ctl = (MapPickControl)s;
-                    NetTopologySuite.IO.WKTReader reader = new NetTopologySuite.IO.WKTReader();
-                    var geom = reader.Read((string)e.NewValue);
-                    ctl.pick.Locations = geom.Coordinates.Select(x => new Location() { Latitude = x.Y, Longitude = x.X });
+                    try
+                    {
+
+                        NetTopologySuite.IO.WKTReader reader = new NetTopologySuite.IO.WKTReader();
+                        var geom = reader.Read((string)e.NewValue);
+                        ctl.pick.Locations = geom.Coordinates.Select(x => new Location() { Latitude = x.Y, Longitude = x.X });
+                    }
+                    catch
+                    {
+                        ctl.pick.Locations = null;
+                    }
                 }
             }));
 

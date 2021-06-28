@@ -131,17 +131,31 @@ namespace MapDownloader.ViewModels
 
                 DownloadTask = Task.Run(async () =>
                {
+                   var sw = System.Diagnostics.Stopwatch.StartNew();
+                   var speed = 0d;
+                   var progress = 0d;
                    while (Progress < 100 && !CancellationTokenSource.IsCancellationRequested && Downloading)
                    {
-                       var progress = Progress;
-                       await Task.Delay(100);
+                       var time = DateTime.Now;
+                       await Task.Delay(200);
+
                        if (Progress > 0)
                        {
                            try
                            {
+                               if (sw.ElapsedMilliseconds > 5000 && Progress > progress)
+                               {
+                                   speed = (Progress - progress) / sw.Elapsed.Seconds;
+                                   progress = Progress;
+                                   sw.Restart();
+                               }
+
                                var used = DateTime.Now - startTime;
-                               var left = used / (Progress / 100) - used;
-                               Message = $"完成进度:{Progress:F}%,已用时间:{Format(used)},剩余时间:{Format(left)}";
+
+
+                               var left = speed > 0 ? Format(TimeSpan.FromSeconds((100 - Progress) / speed)) : "未知";
+                               //var left = used / (Progress / 100) - used;
+                               Message = $"完成进度:{Progress:F}%,已用时间:{Format(used)},剩余时间:{left}";
                            }
                            catch (Exception e)
                            {

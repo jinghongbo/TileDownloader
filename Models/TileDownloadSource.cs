@@ -94,6 +94,7 @@ namespace MapDownloader.Models
                 {
                     if (vm.CancellationTokenSource.IsCancellationRequested)
                     {
+                        freesql.Dispose();
                         return;
                     }
                     await semaphore.WaitAsync();
@@ -154,7 +155,6 @@ namespace MapDownloader.Models
                 }
             }
             await vm.DownloadTask;
-            freesql.Dispose();
         }
 
     }

@@ -153,7 +153,7 @@ namespace MapDownloader.ViewModels
                 Downloading = true;
                 await Source.DownloadAsync(this);
                 await DownloadTask;
-                Message = $"下载完成,用时:{Format(DateTime.Now - startTime)}";
+                Message = $"下载完成,完成用时:{Format(DateTime.Now - startTime)}";
             }
             catch (System.Exception e)
             {

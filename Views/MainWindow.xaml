@@ -122,7 +122,7 @@
             </DataGrid>
         </GroupBox>
 
-        <Grid Grid.Row="3" Margin="5">
+        <Grid Grid.Row="3">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition />
                 <ColumnDefinition Width="120" />

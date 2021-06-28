@@ -86,7 +86,6 @@ namespace MapDownloader.Models
 
                 vm.Tasks.Add(downloadTask);
             }
-            var tables = new ConcurrentDictionary<string, object>();
             using var semaphore = new SemaphoreSlim(vm.Concurrent);
             foreach (var downloadTask in vm.Tasks)
             {
@@ -113,14 +112,7 @@ namespace MapDownloader.Models
                                      var z = tileInfo.Index.Level;
                                      var x = tileInfo.Index.Col;
                                      var y = tileInfo.Index.Row;
-
                                      var table = PakBlock.GetTable(z, x, y);
-                                     tables.GetOrAdd(table, _ =>
-                                     {
-                                         freesql.CodeFirst.SyncStructure(typeof(PakBlock), table);
-                                         return new object { };
-                                     });
-
                                      if (!freesql.Select<PakBlock>().AsTable((_, n) => table).Any(b =>
                                          b.X == x && b.Y == y && b.Z == z && b.Tile != null))
                                      {

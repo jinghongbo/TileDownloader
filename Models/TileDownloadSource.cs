@@ -154,6 +154,7 @@ namespace MapDownloader.Models
                 }
             }
             await vm.DownloadTask;
+            freesql.Dispose();
         }
 
     }

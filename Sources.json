@@ -9,83 +9,92 @@
   {
     "Type": "Tile",
     "Schema": "GlobalSphericalMercator",
-    "Url": "http://{s}.tianditu.gov.cn/DataServer?T=vec_w&x={x}&y={y}&l={z}&tk={k}",
+    "Url": "https://{s}.tianditu.gov.cn/vec_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=img&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}&tk={k}",
     "Subdomains": "t0,t1,t2,t3,t4,t5,t6,t7",
-    "Key": "5d22d49fdc586cb5caed68bfb12d1e6b",
+    "Key": "ef6151d9f0386f3b2a2fdf1d58fe9b32",
     "Name": "天地图 - 矢量底图",
-    "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
+    "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62",
+    "Referer": "https://map.tianditu.gov.cn/"
   },
   {
     "Type": "Tile",
     "Schema": "GlobalSphericalMercator",
-    "Url": "http://{s}.tianditu.gov.cn/DataServer?T=cva_w&x={x}&y={y}&l={z}&tk={k}",
+    "Url": "https://{s}.tianditu.gov.cn/cva_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=img&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}&tk={k}",
     "Subdomains": "t0,t1,t2,t3,t4,t5,t6,t7",
-    "Key": "5d22d49fdc586cb5caed68bfb12d1e6b",
+    "Key": "ef6151d9f0386f3b2a2fdf1d58fe9b32",
     "Name": "天地图 - 矢量注记",
-    "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
+    "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62",
+    "Referer": "https://map.tianditu.gov.cn/"
   },
   {
     "Type": "Tile",
     "Schema": "GlobalSphericalMercator",
-    "Url": "http://{s}.tianditu.gov.cn/DataServer?T=img_w&x={x}&y={y}&l={z}&tk={k}",
+    "Url": "https://{s}.tianditu.gov.cn/img_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=img&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}&tk={k}",
     "Subdomains": "t0,t1,t2,t3,t4,t5,t6,t7",
-    "Key": "5d22d49fdc586cb5caed68bfb12d1e6b",
+    "Key": "ef6151d9f0386f3b2a2fdf1d58fe9b32",
     "Name": "天地图 - 影像底图",
-    "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
+    "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62",
+    "Referer": "https://map.tianditu.gov.cn/"
   },
   {
     "Type": "Tile",
     "Schema": "GlobalSphericalMercator",
-    "Url": "http://{s}.tianditu.gov.cn/DataServer?T=cia_w&x={x}&y={y}&l={z}&tk={k}",
+    "Url": "https://{s}.tianditu.gov.cn/cia_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=img&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}&tk={k}",
     "Subdomains": "t0,t1,t2,t3,t4,t5,t6,t7",
-    "Key": "5d22d49fdc586cb5caed68bfb12d1e6b",
+    "Key": "ef6151d9f0386f3b2a2fdf1d58fe9b32",
     "Name": "天地图 - 影像注记",
-    "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
+    "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62",
+    "Referer": "https://map.tianditu.gov.cn/"
   },
   {
     "Type": "Tile",
     "Schema": "GlobalSphericalMercator",
-    "Url": "http://{s}.tianditu.gov.cn/DataServer?T=ter_w&x={x}&y={y}&l={z}&tk={k}",
+    "Url": "https://{s}.tianditu.gov.cn/ter_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=img&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}&tk={k}",
     "Subdomains": "t0,t1,t2,t3,t4,t5,t6,t7",
-    "Key": "5d22d49fdc586cb5caed68bfb12d1e6b",
+    "Key": "ef6151d9f0386f3b2a2fdf1d58fe9b32",
     "Name": "天地图 - 地形晕渲",
-    "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
+    "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62",
+    "Referer": "https://map.tianditu.gov.cn/"
   },
   {
     "Type": "Tile",
     "Schema": "GlobalSphericalMercator",
-    "Url": "http://{s}.tianditu.gov.cn/DataServer?T=cta_w&x={x}&y={y}&l={z}&tk={k}",
+    "Url": "https://{s}.tianditu.gov.cn/cta_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=img&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}&tk={k}",
     "Subdomains": "t0,t1,t2,t3,t4,t5,t6,t7",
-    "Key": "5d22d49fdc586cb5caed68bfb12d1e6b",
+    "Key": "ef6151d9f0386f3b2a2fdf1d58fe9b32",
     "Name": "天地图 - 地形注记",
-    "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
+    "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62",
+    "Referer": "https://map.tianditu.gov.cn/"
   },
   {
     "Type": "Tile",
     "Schema": "GlobalSphericalMercator",
-    "Url": "http://{s}.tianditu.gov.cn/DataServer?T=ibo_w&x={x}&y={y}&l={z}&tk={k}",
+    "Url": "https://{s}.tianditu.gov.cn/ibo_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=img&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}&tk={k}",
     "Subdomains": "t0,t1,t2,t3,t4,t5,t6,t7",
-    "Key": "5d22d49fdc586cb5caed68bfb12d1e6b",
+    "Key": "ef6151d9f0386f3b2a2fdf1d58fe9b32",
     "Name": "天地图 - 全球境界",
-    "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
+    "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62",
+    "Referer": "https://map.tianditu.gov.cn/"
   },
   {
     "Type": "Tile",
     "Schema": "GlobalSphericalMercator",
-    "Url": "http://{s}.tianditu.gov.cn/DataServer?T=eva_w&x={x}&y={y}&l={z}&tk={k}",
+    "Url": "https://{s}.tianditu.gov.cn/eva_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=img&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}&tk={k}",
     "Subdomains": "t0,t1,t2,t3,t4,t5,t6,t7",
-    "Key": "5d22d49fdc586cb5caed68bfb12d1e6b",
+    "Key": "ef6151d9f0386f3b2a2fdf1d58fe9b32",
     "Name": "天地图 - 矢量英文注记",
-    "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
+    "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62",
+    "Referer": "https://map.tianditu.gov.cn/"
   },
   {
     "Type": "Tile",
     "Schema": "GlobalSphericalMercator",
-    "Url": "http://{s}.tianditu.gov.cn/DataServer?T=eia_w&x={x}&y={y}&l={z}&tk={k}",
+    "Url": "https://{s}.tianditu.gov.cn/eia_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=img&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}&tk={k}",
     "Subdomains": "t0,t1,t2,t3,t4,t5,t6,t7",
-    "Key": "5d22d49fdc586cb5caed68bfb12d1e6b",
+    "Key": "ef6151d9f0386f3b2a2fdf1d58fe9b32",
     "Name": "天地图 - 影像英文注记",
-    "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
+    "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62",
+    "Referer": "https://map.tianditu.gov.cn/"
   },
   {
     "Type": "Tile",

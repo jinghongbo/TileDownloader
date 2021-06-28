@@ -125,12 +125,12 @@ namespace MapDownloader.ViewModels
         {
             try
             {
+                var startTime = DateTime.Now;
                 CancellationTokenSource = new CancellationTokenSource();
                 Progress = 0;
 
                 DownloadTask = Task.Run(async () =>
                {
-                   var startTime = DateTime.Now;
                    while (Progress < 100 && !CancellationTokenSource.IsCancellationRequested && Downloading)
                    {
                        var progress = Progress;
@@ -153,7 +153,7 @@ namespace MapDownloader.ViewModels
                 Downloading = true;
                 await Source.DownloadAsync(this);
                 await DownloadTask;
-                Message = "下载完成";
+                Message = $"下载完成,下载用时:{Format(DateTime.Now - startTime)}";
             }
             catch (System.Exception e)
             {

@@ -28,9 +28,9 @@
     </Window.Resources>
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="*" />
+            <RowDefinition Height="*" MinHeight="100" />
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="2*" />
+            <RowDefinition Height="2*" MinHeight="100" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <GroupBox Header="参数" Margin="5">
@@ -113,7 +113,7 @@
                     <DataGridTemplateColumn Header="进度" Width="240">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <ProgressBar Minimum="0" Maximum="100" Value="{Binding Progress}" Height="Auto" Margin="5"></ProgressBar>
+                                <ProgressBar Minimum="0" Maximum="100" Value="{Binding Progress}" Height="10" Margin="5"></ProgressBar>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>

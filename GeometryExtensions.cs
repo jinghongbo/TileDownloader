@@ -10,7 +10,7 @@ namespace MapDownloader
 {
     public static class GeometryExtensions
     {
-        public static T Project<T>(this T source, int sourceSrid, int targetSrid) where T : Geometry
+        public static T Projection<T>(this T source, int sourceSrid, int targetSrid) where T : Geometry
         {
             var services = new CoordinateSystemServices();
             var transformation = services.CreateTransformation(sourceSrid, targetSrid);
@@ -30,16 +30,17 @@ namespace MapDownloader
                 this.transformation = transformation;
             }
 
-            public bool Done => true;
+            public bool Done => false;
 
             public bool GeometryChanged => true;
 
             public void Filter(CoordinateSequence seq, int i)
             {
-                var (x, y) = transformation.MathTransform.Transform(seq.GetX(i), seq.GetY(i));
-
-                seq.SetX(i, x);
-                seq.SetY(i, y);
+                var x = seq.GetOrdinate(i, Ordinate.X);
+                var y = seq.GetOrdinate(i, Ordinate.Y);
+                (x, y) = transformation.MathTransform.Transform(x, y);
+                seq.SetOrdinate(i, Ordinate.X, x);
+                seq.SetOrdinate(i, Ordinate.Y, y);
             }
         }
     }

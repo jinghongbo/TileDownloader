@@ -68,7 +68,8 @@ namespace MapDownloader.Models
             await freesql.Delete<PakInfo>().Where(x => true).ExecuteAffrowsAsync();
             await freesql.Insert<PakInfo>().AppendData(info).ExecuteAffrowsAsync();
 
-            envelope = geom.Project(4326, 3857).EnvelopeInternal;
+            var projection = geom.Projection(4326, 3857);
+            envelope = projection.EnvelopeInternal;
 
             var extent = new Extent(envelope.MinX, envelope.MinY, envelope.MaxX, envelope.MaxY);
 

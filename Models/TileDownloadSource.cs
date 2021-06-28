@@ -36,20 +36,15 @@ namespace MapDownloader.Models
 
         public override async Task DownloadAsync(ViewModels.MainWindowViewModel vm)
         {
-            var startTime = DateTime.Now;
+            vm.Tasks = new ObservableCollection<DownloadTask>();
 
             using var handler = new HttpClientHandler();
             using var client = new HttpClient();
             client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", UserAgent);
             client.DefaultRequestHeaders.TryAddWithoutValidation("Referer", Referer);
-
             var schema = new GlobalSphericalMercator();
             var source = new HttpTileSource(schema, Url,
                 Subdomains.Split(","), Key, Name);
-
-
-            vm.Tasks = new ObservableCollection<DownloadTask>();
-
             var reader = new WKTReader();
 
             var geom = reader.Read(vm.Range);

@@ -22,5 +22,7 @@ namespace MapDownloader.Models
 
         public abstract Task DownloadAsync(ViewModels.MainWindowViewModel vm);
 
+
+
     }
 }

@@ -55,8 +55,8 @@ namespace MapDownloader.Models
         public override async Task DownloadAsync(ViewModels.MainWindowViewModel vm)
         {
 
-
-
+            vm.Tasks = new System.Collections.ObjectModel.ObservableCollection<DownloadTask>();
+            
             Directory.CreateDirectory(vm.Path);
 
             using var handler = new HttpClientHandler();
@@ -64,12 +64,6 @@ namespace MapDownloader.Models
             handler.CookieContainer.SetCookies(baseUri, Cookies);
             using var client = new HttpClient(handler);
             client.BaseAddress = baseUri;
-
-            client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", UserAgent);
-            client.DefaultRequestHeaders.TryAddWithoutValidation("Referer", Referer);
-
-
-            vm.Tasks = new System.Collections.ObjectModel.ObservableCollection<DownloadTask>();
 
             client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", UserAgent);
             client.DefaultRequestHeaders.TryAddWithoutValidation("Referer", Referer);
@@ -102,29 +96,6 @@ namespace MapDownloader.Models
                     DataId = data.DataId,
                 };
                 vm.Tasks.Add(downloadTask);
-                //var file = Path.Combine(vm.Path, $"{downloadTask.DataId}.zip");
-                //if (File.Exists(file))
-                //{
-                //    await using var fs = File.OpenRead(file);
-                //    downloadTask.Total = downloadTask.Completed = fs.Length;
-                //}
-                //else
-                //{
-                //    for (int i = 0; i < vm.Retry; i++)
-                //    {
-                //        try
-                //        {
-                //            using var res = await client.GetAsync($"sources/download/{downloadTask.ProductId}/{downloadTask.DataId}", HttpCompletionOption.ResponseHeadersRead);
-                //            downloadTask.Total = res.Content.Headers.ContentLength.Value;
-                //            continue;
-                //        }
-                //        catch (Exception e)
-                //        {
-                //            downloadTask.Error = "第" + (i + 1) + "次获取失败：" + (e.InnerException ?? e).Message;
-                //        }
-                //    }
-
-                //}
             }
 
 

@@ -88,16 +88,17 @@ namespace MapDownloader.Models
 
                 if (level > 10)
                 {
-                    for (int x = range.FirstCol; x <= range.LastCol; x += 512)
+                    for (int x = range.FirstCol / 512; x <= range.LastCol / 512; x++)
                     {
-                        for (int y = range.FirstRow; y <= range.LastRow; y += 512)
+                        for (int y = range.FirstRow / 512; y <= range.LastRow / 512; y++)
                         {
-                            var table = PakBlock.GetTable(level, x, y);
+                            var table = $"blocks_{level}_{x}_{y}";
                             freesql.CodeFirst.SyncStructure(typeof(PakBlock), table);
                         }
                     }
                 }
             }
+            freesql.CodeFirst.SyncStructure(typeof(PakBlock), "blocks");
             using var semaphore = new SemaphoreSlim(vm.Concurrent);
             foreach (var downloadTask in vm.Tasks)
             {

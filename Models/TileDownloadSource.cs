@@ -85,6 +85,18 @@ namespace MapDownloader.Models
                 };
 
                 vm.Tasks.Add(downloadTask);
+
+                if (level > 10)
+                {
+                    for (int x = range.FirstCol; x <= range.LastCol; x += 512)
+                    {
+                        for (int y = range.FirstRow; y <= range.LastRow; y += 512)
+                        {
+                            var table = PakBlock.GetTable(level, x, y);
+                            freesql.CodeFirst.SyncStructure(typeof(PakBlock), table);
+                        }
+                    }
+                }
             }
             using var semaphore = new SemaphoreSlim(vm.Concurrent);
             foreach (var downloadTask in vm.Tasks)

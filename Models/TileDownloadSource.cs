@@ -152,7 +152,7 @@ namespace MapDownloader.Models
                                  catch (Exception e)
                                  {
                                      lock (downloadTask)
-                                         downloadTask.Error = "第" + (i + 1) + "次：" + (e.InnerException ?? e).Message;
+                                         downloadTask.Error = "第" + (i + 1) + "次下载失败：" + (e.InnerException ?? e).Message;
                                  }
                              }
                          }

@@ -56,7 +56,7 @@ namespace MapDownloader.Models
         {
 
             vm.Tasks = new System.Collections.ObjectModel.ObservableCollection<DownloadTask>();
-            
+
             Directory.CreateDirectory(vm.Path);
 
             using var handler = new HttpClientHandler();
@@ -131,6 +131,11 @@ namespace MapDownloader.Models
                                        return;
                                    }
                                    using var res = await client.GetAsync($"sources/download/{downloadTask.ProductId}/{downloadTask.DataId}", HttpCompletionOption.ResponseHeadersRead, vm.CancellationTokenSource.Token);
+
+                                   if (!res.IsSuccessStatusCode)
+                                   {
+                                       throw new Exception("未知错误:" + res.StatusCode);
+                                   }
                                    downloadTask.Total = res.Content.Headers.ContentLength.Value;
                                    downloadTask.Completed = 0;
                                    await using var stream = await res.Content.ReadAsStreamAsync(vm.CancellationTokenSource.Token);

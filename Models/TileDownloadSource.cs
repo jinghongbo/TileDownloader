@@ -138,6 +138,10 @@ namespace MapDownloader.Models
                                      {
                                          var uri = source.GetUri(tileInfo);
                                          using var res = await client.GetAsync(uri, vm.CancellationTokenSource.Token);
+                                         if (!res.IsSuccessStatusCode)
+                                         {
+                                             throw new Exception("未知错误:" + res.StatusCode);
+                                         }
                                          var tile = await res.Content.ReadAsByteArrayAsync(vm.CancellationTokenSource.Token);
                                          await freesql.Insert<PakBlock>().AsTable(_ => table)
                                                 .AppendData(new PakBlock { X = x, Y = y, Z = z, Tile = tile })

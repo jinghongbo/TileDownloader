@@ -17,9 +17,9 @@ namespace MapDownloader
             //UI线程未捕获异常处理事件（UI主线程）
             DispatcherUnhandledException += App_DispatcherUnhandledException;
             //非UI线程未捕获异常处理事件(例如自己创建的一个子线程)
-            AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
+            //AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
             //Task线程内未捕获异常处理事件
-            TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
+            //TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
             return Container.Resolve<MainWindow>();
         }
 

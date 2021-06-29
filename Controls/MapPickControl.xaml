@@ -10,7 +10,7 @@
              d:DesignHeight="450" d:DesignWidth="800">
     <Grid>
 
-        <map:Map x:Name="map" MouseRightButtonDown="MapMouseRightButtonDown" MouseRightButtonUp="MapMouseRightButtonUp" MouseMove="MapMouseMove" >
+        <map:Map x:Name="map" MouseRightButtonDown="MapMouseRightButtonDown" MouseRightButtonUp="MapMouseRightButtonUp" MouseMove="MapMouseMove"  MouseWheel="MapMouseWheel" Loaded="MapLoaded" >
             <map:Map.MapLayer>
                 <map:MapTileLayer SourceName="OpenStreetMap" Description="© [OpenStreetMap contributors](http://www.openstreetmap.org/copyright)">
                     <map:MapTileLayer.TileSource>

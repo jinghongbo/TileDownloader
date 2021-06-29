@@ -64,9 +64,9 @@ namespace MapDownloader.Controls
                     leftTopLocaltion,
                 };
 
-                NetTopologySuite.Geometries.Polygon polygon = new NetTopologySuite.Geometries.Polygon(new NetTopologySuite.Geometries.LinearRing(pick.Locations.Select(x => new NetTopologySuite.Geometries.Coordinate(x.Longitude, x.Latitude)).ToArray()));
+                var geom = new NetTopologySuite.Geometries.Polygon(new NetTopologySuite.Geometries.LinearRing(pick.Locations.Select(x => new NetTopologySuite.Geometries.Coordinate(x.Longitude, x.Latitude)).ToArray()));
 
-                Wkt = polygon.ToText();
+                Wkt = geom.ToText();
             }
         }
 
@@ -93,10 +93,11 @@ namespace MapDownloader.Controls
                         {
                             NetTopologySuite.IO.WKTReader reader = new NetTopologySuite.IO.WKTReader();
                             var geom = reader.Read((string)e.NewValue);
-                            ctl.pick.Locations = geom.Coordinates.Select(x => new Location() { Latitude = x.Y, Longitude = x.X });
+                            var env = geom.EnvelopeInternal;
+                            var bbox = new BoundingBox(env.MinY, env.MinX, env.MaxY, env.MaxX);
+                            ctl.map.ZoomToBounds(bbox);
 
-                            ctl.map.Center = new Location(geom.Centroid.Y, geom.Centroid.X);
-                            ctl.map.ZoomLevel = 10;
+                            ctl.pick.Locations = geom.Coordinates.Select(x => new Location() { Latitude = x.Y, Longitude = x.X });
                         }
                         catch
                         {
@@ -106,8 +107,20 @@ namespace MapDownloader.Controls
                 }
             }));
 
+        private void MapMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            e.Handled = true;
+        }
 
-
-
+        private void MapLoaded(object sender, RoutedEventArgs e)
+        {
+            if (pick.Locations.Count() > 3)
+            {
+                var geom = new NetTopologySuite.Geometries.Polygon(new NetTopologySuite.Geometries.LinearRing(pick.Locations.Select(x => new NetTopologySuite.Geometries.Coordinate(x.Longitude, x.Latitude)).ToArray())).Buffer(1); ;
+                var env = geom.EnvelopeInternal;
+                var bbox = new BoundingBox(env.MinY, env.MinX, env.MaxY, env.MaxX);
+                map.ZoomToBounds(bbox);
+            }
+        }
     }
 }

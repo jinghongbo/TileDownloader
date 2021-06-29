@@ -143,7 +143,7 @@ namespace MapDownloader.ViewModels
                        {
                            try
                            {
-                               if (sw.ElapsedMilliseconds > 2000 && Progress > progress)
+                               if (sw.ElapsedMilliseconds > 5000 && Progress > progress)
                                {
                                    speed = (Progress - progress) / sw.Elapsed.Seconds;
                                    progress = Progress;

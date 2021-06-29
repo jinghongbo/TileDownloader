@@ -37,8 +37,11 @@ namespace MapDownloader.Models
         public override async Task DownloadAsync(ViewModels.MainWindowViewModel vm)
         {
             vm.Tasks = new ObservableCollection<DownloadTask>();
+            using var handler = new HttpClientHandler()
+            {
 
-            using var handler = new HttpClientHandler();
+
+            };
             using var client = new HttpClient(handler);
             client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", UserAgent);
             client.DefaultRequestHeaders.TryAddWithoutValidation("Referer", Referer);
@@ -86,19 +89,23 @@ namespace MapDownloader.Models
 
                 vm.Tasks.Add(downloadTask);
 
-                //if (level > 10)
-                //{
-                //    for (int x = range.FirstCol / 512; x <= range.LastCol / 512; x++)
-                //    {
-                //        for (int y = range.FirstRow / 512; y <= range.LastRow / 512; y++)
-                //        {
-                //            var table = $"blocks_{level}_{x}_{y}";
-                //            freesql.CodeFirst.SyncStructure(typeof(PakBlock), table);
-                //        }
-                //    }
-                //}
+                if (level > 10)
+                {
+                    var minx = (int)Math.Floor(range.FirstCol / 512d);
+                    var miny = (int)Math.Floor(range.FirstRow / 512d);
+                    var maxx = (int)Math.Ceiling(range.FirstCol / 512d);
+                    var maxy = (int)Math.Ceiling(range.FirstRow / 512d);
+                    for (int x = minx; x <= maxx; x++)
+                    {
+                        for (int y = miny; y <= maxy; y++)
+                        {
+                            var table = $"blocks_{level}_{x}_{y}";
+                            freesql.CodeFirst.SyncStructure(typeof(PakBlock), table);
+                        }
+                    }
+                }
             }
-            //freesql.CodeFirst.SyncStructure(typeof(PakBlock), "blocks");
+            freesql.CodeFirst.SyncStructure(typeof(PakBlock), "blocks");
             using var semaphore = new SemaphoreSlim(vm.Concurrent);
             foreach (var downloadTask in vm.Tasks)
             {
@@ -130,9 +137,8 @@ namespace MapDownloader.Models
                                          b.X == x && b.Y == y && b.Z == z && b.Tile != null))
                                      {
                                          var uri = source.GetUri(tileInfo);
-
-                                         var tile = await client.GetByteArrayAsync(uri, vm.CancellationTokenSource.Token);
-
+                                         using var res = await client.GetAsync(uri, vm.CancellationTokenSource.Token);
+                                         var tile = await res.Content.ReadAsByteArrayAsync(vm.CancellationTokenSource.Token);
                                          await freesql.Insert<PakBlock>().AsTable(_ => table)
                                                 .AppendData(new PakBlock { X = x, Y = y, Z = z, Tile = tile })
                                                 .ExecuteAffrowsAsync(vm.CancellationTokenSource.Token);

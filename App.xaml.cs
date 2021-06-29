@@ -21,7 +21,12 @@ namespace MapDownloader
             //Task线程内未捕获异常处理事件
             TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
             return Container.Resolve<MainWindow>();
-        } 
+        }
+
+        protected override void RegisterTypes(IContainerRegistry containerRegistry)
+        {
+
+        }
 
         //UI线程未捕获异常处理事件（UI主线程）
         private void App_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)

@@ -30,8 +30,6 @@ namespace MapDownloader.Models
 
         [DonwloadArgument("子域名")]
         public string Subdomains { get; set; }
-        [DonwloadArgument("Schema")]
-        public string Schema { get; set; }
 
 
         public override async Task DownloadAsync(ViewModels.MainWindowViewModel vm)

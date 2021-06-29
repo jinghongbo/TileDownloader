@@ -12,8 +12,9 @@
     Title="地图下载器" Height="600" Width="800"
     TextElement.Foreground="{DynamicResource MaterialDesignBody}"
     Background="{DynamicResource MaterialDesignPaper}"
+    
     WindowState="Maximized"
-    FontFamily="微软雅黑">
+    FontFamily="微软雅黑" Icon="/Resources/logo.png">
     <Window.Resources>
         <Style TargetType="{x:Type Label}">
             <Setter Property="Margin" Value="5" />

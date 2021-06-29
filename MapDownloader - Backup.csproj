@@ -4,10 +4,15 @@
     <TargetFramework>net6.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
     <AssemblyName>MapDownloader</AssemblyName>
-    <ApplicationIcon>Resources\logo.ico</ApplicationIcon>
+    <Win32Resource />
+    <ApplicationIcon />
+    <NoWin32Manifest>true</NoWin32Manifest>
   </PropertyGroup>
   <ItemGroup>
-    <None Remove="Resources\logo.png" />
+    <Compile Remove="Properties\**" />
+    <EmbeddedResource Remove="Properties\**" />
+    <None Remove="Properties\**" />
+    <Page Remove="Properties\**" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="BruTile" Version="3.1.3" />

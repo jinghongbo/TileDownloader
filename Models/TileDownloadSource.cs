@@ -39,7 +39,7 @@ namespace MapDownloader.Models
             vm.Tasks = new ObservableCollection<DownloadTask>();
 
             using var handler = new HttpClientHandler();
-            using var client = new HttpClient();
+            using var client = new HttpClient(handler);
             client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", UserAgent);
             client.DefaultRequestHeaders.TryAddWithoutValidation("Referer", Referer);
             var schema = new GlobalSphericalMercator();
@@ -86,19 +86,19 @@ namespace MapDownloader.Models
 
                 vm.Tasks.Add(downloadTask);
 
-                if (level > 10)
-                {
-                    for (int x = range.FirstCol / 512; x <= range.LastCol / 512; x++)
-                    {
-                        for (int y = range.FirstRow / 512; y <= range.LastRow / 512; y++)
-                        {
-                            var table = $"blocks_{level}_{x}_{y}";
-                            freesql.CodeFirst.SyncStructure(typeof(PakBlock), table);
-                        }
-                    }
-                }
+                //if (level > 10)
+                //{
+                //    for (int x = range.FirstCol / 512; x <= range.LastCol / 512; x++)
+                //    {
+                //        for (int y = range.FirstRow / 512; y <= range.LastRow / 512; y++)
+                //        {
+                //            var table = $"blocks_{level}_{x}_{y}";
+                //            freesql.CodeFirst.SyncStructure(typeof(PakBlock), table);
+                //        }
+                //    }
+                //}
             }
-            freesql.CodeFirst.SyncStructure(typeof(PakBlock), "blocks");
+            //freesql.CodeFirst.SyncStructure(typeof(PakBlock), "blocks");
             using var semaphore = new SemaphoreSlim(vm.Concurrent);
             foreach (var downloadTask in vm.Tasks)
             {

@@ -1,34 +1,6 @@
 ﻿[
   {
-    "Type": "GSCloud",
-    "Name": "ASTER GDEM 30M 分辨率数字高程数据",
-    "ProductId": "310",
-    "Url": "http://www.gscloud.cn",
-    "Cookies": "csrftoken=HVr4Ufjo9fccyziGCgKCbsN5AvTINgu4SDcPkpliQPy0JLnbdSrfYtOBZ5ah9VIi,sessionid=73glwcmwykdmv2vku9oedg0u4qojzgil"
-  },
-  {
     "Type": "Tile",
-    "Schema": "GlobalSphericalMercator",
-    "Url": "https://{s}.tianditu.gov.cn/vec_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=vec&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}&tk={k}",
-    "Subdomains": "t0,t1,t2,t3,t4,t5,t6,t7",
-    "Key": "ef6151d9f0386f3b2a2fdf1d58fe9b32",
-    "Name": "天地图 - 矢量底图",
-    "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62",
-    "Referer": "https://map.tianditu.gov.cn/"
-  },
-  {
-    "Type": "Tile",
-    "Schema": "GlobalSphericalMercator",
-    "Url": "https://{s}.tianditu.gov.cn/cva_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=cva&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}&tk={k}",
-    "Subdomains": "t0,t1,t2,t3,t4,t5,t6,t7",
-    "Key": "ef6151d9f0386f3b2a2fdf1d58fe9b32",
-    "Name": "天地图 - 矢量注记",
-    "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62",
-    "Referer": "https://map.tianditu.gov.cn/"
-  },
-  {
-    "Type": "Tile",
-    "Schema": "GlobalSphericalMercator",
     "Url": "https://{s}.tianditu.gov.cn/img_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=img&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}&tk={k}",
     "Subdomains": "t0,t1,t2,t3,t4,t5,t6,t7",
     "Key": "ef6151d9f0386f3b2a2fdf1d58fe9b32",
@@ -38,7 +10,6 @@
   },
   {
     "Type": "Tile",
-    "Schema": "GlobalSphericalMercator",
     "Url": "https://{s}.tianditu.gov.cn/cia_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=cia&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}&tk={k}",
     "Subdomains": "t0,t1,t2,t3,t4,t5,t6,t7",
     "Key": "ef6151d9f0386f3b2a2fdf1d58fe9b32",
@@ -48,7 +19,24 @@
   },
   {
     "Type": "Tile",
-    "Schema": "GlobalSphericalMercator",
+    "Url": "https://{s}.tianditu.gov.cn/vec_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=vec&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}&tk={k}",
+    "Subdomains": "t0,t1,t2,t3,t4,t5,t6,t7",
+    "Key": "ef6151d9f0386f3b2a2fdf1d58fe9b32",
+    "Name": "天地图 - 矢量底图",
+    "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62",
+    "Referer": "https://map.tianditu.gov.cn/"
+  },
+  {
+    "Type": "Tile",
+    "Url": "https://{s}.tianditu.gov.cn/cva_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=cva&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}&tk={k}",
+    "Subdomains": "t0,t1,t2,t3,t4,t5,t6,t7",
+    "Key": "ef6151d9f0386f3b2a2fdf1d58fe9b32",
+    "Name": "天地图 - 矢量注记",
+    "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62",
+    "Referer": "https://map.tianditu.gov.cn/"
+  },
+  {
+    "Type": "Tile",
     "Url": "https://{s}.tianditu.gov.cn/ter_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ter&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}&tk={k}",
     "Subdomains": "t0,t1,t2,t3,t4,t5,t6,t7",
     "Key": "ef6151d9f0386f3b2a2fdf1d58fe9b32",
@@ -58,7 +46,6 @@
   },
   {
     "Type": "Tile",
-    "Schema": "GlobalSphericalMercator",
     "Url": "https://{s}.tianditu.gov.cn/cta_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=cta&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}&tk={k}",
     "Subdomains": "t0,t1,t2,t3,t4,t5,t6,t7",
     "Key": "ef6151d9f0386f3b2a2fdf1d58fe9b32",
@@ -68,7 +55,6 @@
   },
   {
     "Type": "Tile",
-    "Schema": "GlobalSphericalMercator",
     "Url": "https://{s}.tianditu.gov.cn/ibo_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ibo&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}&tk={k}",
     "Subdomains": "t0,t1,t2,t3,t4,t5,t6,t7",
     "Key": "ef6151d9f0386f3b2a2fdf1d58fe9b32",
@@ -78,7 +64,6 @@
   },
   {
     "Type": "Tile",
-    "Schema": "GlobalSphericalMercator",
     "Url": "https://{s}.tianditu.gov.cn/eva_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=eva&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}&tk={k}",
     "Subdomains": "t0,t1,t2,t3,t4,t5,t6,t7",
     "Key": "ef6151d9f0386f3b2a2fdf1d58fe9b32",
@@ -88,7 +73,6 @@
   },
   {
     "Type": "Tile",
-    "Schema": "GlobalSphericalMercator",
     "Url": "https://{s}.tianditu.gov.cn/eia_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=eia&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}&tk={k}",
     "Subdomains": "t0,t1,t2,t3,t4,t5,t6,t7",
     "Key": "ef6151d9f0386f3b2a2fdf1d58fe9b32",
@@ -98,121 +82,65 @@
   },
   {
     "Type": "Tile",
-    "Schema": "GlobalSphericalMercator",
-    "Url": "http://{s}.google.com/vt/lyrs=m&hl=zh&x={x}&y={y}&z={z}",
+    "Url": "https://{s}.google.com/vt/lyrs=m&hl=zh&x={x}&y={y}&z={z}",
     "Subdomains": "mt0,mt1,mt2,mt3",
     "Name": "Google Maps - Roadmap",
     "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62",
-    "Referer": "http://maps.google.com/"
+    "Referer": "https://maps.google.com/"
   },
   {
     "Type": "Tile",
-    "Schema": "GlobalSphericalMercator",
-    "Url": "http://{s}.google.com/vt/lyrs=p&hl=zh&x={x}&y={y}&z={z}",
+    "Url": "https://{s}.google.com/vt/lyrs=p&hl=zh&x={x}&y={y}&z={z}",
     "Subdomains": "mt0,mt1,mt2,mt3",
     "Name": "Google Maps - Terrain",
     "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62",
-    "Referer": "http://maps.google.com/"
+    "Referer": "https://maps.google.com/"
   },
   {
     "Type": "Tile",
-    "Schema": "GlobalSphericalMercator",
-    "Url": "http://{s}.google.com/vt/lyrs=r&hl=zh&x={x}&y={y}&z={z}",
+    "Url": "https://{s}.google.com/vt/lyrs=r&hl=zh&x={x}&y={y}&z={z}",
     "Subdomains": "mt0,mt1,mt2,mt3",
     "Name": "Google Maps - Altered roadmap",
     "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62",
-    "Referer": "http://maps.google.com/"
+    "Referer": "https://maps.google.com/"
   },
   {
     "Type": "Tile",
-    "Schema": "GlobalSphericalMercator",
-    "Url": "http://{s}.google.com/vt/lyrs=s&hl=zh&x={x}&y={y}&z={z}",
+    "Url": "https://{s}.google.com/vt/lyrs=s&hl=zh&x={x}&y={y}&z={z}",
     "Subdomains": "mt0,mt1,mt2,mt3",
     "Name": "Google Maps - Satellite only",
     "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62",
-    "Referer": "http://maps.google.com/"
+    "Referer": "https://maps.google.com/"
   },
   {
     "Type": "Tile",
-    "Schema": "GlobalSphericalMercator",
-    "Url": "http://{s}.google.com/vt/lyrs=h&hl=zh&x={x}&y={y}&z={z}",
+    "Url": "https://{s}.google.com/vt/lyrs=h&hl=zh&x={x}&y={y}&z={z}",
     "Subdomains": "mt0,mt1,mt2,mt3",
     "Name": "Google Maps - Road only",
     "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62",
-    "Referer": "http://maps.google.com/"
+    "Referer": "https://maps.google.com/"
   },
   {
     "Type": "Tile",
-    "Schema": "GlobalSphericalMercator",
-    "Url": "http://{s}.google.com/vt/lyrs=t&hl=zh&x={x}&y={y}&z={z}",
+    "Url": "https://{s}.google.com/vt/lyrs=t&hl=zh&x={x}&y={y}&z={z}",
     "Subdomains": "mt0,mt1,mt2,mt3",
     "Name": "Google Maps - Terrain only",
     "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62",
-    "Referer": "http://maps.google.com/"
+    "Referer": "https://maps.google.com/"
   },
   {
     "Type": "Tile",
-    "Schema": "GlobalSphericalMercator",
-    "Url": "http://{s}.google.com/vt/lyrs=y&hl=zh&x={x}&y={y}&z={z}",
+    "Url": "https://{s}.google.com/vt/lyrs=y&hl=zh&x={x}&y={y}&z={z}",
     "Subdomains": "mt0,mt1,mt2,mt3",
     "Name": "Google Maps - Hybrid",
     "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62",
-    "Referer": "http://maps.google.com/"
+    "Referer": "https://maps.google.com/"
   },
   {
-    "Type": "Tile",
-    "Schema": "GlobalSphericalMercator",
-    "Url": "http://{s}.google.cn/maps/vt?lyrs=m&gl=CN&x={x}&y={y}&z={z}",
-    "Subdomains": "mt0,mt1,mt2,mt3",
-    "Name": "Google China Maps - Roadmap",
-    "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
-  },
-  {
-    "Type": "Tile",
-    "Schema": "GlobalSphericalMercator",
-    "Url": "http://{s}.google.cn/maps/vt?lyrs=p&gl=CN&x={x}&y={y}&z={z}",
-    "Subdomains": "mt0,mt1,mt2,mt3",
-    "Name": "Google China Maps - Terrain",
-    "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
-  },
-  {
-    "Type": "Tile",
-    "Schema": "GlobalSphericalMercator",
-    "Url": "http://{s}.google.cn/maps/vt?lyrs=r&gl=CN&x={x}&y={y}&z={z}",
-    "Subdomains": "mt0,mt1,mt2,mt3",
-    "Name": "Google China Maps - Altered roadmap",
-    "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
-  },
-  {
-    "Type": "Tile",
-    "Schema": "GlobalSphericalMercator",
-    "Url": "http://{s}.google.cn/maps/vt?lyrs=s&gl=CN&x={x}&y={y}&z={z}",
-    "Subdomains": "mt0,mt1,mt2,mt3",
-    "Name": "Google China Maps - Satellite only",
-    "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
-  },
-  {
-    "Type": "Tile",
-    "Schema": "GlobalSphericalMercator",
-    "Url": "http://{s}.google.cn/maps/vt?lyrs=h&gl=CN&x={x}&y={y}&z={z}",
-    "Subdomains": "mt0,mt1,mt2,mt3",
-    "Name": "Google China Maps - Road only",
-    "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
-  },
-  {
-    "Type": "Tile",
-    "Schema": "GlobalSphericalMercator",
-    "Url": "http://{s}.google.cn/maps/vt?lyrs=t&gl=CN&x={x}&y={y}&z={z}",
-    "Subdomains": "mt0,mt1,mt2,mt3",
-    "Name": "Google China Maps - Terrain only",
-    "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
-  },
-  {
-    "Type": "Tile",
-    "Schema": "GlobalSphericalMercator",
-    "Url": "http://{s}.google.cn/maps/vt?lyrs=y&gl=CN&x={x}&y={y}&z={z}",
-    "Subdomains": "mt0,mt1,mt2,mt3",
-    "Name": "Google China Maps - Hybrid",
-    "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62"
+    "Type": "GSCloud",
+    "Name": "ASTER GDEM 30M 分辨率数字高程数据",
+    "ProductId": "310",
+    "Url": "http://www.gscloud.cn",
+    "Cookies": "csrftoken=HVr4Ufjo9fccyziGCgKCbsN5AvTINgu4SDcPkpliQPy0JLnbdSrfYtOBZ5ah9VIi,sessionid=73glwcmwykdmv2vku9oedg0u4qojzgil"
   }
 ]

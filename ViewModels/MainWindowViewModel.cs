@@ -90,7 +90,7 @@ namespace MapDownloader.ViewModels
             set { SetProperty(ref _retry, value); }
         }
 
-        private Envelope _range = new Envelope(-180, 180, -85, 85);
+        private Envelope _range = new Envelope(-180, 180, -85.06, 85.06);
 
         public Envelope Range
         {
@@ -132,29 +132,26 @@ namespace MapDownloader.ViewModels
 
                 DownloadTask = Task.Run(async () =>
                {
-                   var sw = System.Diagnostics.Stopwatch.StartNew();
+                   var time = DateTime.Now;
                    var speed = 0d;
                    var progress = 0d;
                    while (Progress < 100 && !CancellationTokenSource.IsCancellationRequested && Downloading)
                    {
-                       var time = DateTime.Now;
-                       await Task.Delay(200);
 
+                       var now = DateTime.Now;
                        if (Progress > 0)
                        {
                            try
                            {
-                               if (sw.ElapsedMilliseconds > 5000 && Progress > progress)
+                               var sec = (now - time).TotalSeconds;
+                               if (sec > 5 && Progress > progress)
                                {
-                                   speed = (Progress - progress) / sw.Elapsed.Seconds;
+                                   speed = (Progress - progress) / sec;
                                    progress = Progress;
-                                   sw.Restart();
+                                   time = now;
                                }
-
                                var used = DateTime.Now - startTime;
-
-
-                               var left = speed > 0 ? Format(TimeSpan.FromSeconds((100 - Progress) / speed)) : "未知";
+                               var left = speed > 0 ? Format(TimeSpan.FromSeconds((100 - Progress) / speed)) : "正在计算";
                                //var left = used / (Progress / 100) - used;
                                Message = $"完成进度:{Progress:F}%,已用时间:{Format(used)},剩余时间:{left}";
                            }
@@ -162,6 +159,7 @@ namespace MapDownloader.ViewModels
                            {
                                Message = e.Message;
                            }
+                           await Task.Delay(200);
                        }
                    }
                }, CancellationTokenSource.Token);
@@ -170,7 +168,7 @@ namespace MapDownloader.ViewModels
                 await DownloadTask;
                 Message = $"下载完成,完成用时:{Format(DateTime.Now - startTime)}";
             }
-            catch (System.Exception e)
+            catch (Exception e)
             {
                 Message = (e.InnerException ?? e).Message;
             }

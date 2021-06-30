@@ -92,7 +92,6 @@ namespace MapDownloader.Models
                 var downloadTask = new DownloadTask()
                 {
                     Name = data.DataId,
-                    ProductId = data.ProductId,
                     DataId = data.DataId,
                 };
                 vm.Tasks.Add(downloadTask);
@@ -130,7 +129,7 @@ namespace MapDownloader.Models
                                    {
                                        return;
                                    }
-                                   using var res = await client.GetAsync($"sources/download/{downloadTask.ProductId}/{downloadTask.DataId}", HttpCompletionOption.ResponseHeadersRead, vm.CancellationTokenSource.Token);
+                                   using var res = await client.GetAsync($"sources/download/{ProductId}/{downloadTask.DataId}", HttpCompletionOption.ResponseHeadersRead, vm.CancellationTokenSource.Token);
 
                                    if (!res.IsSuccessStatusCode)
                                    {

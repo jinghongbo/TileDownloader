@@ -37,9 +37,7 @@ namespace MapDownloader.Models
 
 
         public int Level { get; set; }
-        public BruTile.Extent Extent { get; set; }
 
-        public string ProductId { get; set; }
         public string DataId { get; set; }
 
     }

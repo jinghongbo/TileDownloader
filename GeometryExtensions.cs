@@ -20,13 +20,13 @@ namespace MapDownloader
             target.SRID = targetSrid;
             return (T)target;
         }
-        public static Envelope Projection(this Envelope source, int sourceSrid, int targetSrid)
+        public static Envelope Projection(this Envelope envelope, int sourceSrid, int targetSrid)
         {
             var services = new CoordinateSystemServices();
             var transformation = services.CreateTransformation(sourceSrid, targetSrid);
-            var (minX, minY) = transformation.MathTransform.Transform(source.MinX, source.MinY);
-            var (maxX, maxY) = transformation.MathTransform.Transform(source.MaxX, source.MaxY);
-            return new Envelope(minX, minY, maxX, maxY);
+            var (minX, minY) = transformation.MathTransform.Transform(envelope.MinX, envelope.MinY);
+            var (maxX, maxY) = transformation.MathTransform.Transform(envelope.MaxX, envelope.MaxY);
+            return new Envelope(minX, maxX, minY, maxY);
         }
 
         public static Polygon ToPolygon(this Envelope envelope)

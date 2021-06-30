@@ -35,19 +35,13 @@ namespace MapDownloader.Models
         public override async Task DownloadAsync(ViewModels.MainWindowViewModel vm)
         {
             vm.Tasks = new ObservableCollection<DownloadTask>();
-            using var handler = new HttpClientHandler()
-            {
-
-
-            };
+            using var handler = new HttpClientHandler();
             using var client = new HttpClient(handler);
             client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", UserAgent);
             client.DefaultRequestHeaders.TryAddWithoutValidation("Referer", Referer);
+            var subdomains = Subdomains.Split(",");
             var schema = new GlobalSphericalMercator();
-            var source = new HttpTileSource(schema, Url,
-                Subdomains.Split(","), Key, Name);
-            var reader = new WKTReader();
-
+            var source = new HttpTileSource(schema, Url, subdomains, Key, Name);
 
             var info = new PakInfo
             {
@@ -69,7 +63,9 @@ namespace MapDownloader.Models
 
             var envelope = vm.Range.Projection(4326, 3857);
 
-            var extent = new Extent(envelope.MinX, envelope.MinY, envelope.MaxX, envelope.MaxY);
+            var extent1 = new Extent(envelope.MinX, envelope.MinY, envelope.MaxX, envelope.MaxY);
+
+            var extent = new Extent(-20037508, -20037508, 20037508, 20037508);
 
             for (var level = MinLevel; level <= MaxLevel; level++)
             {
@@ -79,7 +75,6 @@ namespace MapDownloader.Models
                     Name = $"{level}",
                     Total = range.ColCount * range.RowCount,
                     Level = level,
-                    Extent = extent,
                 };
 
                 vm.Tasks.Add(downloadTask);
@@ -104,7 +99,7 @@ namespace MapDownloader.Models
             using var semaphore = new SemaphoreSlim(vm.Concurrent);
             foreach (var downloadTask in vm.Tasks)
             {
-                foreach (var tileInfo in source.Schema.GetTileInfos(downloadTask.Extent, downloadTask.Level))
+                foreach (var tileInfo in schema.GetTileInfos(extent, downloadTask.Level))
                 {
                     if (vm.CancellationTokenSource.IsCancellationRequested)
                     {

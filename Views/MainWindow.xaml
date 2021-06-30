@@ -5,8 +5,8 @@
     xmlns:av="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:map="clr-namespace:MapControl;assembly=MapControl.WPF"
     xmlns:c="clr-namespace:MapDownloader.Controls"
+    xmlns:cvt="clr-namespace:MapDownloader.Converters"
     mc:Ignorable="av" x:Class="MapDownloader.Views.MainWindow"
     prism:ViewModelLocator.AutoWireViewModel="True"
     Title="地图下载器" Height="600" Width="800"
@@ -26,6 +26,7 @@
             <Setter Property="VerticalContentAlignment" Value="Center" />
             <Setter Property="HorizontalContentAlignment" Value="Left" />
         </Style>
+        <cvt:EnvelopeConverter x:Key="EnvelopeCvt"></cvt:EnvelopeConverter>
     </Window.Resources>
     <Grid>
         <Grid.RowDefinitions>
@@ -56,9 +57,9 @@
                             <ColumnDefinition Width="60" />
                         </Grid.ColumnDefinitions>
                         <Label Grid.Column="0" Content="范围" Margin="5" />
-                        <TextBox  Margin="5" Grid.Column="1"  Text="{Binding Range}"/>
+                        <TextBox  Margin="5" Grid.Column="1"  Text="{Binding Range,Converter={StaticResource EnvelopeCvt}}"/>
                         <md:PopupBox Grid.Column="2" Margin="5" Padding="0" StaysOpen="True"  >
-                            <c:MapPickControl Height="400" Width="800"  Wkt="{Binding Range,Mode=TwoWay}" ></c:MapPickControl>
+                            <c:MapPickControl Height="600" Width="800"  Range="{Binding Range,Mode=TwoWay}" ></c:MapPickControl>
                         </md:PopupBox>
                     </Grid>
                     <Grid>

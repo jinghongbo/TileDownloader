@@ -1,6 +1,7 @@
 ﻿using MapDownloader.Converters;
 using MapDownloader.Models;
 using Microsoft.Win32;
+using NetTopologySuite.Geometries;
 using Newtonsoft.Json;
 using Prism.Commands;
 using Prism.Mvvm;
@@ -89,9 +90,9 @@ namespace MapDownloader.ViewModels
             set { SetProperty(ref _retry, value); }
         }
 
-        private string _range = "POLYGON ((103.88 30.81, 103.88 30.56, 104.23 30.56, 104.23 30.81, 103.88 30.81))";
+        private Envelope _range = new Envelope(-180, 180, -85, 85);
 
-        public string Range
+        public Envelope Range
         {
             get { return _range; }
             set { SetProperty(ref _range, value); }

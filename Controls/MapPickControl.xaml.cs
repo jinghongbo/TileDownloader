@@ -64,24 +64,22 @@ namespace MapDownloader.Controls
                     leftTopLocaltion,
                 };
 
-                var geom = new NetTopologySuite.Geometries.Polygon(new NetTopologySuite.Geometries.LinearRing(pick.Locations.Select(x => new NetTopologySuite.Geometries.Coordinate(x.Longitude, x.Latitude)).ToArray()));
-
-                Wkt = geom.ToText();
+                Range = new NetTopologySuite.Geometries.Envelope(leftTopLocaltion.Longitude, rightDownLocaltion.Latitude, rightDownLocaltion.Longitude, leftTopLocaltion.Latitude);
             }
         }
 
 
 
 
-        public string Wkt
+        public NetTopologySuite.Geometries.Envelope Range
         {
-            get { return (string)GetValue(WktProperty); }
-            set { SetValue(WktProperty, value); }
+            get { return (NetTopologySuite.Geometries.Envelope)GetValue(RangeProperty); }
+            set { SetValue(RangeProperty, value); }
         }
 
         // Using a DependencyProperty as the backing store for Wkt.  This enables animation, styling, binding, etc...
-        public static readonly DependencyProperty WktProperty =
-            DependencyProperty.Register("Wkt", typeof(string), typeof(MapPickControl), new PropertyMetadata(null, (s, e) =>
+        public static readonly DependencyProperty RangeProperty =
+            DependencyProperty.Register("Range", typeof(NetTopologySuite.Geometries.Envelope), typeof(MapPickControl), new PropertyMetadata(null, (s, e) =>
             {
                 if (e.NewValue != e.OldValue)
                 {
@@ -91,13 +89,11 @@ namespace MapDownloader.Controls
                     {
                         try
                         {
-                            NetTopologySuite.IO.WKTReader reader = new NetTopologySuite.IO.WKTReader();
-                            var geom = reader.Read((string)e.NewValue);
-                            var env = geom.EnvelopeInternal;
-                            var bbox = new BoundingBox(env.MinY, env.MinX, env.MaxY, env.MaxX);
+                            var range = (NetTopologySuite.Geometries.Envelope)e.NewValue;
+                            var bbox = new BoundingBox(range.MinY, range.MinX, range.MaxY, range.MaxX);
                             ctl.map.ZoomToBounds(bbox);
 
-                            ctl.pick.Locations = geom.Coordinates.Select(x => new Location() { Latitude = x.Y, Longitude = x.X });
+                            ctl.pick.Locations = range.ToPolygon().Coordinates.Select(x => new Location() { Latitude = x.Y, Longitude = x.X });
                         }
                         catch
                         {
@@ -114,11 +110,9 @@ namespace MapDownloader.Controls
 
         private void MapLoaded(object sender, RoutedEventArgs e)
         {
-            if (pick.Locations.Count() > 3)
+            if (pick.Locations?.Count() > 3)
             {
-                var geom = new NetTopologySuite.Geometries.Polygon(new NetTopologySuite.Geometries.LinearRing(pick.Locations.Select(x => new NetTopologySuite.Geometries.Coordinate(x.Longitude, x.Latitude)).ToArray())).Buffer(1); ;
-                var env = geom.EnvelopeInternal;
-                var bbox = new BoundingBox(env.MinY, env.MinX, env.MaxY, env.MaxX);
+                var bbox = new BoundingBox(Range.MinY, Range.MinX, Range.MaxY, Range.MaxX);
                 map.ZoomToBounds(bbox);
             }
         }

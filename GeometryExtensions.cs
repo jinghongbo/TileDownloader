@@ -20,6 +20,26 @@ namespace MapDownloader
             target.SRID = targetSrid;
             return (T)target;
         }
+        public static Envelope Projection(this Envelope source, int sourceSrid, int targetSrid)
+        {
+            var services = new CoordinateSystemServices();
+            var transformation = services.CreateTransformation(sourceSrid, targetSrid);
+            var (minX, minY) = transformation.MathTransform.Transform(source.MinX, source.MinY);
+            var (maxX, maxY) = transformation.MathTransform.Transform(source.MaxX, source.MaxY);
+            return new Envelope(minX, minY, maxX, maxY);
+        }
+
+        public static Polygon ToPolygon(this Envelope envelope)
+        {
+            return new Polygon(new LinearRing(new Coordinate[] {
+                new Coordinate(envelope.MinX,envelope.MinY),
+                new Coordinate(envelope.MinX,envelope.MaxY),
+                new Coordinate(envelope.MaxX,envelope.MaxY),
+                new Coordinate(envelope.MaxX,envelope.MinY),
+                new Coordinate(envelope.MinX,envelope.MinY),
+            }));
+        }
+
 
         class CoordinateSequenceFilter : ICoordinateSequenceFilter
         {

@@ -19,7 +19,7 @@
                 </map:MapTileLayer>
             </map:Map.MapLayer>
 
-            <map:MapPolygon x:Name="pick" Stroke="Red" StrokeThickness="3">
+            <map:MapPolygon x:Name="pick" Stroke="Red" StrokeThickness="1">
             </map:MapPolygon>
         </map:Map>
     </Grid>

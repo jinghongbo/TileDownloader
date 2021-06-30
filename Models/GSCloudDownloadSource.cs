@@ -175,13 +175,12 @@ namespace MapDownloader.Models
             await vm.DownloadTask;
         }
 
-        private async Task<GSCloudPage<GSCloudData>> SearchAsync(HttpClient client, string range, int offset, int pageSize, CancellationToken cancellationToken)
+        private async Task<GSCloudPage<GSCloudData>> SearchAsync(HttpClient client, Envelope range, int offset, int pageSize, CancellationToken cancellationToken)
         {
             var serializerSettings = new JsonSerializerSettings();
             serializerSettings.Converters.Add(new GeometryConverter());
             serializerSettings.Converters.Add(new CoordinateConverter());
-            var reader = new NetTopologySuite.IO.WKTReader();
-            var geom = reader.Read(range);
+            var geom = range.ToPolygon();
             var tableInfo = new { offset = offset, pageSize = pageSize };
             var query = new { productid = new { @in = new[] { ProductId } }, geom_params = new { qtype = 1, value = geom } };
 

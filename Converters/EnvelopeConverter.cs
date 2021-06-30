@@ -1,4 +1,5 @@
 ﻿using BruTile;
+using NetTopologySuite.Geometries;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -9,13 +10,13 @@ using System.Windows.Data;
 
 namespace MapDownloader.Converters
 {
-    public class ExtentConverter : IValueConverter
+    public class EnvelopeConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value is Extent extent)
+            if (value is Envelope range)
             {
-                return $"{extent.MinX},{extent.MinY},{extent.MaxX},{extent.MaxY}";
+                return $"{range.MinX},{range.MaxX},{range.MinY},{range.MaxY}";
             }
             return "";
         }
@@ -25,7 +26,7 @@ namespace MapDownloader.Converters
             if (value is string str)
             {
                 var arr = str.Split(",").Select(System.Convert.ToDouble).ToArray();
-                return new Extent(arr[0], arr[1], arr[2], arr[3]);
+                return new Envelope(arr[0], arr[1], arr[2], arr[3]);
             }
             return null;
         }

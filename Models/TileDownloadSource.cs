@@ -48,17 +48,15 @@ namespace MapDownloader.Models
                 Subdomains.Split(","), Key, Name);
             var reader = new WKTReader();
 
-            var geom = reader.Read(vm.Range);
-            var envelope = geom.EnvelopeInternal;
 
             var info = new PakInfo
             {
                 Type = "image",
                 Source = Name,
-                MinX = envelope.MinX,
-                MinY = envelope.MinY,
-                MaxX = envelope.MaxX,
-                MaxY = envelope.MaxY,
+                MinX = vm.Range.MinX,
+                MinY = vm.Range.MinY,
+                MaxX = vm.Range.MaxX,
+                MaxY = vm.Range.MaxY,
                 MinLevel = MinLevel,
                 MaxLevel = MaxLevel
             };
@@ -69,8 +67,7 @@ namespace MapDownloader.Models
             await freesql.Delete<PakInfo>().Where(x => true).ExecuteAffrowsAsync();
             await freesql.Insert<PakInfo>().AppendData(info).ExecuteAffrowsAsync();
 
-            var projection = geom.Projection(4326, 3857);
-            envelope = projection.EnvelopeInternal;
+            var envelope = vm.Range.Projection(4326, 3857);
 
             var extent = new Extent(envelope.MinX, envelope.MinY, envelope.MaxX, envelope.MaxY);
 

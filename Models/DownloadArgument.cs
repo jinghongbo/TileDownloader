@@ -30,8 +30,7 @@ namespace MapDownloader.Models
             var args = new List<DownloadArgument>();
             foreach (var prop in props)
             {
-                var attr = Attribute.GetCustomAttribute(prop, typeof(DonwloadArgumentAttribute)) as DonwloadArgumentAttribute;
-                if (attr == null)
+                if (Attribute.GetCustomAttribute(prop, typeof(DonwloadArgumentAttribute)) is not DonwloadArgumentAttribute attr)
                 {
                     continue;
                 }

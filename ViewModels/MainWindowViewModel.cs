@@ -90,7 +90,7 @@ namespace MapDownloader.ViewModels
             set { SetProperty(ref _retry, value); }
         }
 
-        private Envelope _range = new Envelope(-180, 180, -85.06, 85.06);
+        private Envelope _range = new(-180, 180, -85.06, 85.06);
 
         public Envelope Range
         {
@@ -181,7 +181,7 @@ namespace MapDownloader.ViewModels
         private DelegateCommand _cancelCmd;
 
         public DelegateCommand CancelCmd =>
-            _cancelCmd ?? (_cancelCmd = new DelegateCommand(ExecuteCancel, () => Downloading));
+_cancelCmd ??= new DelegateCommand(ExecuteCancel, () => Downloading);
 
         private CancellationTokenSource _cancellationTokenSource;
 
@@ -193,7 +193,7 @@ namespace MapDownloader.ViewModels
         private DelegateCommand _browseCmd;
 
         public DelegateCommand BrowseCmd =>
-            _browseCmd ?? (_browseCmd = new DelegateCommand(ExecuteBrowse));
+_browseCmd ??= new DelegateCommand(ExecuteBrowse);
 
         public CancellationTokenSource CancellationTokenSource { get => _cancellationTokenSource; set => _cancellationTokenSource = value; }
 
@@ -201,8 +201,10 @@ namespace MapDownloader.ViewModels
         {
             if (Source.Type == "Tile")
             {
-                var dialog = new SaveFileDialog();
-                dialog.Filter = "pak|*.pak";
+                var dialog = new SaveFileDialog
+                {
+                    Filter = "pak|*.pak"
+                };
 
                 if (dialog.ShowDialog() == true)
                 {
@@ -211,9 +213,11 @@ namespace MapDownloader.ViewModels
             }
             else if (Source.Type == "GSCloud")
             {
-                var dialog = new SaveFileDialog();
-                dialog.FileName = "[当前目录]";
-                dialog.Filter = "目录|dir";
+                var dialog = new SaveFileDialog
+                {
+                    FileName = "[当前目录]",
+                    Filter = "目录|dir"
+                };
                 if (dialog.ShowDialog() == true)
                 {
                     Path = System.IO.Path.GetDirectoryName(dialog.FileName);
@@ -223,7 +227,7 @@ namespace MapDownloader.ViewModels
 
         public Task DownloadTask { get; set; }
 
-        public string Format(TimeSpan timeSpan)
+        public static string Format(TimeSpan timeSpan)
         {
             if (timeSpan.Days > 1)
             {

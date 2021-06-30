@@ -147,7 +147,7 @@ namespace MapDownloader.Models
                                    var readBytes = 0;
                                    while (downloadTask.Completed < downloadTask.Total && (readBytes = stream.Read(buffer)) != 0)
                                    {
-                                       await output.WriteAsync(buffer, 0, readBytes, vm.CancellationTokenSource.Token);
+                                       await output.WriteAsync(buffer.AsMemory(0, readBytes), vm.CancellationTokenSource.Token);
                                        downloadTask.Completed += readBytes;
                                        vm.Progress = vm.Tasks.Sum(x => x.Progress) / vm.Tasks.Count;
                                    }
@@ -180,7 +180,7 @@ namespace MapDownloader.Models
             serializerSettings.Converters.Add(new GeometryConverter());
             serializerSettings.Converters.Add(new CoordinateConverter());
             var geom = range.ToPolygon();
-            var tableInfo = new { offset = offset, pageSize = pageSize };
+            var tableInfo = new { offset, pageSize };
             var query = new { productid = new { @in = new[] { ProductId } }, geom_params = new { qtype = 1, value = geom } };
 
             var res = await client.PostAsync("/wsd/gscloud_wsd/dataset/p_search", new FormUrlEncodedContent(new Dictionary<string, string>()
@@ -189,7 +189,7 @@ namespace MapDownloader.Models
                 {nameof(query),JsonConvert.SerializeObject(query,serializerSettings)  },
             }), cancellationToken);
 
-            var json = await res.Content.ReadAsStringAsync();
+            var json = await res.Content.ReadAsStringAsync(cancellationToken);
 
             var page = JsonConvert.DeserializeObject<GSCloudPage<GSCloudData>>(json, serializerSettings);
             return page;

@@ -43,7 +43,7 @@ namespace MapDownloader
 
         class CoordinateSequenceFilter : ICoordinateSequenceFilter
         {
-            private ProjNet.CoordinateSystems.Transformations.ICoordinateTransformation transformation;
+            private readonly ProjNet.CoordinateSystems.Transformations.ICoordinateTransformation transformation;
 
             public CoordinateSequenceFilter(ProjNet.CoordinateSystems.Transformations.ICoordinateTransformation transformation)
             {

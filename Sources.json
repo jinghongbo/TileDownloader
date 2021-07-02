@@ -138,49 +138,49 @@
   },
   {
     "Type": "GSCloud",
-    "Name": "GDEMV2 30M 分辨率数字高程数据",
+    "Name": "GSCloud - GDEMV2 30M 分辨率数字高程数据",
     "ProductId": "421",
     "Url": "http://www.gscloud.cn",
     "Cookies": "csrftoken=HVr4Ufjo9fccyziGCgKCbsN5AvTINgu4SDcPkpliQPy0JLnbdSrfYtOBZ5ah9VIi,sessionid=73glwcmwykdmv2vku9oedg0u4qojzgil"
   },
   {
     "Type": "GSCloud",
-    "Name": "SRTMDEMUTM 90M 分辨率数字高程数据产品",
+    "Name": "GSCloud - SRTMDEMUTM 90M 分辨率数字高程数据产品",
     "ProductId": "306",
     "Url": "http://www.gscloud.cn",
     "Cookies": "csrftoken=HVr4Ufjo9fccyziGCgKCbsN5AvTINgu4SDcPkpliQPy0JLnbdSrfYtOBZ5ah9VIi,sessionid=73glwcmwykdmv2vku9oedg0u4qojzgil"
   },
   {
     "Type": "GSCloud",
-    "Name": "ASTER GDEM 30M 分辨率数字高程数据",
+    "Name": "GSCloud - ASTER GDEM 30M 分辨率数字高程数据",
     "ProductId": "310",
     "Url": "http://www.gscloud.cn",
     "Cookies": "csrftoken=HVr4Ufjo9fccyziGCgKCbsN5AvTINgu4SDcPkpliQPy0JLnbdSrfYtOBZ5ah9VIi,sessionid=73glwcmwykdmv2vku9oedg0u4qojzgil"
   },
   {
     "Type": "GSCloud",
-    "Name": "SRTMDEM 90M 分辨率原始高程数据",
+    "Name": "GSCloud - SRTMDEM 90M 分辨率原始高程数据",
     "ProductId": "305",
     "Url": "http://www.gscloud.cn",
     "Cookies": "csrftoken=HVr4Ufjo9fccyziGCgKCbsN5AvTINgu4SDcPkpliQPy0JLnbdSrfYtOBZ5ah9VIi,sessionid=73glwcmwykdmv2vku9oedg0u4qojzgil"
   },
   {
     "Type": "GSCloud",
-    "Name": "SRTMSLOPE 90M 分辨率坡度数据产品",
+    "Name": "GSCloud - SRTMSLOPE 90M 分辨率坡度数据产品",
     "ProductId": "307",
     "Url": "http://www.gscloud.cn",
     "Cookies": "csrftoken=HVr4Ufjo9fccyziGCgKCbsN5AvTINgu4SDcPkpliQPy0JLnbdSrfYtOBZ5ah9VIi,sessionid=73glwcmwykdmv2vku9oedg0u4qojzgil"
   },
   {
     "Type": "GSCloud",
-    "Name": "SRTMASPECT 90M 分辨率坡向数据产品",
+    "Name": "GSCloud - SRTMASPECT 90M 分辨率坡向数据产品",
     "ProductId": "309",
     "Url": "http://www.gscloud.cn",
     "Cookies": "csrftoken=HVr4Ufjo9fccyziGCgKCbsN5AvTINgu4SDcPkpliQPy0JLnbdSrfYtOBZ5ah9VIi,sessionid=73glwcmwykdmv2vku9oedg0u4qojzgil"
   },
   {
     "Type": "GSCloud",
-    "Name": "SRTMTPI 90M 分辨率坡位数据产品",
+    "Name": "GSCloud - SRTMTPI 90M 分辨率坡位数据产品",
     "ProductId": "308",
     "Url": "http://www.gscloud.cn",
     "Cookies": "csrftoken=HVr4Ufjo9fccyziGCgKCbsN5AvTINgu4SDcPkpliQPy0JLnbdSrfYtOBZ5ah9VIi,sessionid=73glwcmwykdmv2vku9oedg0u4qojzgil"

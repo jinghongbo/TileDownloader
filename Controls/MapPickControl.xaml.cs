@@ -64,7 +64,7 @@ namespace MapDownloader.Controls
                     leftTopLocaltion,
                 };
 
-                Range = new NetTopologySuite.Geometries.Envelope(leftTopLocaltion.Longitude, rightDownLocaltion.Latitude, rightDownLocaltion.Longitude, leftTopLocaltion.Latitude);
+                Range = new NetTopologySuite.Geometries.Envelope(leftTopLocaltion.Longitude, rightDownLocaltion.Longitude, leftTopLocaltion.Latitude, rightDownLocaltion.Latitude);
             }
         }
 

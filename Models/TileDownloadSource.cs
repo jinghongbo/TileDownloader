@@ -63,9 +63,7 @@ namespace MapDownloader.Models
 
             var envelope = vm.Range.Projection(4326, 3857);
 
-            var extent1 = new Extent(envelope.MinX, envelope.MinY, envelope.MaxX, envelope.MaxY);
-
-            var extent = new Extent(-20037508, -20037508, 20037508, 20037508);
+            var extent = new Extent(envelope.MinX, envelope.MinY, envelope.MaxX, envelope.MaxY);
 
             for (var level = MinLevel; level <= MaxLevel; level++)
             {

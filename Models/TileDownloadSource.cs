@@ -65,6 +65,8 @@ namespace MapDownloader.Models
 
             var extent = new Extent(envelope.MinX, envelope.MinY, envelope.MaxX, envelope.MaxY);
 
+            var dict = new Dictionary<string, Dictionary<string, bool>>();
+
             for (var level = MinLevel; level <= MaxLevel; level++)
             {
                 var range = TileTransform.WorldToTile(extent, level, schema);
@@ -88,12 +90,16 @@ namespace MapDownloader.Models
                         for (int y = miny; y <= maxy; y++)
                         {
                             var table = $"blocks_{level}_{x}_{y}";
-                            freesql.CodeFirst.SyncStructure(typeof(PakBlock), table);
+                            dict.Add(table, await freesql.Select<PakBlock>().AsTable((t, n) => table).ToDictionaryAsync(b => $"{b.Z}_{b.X}_{b.Y}", b => b.Tile != null));
+
                         }
                     }
                 }
+
             }
             freesql.CodeFirst.SyncStructure(typeof(PakBlock), "blocks");
+            dict.Add("blocks", await freesql.Select<PakBlock>().ToDictionaryAsync(b => $"{b.Z}_{b.X}_{b.Y}", b => b.Tile != null));
+
             using var semaphore = new SemaphoreSlim(vm.Concurrent);
             foreach (var downloadTask in vm.Tasks)
             {
@@ -121,8 +127,9 @@ namespace MapDownloader.Models
                                      var x = tileInfo.Index.Col;
                                      var y = tileInfo.Index.Row;
                                      var table = PakBlock.GetTable(z, x, y);
-                                     if (!freesql.Select<PakBlock>().AsTable((_, n) => table).Any(b =>
-                                         b.X == x && b.Y == y && b.Z == z && b.Tile != null))
+                                     if (!dict[table].TryGetValue($"{z}_{x}_{y}", out var b) && !b)
+                                     //if (!freesql.Select<PakBlock>().AsTable((_, n) => table).Any(b =>
+                                     //    b.X == x && b.Y == y && b.Z == z && b.Tile != null))
                                      {
                                          var uri = await FormatUri(source.GetUri(tileInfo), vm.CancellationTokenSource.Token);
                                          using var res = await client.GetAsync(uri, vm.CancellationTokenSource.Token);
@@ -135,9 +142,20 @@ namespace MapDownloader.Models
                                              throw new Exception($"请求错误:" + res.StatusCode);
                                          }
                                          var tile = await res.Content.ReadAsByteArrayAsync(vm.CancellationTokenSource.Token);
-                                         await freesql.Insert<PakBlock>().AsTable(_ => table)
-                                                .AppendData(new PakBlock { X = x, Y = y, Z = z, Tile = tile })
-                                                .ExecuteAffrowsAsync(vm.CancellationTokenSource.Token);
+                                         if (b)
+                                         {
+
+                                             await freesql.Update<PakBlock>().AsTable(_ => table)
+                                                    .SetSource(new PakBlock { X = x, Y = y, Z = z, Tile = tile })
+                                                    .ExecuteAffrowsAsync(vm.CancellationTokenSource.Token);
+                                         }
+                                         else
+                                         {
+
+                                             await freesql.Insert<PakBlock>().AsTable(_ => table)
+                                                    .AppendData(new PakBlock { X = x, Y = y, Z = z, Tile = tile })
+                                                    .ExecuteAffrowsAsync(vm.CancellationTokenSource.Token);
+                                         }
                                      }
                                      break;
                                  }
@@ -165,7 +183,7 @@ namespace MapDownloader.Models
         }
 
 
-        public virtual Task<Uri> FormatUri(Uri uri,CancellationToken cancellationToken)
+        public virtual Task<Uri> FormatUri(Uri uri, CancellationToken cancellationToken)
         {
             return Task.FromResult(uri);
         }

@@ -90,7 +90,7 @@ namespace MapDownloader.ViewModels
             set { SetProperty(ref _retry, value); }
         }
 
-        private Envelope _range = new(-180, 180, -85.06, 85.06);
+        private Envelope _range = new(-180, 180, -85, 85);
 
         public Envelope Range
         {

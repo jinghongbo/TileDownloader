@@ -124,7 +124,7 @@ namespace MapDownloader.Models
                                      if (!freesql.Select<PakBlock>().AsTable((_, n) => table).Any(b =>
                                          b.X == x && b.Y == y && b.Z == z && b.Tile != null))
                                      {
-                                         var uri = source.GetUri(tileInfo);
+                                         var uri = await FormatUri(source.GetUri(tileInfo), vm.CancellationTokenSource.Token);
                                          using var res = await client.GetAsync(uri, vm.CancellationTokenSource.Token);
                                          if (res.StatusCode == HttpStatusCode.NotFound)
                                          {
@@ -164,5 +164,10 @@ namespace MapDownloader.Models
             await vm.DownloadTask;
         }
 
+
+        public virtual Task<Uri> FormatUri(Uri uri,CancellationToken cancellationToken)
+        {
+            return Task.FromResult(uri);
+        }
     }
 }

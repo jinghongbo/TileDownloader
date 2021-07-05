@@ -49,8 +49,6 @@ namespace MapDownloader.Models
         [DonwloadArgument("产品编号")]
         public string ProductId { get; set; }
 
-        [DonwloadArgument("Cookies")]
-        public string Cookies { get; set; }
 
         public override async Task DownloadAsync(ViewModels.MainWindowViewModel vm)
         {
@@ -61,10 +59,9 @@ namespace MapDownloader.Models
 
             using var handler = new HttpClientHandler();
             var baseUri = new Uri(Url);
-            handler.CookieContainer.SetCookies(baseUri, Cookies);
+            handler.CookieContainer.SetCookies(baseUri, Cookies.Replace(";", ","));
             using var client = new HttpClient(handler);
             client.BaseAddress = baseUri;
-
             client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", UserAgent);
             client.DefaultRequestHeaders.TryAddWithoutValidation("Referer", Referer);
 

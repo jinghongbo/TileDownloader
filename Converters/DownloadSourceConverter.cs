@@ -23,6 +23,7 @@ namespace MapDownloader.Converters
             Type actualType = typeToken.ToObject<string>(serializer) switch
             {
                 "Tile" => typeof(TileDownloadSource),
+                "Tianditu" => typeof(TiandituDownloadSource),
                 "GSCloud" => typeof(GSCloudDownloadSource),
                 _ => throw new NotSupportedException("不支持"),
             };

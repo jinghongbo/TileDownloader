@@ -199,7 +199,7 @@ _browseCmd ??= new DelegateCommand(ExecuteBrowse);
 
         private void ExecuteBrowse()
         {
-            if (Source.Type == "Tile")
+            if (Source.Type == "Tile" || Source.Type == "Tianditu")
             {
                 var dialog = new SaveFileDialog
                 {

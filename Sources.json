@@ -6,7 +6,7 @@
     "Key": "ef6151d9f0386f3b2a2fdf1d58fe9b32",
     "Name": "天地图 - 影像底图",
     "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62",
-    "Referer": "https://map.tianditu.gov.cn/",
+    //"Referer": "https://map.tianditu.gov.cn/",
     "Cookies": "HWWAFSESID=79a23736426259b400; HWWAFSESTIME=1625463646109; SESSION=de023012-5fae-4cc2-96d1-13d361492bab; JSESSIONID=aaai7_iYQ8BM4gwg94eHx"
   },
   {
@@ -16,7 +16,7 @@
     "Key": "ef6151d9f0386f3b2a2fdf1d58fe9b32",
     "Name": "天地图 - 影像注记",
     "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62",
-    "Referer": "https://map.tianditu.gov.cn/",
+    //"Referer": "https://map.tianditu.gov.cn/",
     "Cookies": "HWWAFSESID=79a23736426259b400; HWWAFSESTIME=1625463646109; SESSION=de023012-5fae-4cc2-96d1-13d361492bab; JSESSIONID=aaai7_iYQ8BM4gwg94eHx"
   },
   {
@@ -26,7 +26,7 @@
     "Key": "ef6151d9f0386f3b2a2fdf1d58fe9b32",
     "Name": "天地图 - 矢量底图",
     "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62",
-    "Referer": "https://map.tianditu.gov.cn/",
+    //"Referer": "https://map.tianditu.gov.cn/",
     "Cookies": "HWWAFSESID=79a23736426259b400; HWWAFSESTIME=1625463646109; SESSION=de023012-5fae-4cc2-96d1-13d361492bab; JSESSIONID=aaai7_iYQ8BM4gwg94eHx"
   },
   {
@@ -36,7 +36,7 @@
     "Key": "ef6151d9f0386f3b2a2fdf1d58fe9b32",
     "Name": "天地图 - 矢量注记",
     "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62",
-    "Referer": "https://map.tianditu.gov.cn/",
+    //"Referer": "https://map.tianditu.gov.cn/",
     "Cookies": "HWWAFSESID=79a23736426259b400; HWWAFSESTIME=1625463646109; SESSION=de023012-5fae-4cc2-96d1-13d361492bab; JSESSIONID=aaai7_iYQ8BM4gwg94eHx"
   },
   {
@@ -46,7 +46,7 @@
     "Key": "ef6151d9f0386f3b2a2fdf1d58fe9b32",
     "Name": "天地图 - 地形晕渲",
     "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62",
-    "Referer": "https://map.tianditu.gov.cn/",
+    //"Referer": "https://map.tianditu.gov.cn/",
     "Cookies": "HWWAFSESID=79a23736426259b400; HWWAFSESTIME=1625463646109; SESSION=de023012-5fae-4cc2-96d1-13d361492bab; JSESSIONID=aaai7_iYQ8BM4gwg94eHx"
   },
   {
@@ -56,7 +56,7 @@
     "Key": "ef6151d9f0386f3b2a2fdf1d58fe9b32",
     "Name": "天地图 - 地形注记",
     "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62",
-    "Referer": "https://map.tianditu.gov.cn/",
+    //"Referer": "https://map.tianditu.gov.cn/",
     "Cookies": "HWWAFSESID=79a23736426259b400; HWWAFSESTIME=1625463646109; SESSION=de023012-5fae-4cc2-96d1-13d361492bab; JSESSIONID=aaai7_iYQ8BM4gwg94eHx"
   },
   {
@@ -66,7 +66,7 @@
     "Key": "ef6151d9f0386f3b2a2fdf1d58fe9b32",
     "Name": "天地图 - 全球境界",
     "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62",
-    "Referer": "https://map.tianditu.gov.cn/",
+    //"Referer": "https://map.tianditu.gov.cn/",
     "Cookies": "HWWAFSESID=79a23736426259b400; HWWAFSESTIME=1625463646109; SESSION=de023012-5fae-4cc2-96d1-13d361492bab; JSESSIONID=aaai7_iYQ8BM4gwg94eHx"
   },
   {
@@ -76,7 +76,7 @@
     "Key": "ef6151d9f0386f3b2a2fdf1d58fe9b32",
     "Name": "天地图 - 矢量英文注记",
     "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62",
-    "Referer": "https://map.tianditu.gov.cn/",
+    //"Referer": "https://map.tianditu.gov.cn/",
     "Cookies": "HWWAFSESID=79a23736426259b400; HWWAFSESTIME=1625463646109; SESSION=de023012-5fae-4cc2-96d1-13d361492bab; JSESSIONID=aaai7_iYQ8BM4gwg94eHx"
   },
   {
@@ -86,7 +86,7 @@
     "Key": "ef6151d9f0386f3b2a2fdf1d58fe9b32",
     "Name": "天地图 - 影像英文注记",
     "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62",
-    "Referer": "https://map.tianditu.gov.cn/",
+    //"Referer": "https://map.tianditu.gov.cn/",
     "Cookies": "HWWAFSESID=79a23736426259b400; HWWAFSESTIME=1625463646109; SESSION=de023012-5fae-4cc2-96d1-13d361492bab; JSESSIONID=aaai7_iYQ8BM4gwg94eHx"
   },
   {

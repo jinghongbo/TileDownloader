@@ -1,4 +1,5 @@
-﻿using MapDownloader.ViewModels;
+﻿using MapDownloader.Attributes;
+using MapDownloader.ViewModels;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -107,6 +108,9 @@ namespace MapDownloader.Models
             _semaphoreSlim = new SemaphoreSlim(1);
             return base.DownloadAsync(vm);
         }
+
+        [DonwloadArgument("限制")]
+        public int Limit { get; set; } = 10000;
         public override async Task<Uri> FormatUri(Uri uri, CancellationToken cancellationToken)
         {
             try
@@ -114,9 +118,9 @@ namespace MapDownloader.Models
                 await _semaphoreSlim.WaitAsync(cancellationToken);
                 Interlocked.Decrement(ref _count);
 
-                if (_count < 0)
+                if (_count <= 0)
                 {
-                    Interlocked.Exchange(ref _count, 10000);
+                    Interlocked.Exchange(ref _count, Limit);
 
                     _token = await CreateToken(cancellationToken);
                 }

@@ -1,0 +1,44 @@
+# Tasks
+
+- [x] Task 1: 升级依赖并修复编译
+  - [x] SubTask 1.1: 更新 MapDownloader.csproj 包引用（CommunityToolkit.Mvvm 8.4.0、Microsoft.Extensions.DependencyInjection 10.x、WPF-UI 4.3.0、FreeSql.Provider.Sqlite 3.5.311、BruTile 6.0.0、NetTopologySuite 2.6.0、ProjNet 最新稳定版、Newtonsoft.Json 13.0.4；移除 Prism.DryIoc、MaterialDesignThemes、XAML.MapControl、NetTopologySuite.IO.GeoJSON）
+  - [x] SubTask 1.2: App.xaml(.cs) 改为标准 WPF Application + ServiceProvider 构建（页面/ViewModel/Services 注册），移除 PrismApplication
+  - [x] SubTask 1.3: ViewModels 迁移到 CommunityToolkit.Mvvm（ObservableObject、[ObservableProperty]、[RelayCommand]），移除 BindableBase/DelegateCommand/ViewModelLocator
+  - [x] SubTask 1.4: 移除 GSCloudDownloadSource.cs、TiandituDownloadSource.cs，Sources.json 仅保留通用瓦片源配置；修复 BruTile 6 / FreeSql 3 API 变更
+  - [x] SubTask 1.5: `dotnet build` 通过验证
+- [x] Task 2: 目录结构重组
+  - [x] SubTask 2.1: 建立 Services/ 目录，定义 IDownloadEngine、ITileStore、ITaskManager、ITileImageLoader（瓦片加载，地图控件与下载引擎复用）抽象接口
+  - [x] SubTask 2.2: 将 TileDownloadSource 下载逻辑迁移为 TileDownloadEngine 实现，DownloadSource 仅保留来源配置元数据（名称/URL 模板/子域名/密钥/UA/Referer/Cookies）
+  - [x] SubTask 2.3: Models 与 ViewModels 解耦（DownloadSource 不再引用 ViewModel），DI 注册服务
+- [x] Task 3: 自研地图控件
+  - [x] SubTask 3.1: 实现自定义 MapControl（纯 WPF）：XYZ 瓦片渲染、拖拽平移、滚轮缩放（级别 0–20）、视野内瓦片异步加载
+  - [x] SubTask 3.2: 瓦片加载服务：网络获取 + 内存缓存 + 磁盘缓存，URL 模板/子域名/密钥替换，不阻塞 UI 线程
+  - [x] SubTask 3.3: 框选交互：选区矩形绘制与高亮、Envelope（EPSG:4326）依赖属性与 ViewModel 双向绑定、半透明信息浮层（中心坐标/缩放级别/选区范围）
+- [x] Task 4: 断点续传
+  - [x] SubTask 4.1: 瓦片类续传：启动时扫描存储已有瓦片跳过 + 检查点（CurLevel/CurX/CurY）写入与恢复
+  - [x] SubTask 4.2: 任务状态持久化（SQLite：状态/进度/目标/格式），重启后任务中心可继续中断任务
+- [x] Task 5: 多格式输出
+  - [x] SubTask 5.1: 实现 MultiFilePakTileStore（多文件·默认：{name}.pak 主文件存 meta/分块索引 + {name}.blocks_{z}_{tx}_{ty}.pak 每表一文件，z<10 存 {name}.blocks.pak；支持文件粒度续传）
+  - [x] SubTask 5.2: 实现 PakTileStore（单文件·旧，迁移现有 pak 逻辑，保持表结构兼容）
+  - [x] SubTask 5.3: 实现 MbTilesTileStore（metadata + tiles 表，含 zoom 级别范围元数据）
+  - [x] SubTask 5.4: 实现 DirectoryTileStore（z/x/y 文件夹存储）
+  - [x] SubTask 5.5: 格式注册与选择（ITileStore 注册表 + 高级选项格式选择）
+- [x] Task 6: 现代化界面与极简交互
+  - [x] SubTask 6.1: App.xaml 接入 WPF-UI 主题资源（ThemesDictionary + ControlsDictionary），MainWindow 改为 FluentWindow + Mica 背景 + 左侧 NavigationView 侧边栏，统一卡片布局/圆角/间距/字体层级与过渡动画
+  - [x] SubTask 6.2: 新建下载页：来源选择（卡片/下拉）+ 自研地图选区占主体 + 极简操作区（「开始下载」主按钮）+「高级选项」Expander（层级范围/输出格式/输出路径）；移除动态参数表单（UA/Referer/Cookies 等仅存 Sources.json）
+  - [x] SubTask 6.3: 任务中心页：任务卡片/列表、总体进度环 + 分层级进度条 + 已完成/总数 + 速度/剩余时间 + 状态徽标（进行中/已完成/失败/已中断）、继续/取消/删除操作
+  - [x] SubTask 6.4: 设置页：并发、重试、主题切换；Snackbar/ContentDialog 反馈接入
+- [x] Task 7: 整体验证
+  - [x] SubTask 7.1: `dotnet build` 无错误、`dotnet run` 启动正常
+  - [x] SubTask 7.2: 手动冒烟：选择来源 → 地图框选 → 一键下载（多文件 pak，验证主文件+分块文件）；中断后续传；单文件 pak、MBTiles 与瓦片目录输出校验；地图控件平移/缩放/框选流畅（引擎级冒烟已实测通过：OSM 真实下载 8 瓦片 → 四格式产物结构与续传全跳过；地图交互流畅度为使用体感，由用户确认）
+- [x] Task 8: 来源配置拆分与用户密钥（用户反馈追加）
+  - [x] SubTask 8.1: Sources.json 拆分为 Sources/ 目录一源一 JSON，内置 16 个通用源（OSM、CARTO×2、ArcGIS×3、高德×2、天地图×2、谷歌国际版×4、谷歌中国版×2），不预置密钥/Cookie
+  - [x] SubTask 8.2: SourcesConfigService 改为加载 Sources/*.json（按文件名排序），csproj 拷贝配置
+  - [x] SubTask 8.3: URL 含 {k} 的来源在新建下载页显示密钥输入框，由用户填写并持久化到本机（user_keys.json），EffectiveSource 注入地图预览与下载请求
+
+# Task Dependencies
+- Task 2、3、6 依赖 Task 1（编译基线）
+- Task 4 依赖 Task 2（服务抽象）
+- Task 5 依赖 Task 2（ITileStore 抽象），其中 5.1 依赖 4.1 的检查点逻辑
+- Task 6.2 依赖 Task 3（自研地图控件）与 Task 5.5（格式注册）；Task 6.3 依赖 Task 4.2（任务持久化）
+- Task 7 依赖全部

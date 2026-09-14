@@ -1,0 +1,9 @@
+{
+  "Type": "Tile",
+  "Name": "天地图 - 影像底图（需密钥）",
+  "Url": "https://{s}.tianditu.gov.cn/img_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=img&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}&tk={k}",
+  "Subdomains": "t0,t1,t2,t3,t4,t5,t6,t7",
+  "Key": "",
+  "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+  "Referer": "https://map.tianditu.gov.cn/"
+}

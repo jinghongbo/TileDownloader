@@ -1,62 +1,86 @@
-﻿using Prism.Ioc;
-using System.Windows;
-using MapDownloader.Views;
-using System.Threading.Tasks;
 using System;
+using System.Windows;
 using System.Windows.Threading;
+using MapDownloader.Services;
+using MapDownloader.ViewModels;
+using MapDownloader.Views;
+using Microsoft.Extensions.DependencyInjection;
+using Wpf.Ui;
 
 namespace MapDownloader
 {
     /// <summary>
-    /// Interaction logic for App.xaml
+    /// 应用入口：标准 WPF Application + Microsoft.Extensions.DependencyInjection
     /// </summary>
-    public partial class App
+    public partial class App : Application
     {
-        protected override Window CreateShell()
+        /// <summary>全局服务容器</summary>
+        public static IServiceProvider Services { get; private set; } = null!;
+
+        protected override void OnStartup(StartupEventArgs e)
         {
-            //UI线程未捕获异常处理事件（UI主线程）
+            // UI 线程未捕获异常处理
             DispatcherUnhandledException += App_DispatcherUnhandledException;
-            //非UI线程未捕获异常处理事件(例如自己创建的一个子线程)
-            //AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
-            //Task线程内未捕获异常处理事件
-            //TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
-            return Container.Resolve<MainWindow>();
+
+            var services = new ServiceCollection();
+
+            // Services
+            services.AddSingleton<TileStoreRegistry>();
+            services.AddSingleton<SourcesConfigService>();
+            services.AddSingleton<ITileImageLoader, TileImageLoader>();
+            services.AddSingleton<ITaskManager, TaskManager>();
+            services.AddTransient<IDownloadEngine, TileDownloadEngine>();
+
+            // ViewModels（单例，页面间共享任务集合与设置）
+            services.AddSingleton<MainWindowViewModel>();
+            services.AddSingleton<SettingsViewModel>();
+            services.AddSingleton<TasksViewModel>();
+            services.AddSingleton<NewDownloadViewModel>();
+
+            // WPF-UI 服务（Snackbar 提示 / ContentDialog 弹窗，宿主在 MainWindow 设置）
+            services.AddSingleton<ISnackbarService, SnackbarService>();
+            services.AddSingleton<IContentDialogService, ContentDialogService>();
+
+            // Views / Pages（单例：Navigation 内建导航复用实例，保留页面状态如地图视野）
+            services.AddSingleton<MainWindow>();
+            services.AddSingleton<NewDownloadPage>();
+            services.AddSingleton<TasksPage>();
+            services.AddSingleton<SettingsPage>();
+
+            Services = services.BuildServiceProvider();
+
+            var mainWindow = Services.GetRequiredService<MainWindow>();
+            mainWindow.Show();
+
+            base.OnStartup(e);
         }
 
-        protected override void RegisterTypes(IContainerRegistry containerRegistry)
-        {
-
-        }
-
-        //UI线程未捕获异常处理事件（UI主线程）
+        // UI 线程未捕获异常处理事件（UI 主线程）
         private void App_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
         {
             Exception ex = e.Exception;
-            string msg = string.Format("{0}\n\n{1}", ex.Message, ex.StackTrace);//异常信息 和 调用堆栈信息
+            var sb = new System.Text.StringBuilder();
+            for (var cur = (Exception?)ex; cur != null; cur = cur.InnerException)
+            {
+                sb.AppendLine($"[{ex.GetType().Name}] {cur.Message}");
+            }
+            sb.AppendLine(ex.StackTrace);
+            string msg = sb.ToString();
+
+            // 记录崩溃日志，便于诊断
+            try
+            {
+                System.IO.File.AppendAllText(
+                    System.IO.Path.Combine(System.IO.Path.GetTempPath(), "mapdownloader_crash.log"),
+                    $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {msg}\n\n");
+            }
+            catch
+            {
+            }
+
             MessageBox.Show(msg, "UI线程异常");
 
-            e.Handled = true;//表示异常已处理，可以继续运行
-        }
-
-        //非UI线程未捕获异常处理事件(例如自己创建的一个子线程)
-        //如果UI线程异常DispatcherUnhandledException未注册，则如果发生了UI线程未处理异常也会触发此异常事件
-        //此机制的异常捕获后应用程序会直接终止。没有像DispatcherUnhandledException事件中的Handler=true的处理方式，可以通过比如Dispatcher.Invoke将子线程异常丢在UI主线程异常处理机制中处理
-        private void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
-        {
-            Exception ex = e.ExceptionObject as Exception;
-            if (ex != null)
-            {
-                string msg = string.Format("{0}\n\n{1}", ex.Message, ex.StackTrace);//异常信息 和 调用堆栈信息
-                MessageBox.Show(msg, "非UI线程异常");
-            }
-        }
-
-        //Task线程内未捕获异常处理事件
-        private void TaskScheduler_UnobservedTaskException(object sender, UnobservedTaskExceptionEventArgs e)
-        {
-            Exception ex = e.Exception;
-            string msg = string.Format("{0}\n\n{1}", ex.Message, ex.StackTrace);
-            MessageBox.Show(msg, "Task异常");
+            e.Handled = true; // 表示异常已处理，可以继续运行
         }
     }
 }

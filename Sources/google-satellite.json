@@ -1,0 +1,8 @@
+{
+  "Type": "Tile",
+  "Name": "谷歌地图 - 卫星影像",
+  "Url": "https://{s}.google.com/vt/lyrs=s&hl=zh&x={x}&y={y}&z={z}",
+  "Subdomains": "mt0,mt1,mt2,mt3",
+  "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+  "Referer": "https://maps.google.com/"
+}

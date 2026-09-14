@@ -1,0 +1,125 @@
+<Page
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    x:Class="MapDownloader.Views.SettingsPage">
+
+    <Page.Resources>
+        <!--  设置卡片统一样式  -->
+        <Style x:Key="SettingCard" TargetType="ui:Card">
+            <Setter Property="Margin" Value="0,0,0,12" />
+            <Setter Property="Padding" Value="20" />
+        </Style>
+        <!--  设置行：左侧标题+说明，右侧控件  -->
+        <Style x:Key="SettingTitle" TargetType="ui:TextBlock">
+            <Setter Property="FontTypography" Value="Body" />
+        </Style>
+        <Style x:Key="SettingHint" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+    </Page.Resources>
+
+    <Grid>
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <!--  居中限宽，阅读友好  -->
+            <StackPanel MaxWidth="760" HorizontalAlignment="Center" Margin="16,8,16,16">
+
+                <ui:TextBlock FontTypography="Title" Text="设置" />
+                <ui:TextBlock FontTypography="Body" Opacity="0.7" Margin="0,2,0,12" Text="下载引擎参数与外观偏好，修改后即时生效" />
+
+                <!--  下载  -->
+                <ui:Card Style="{StaticResource SettingCard}">
+                    <StackPanel>
+                        <ui:TextBlock FontTypography="BodyStrong" Text="下载" />
+                        <Grid Margin="0,14,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <ui:TextBlock Style="{StaticResource SettingTitle}" Text="并发数" />
+                                <TextBlock Style="{StaticResource SettingHint}" Margin="0,2,0,0"
+                                           Text="同时下载瓦片的数量（1–32），过高可能触发服务端限流" />
+                            </StackPanel>
+                            <ui:NumberBox Grid.Column="1"
+                                          Width="140"
+                                          VerticalAlignment="Center"
+                                          Value="{Binding Concurrent, Mode=TwoWay}"
+                                          Minimum="1" Maximum="32"
+                                          SmallChange="1"
+                                          ClearButtonEnabled="False" />
+                        </Grid>
+                        <Grid Margin="0,14,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <ui:TextBlock Style="{StaticResource SettingTitle}" Text="失败重试次数" />
+                                <TextBlock Style="{StaticResource SettingHint}" Margin="0,2,0,0"
+                                           Text="单张瓦片下载失败后的重试上限（0–10）" />
+                            </StackPanel>
+                            <ui:NumberBox Grid.Column="1"
+                                          Width="140"
+                                          VerticalAlignment="Center"
+                                          Value="{Binding Retry, Mode=TwoWay}"
+                                          Minimum="0" Maximum="10"
+                                          SmallChange="1"
+                                          ClearButtonEnabled="False" />
+                        </Grid>
+                    </StackPanel>
+                </ui:Card>
+
+                <!--  外观  -->
+                <ui:Card Style="{StaticResource SettingCard}">
+                    <StackPanel>
+                        <ui:TextBlock FontTypography="BodyStrong" Text="外观" />
+                        <Grid Margin="0,14,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <ui:TextBlock Style="{StaticResource SettingTitle}" Text="主题" />
+                                <TextBlock Style="{StaticResource SettingHint}" Margin="0,2,0,0"
+                                           Text="切换应用界面配色（深色 / 浅色 / 跟随系统）" />
+                            </StackPanel>
+                            <ComboBox Grid.Column="1"
+                                      Width="140"
+                                      VerticalAlignment="Center"
+                                      ItemsSource="{Binding ThemeModes}"
+                                      SelectedItem="{Binding SelectedThemeMode, Mode=TwoWay}"
+                                      DisplayMemberPath="Label" />
+                        </Grid>
+                    </StackPanel>
+                </ui:Card>
+
+                <!--  关于  -->
+                <ui:Card Style="{StaticResource SettingCard}">
+                    <StackPanel>
+                        <ui:TextBlock FontTypography="BodyStrong" Text="关于" />
+                        <Grid Margin="0,14,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <ui:TextBlock Style="{StaticResource SettingTitle}" Text="地图下载器" />
+                                <TextBlock Style="{StaticResource SettingHint}" Margin="0,2,0,0"
+                                           Text="通用瓦片地图下载工具 · 支持多文件 pak / MBTiles / 瓦片目录输出" />
+                            </StackPanel>
+                            <ui:TextBlock Grid.Column="1"
+                                          FontTypography="Body"
+                                          Opacity="0.7"
+                                          VerticalAlignment="Center"
+                                          Text="{Binding AppVersion, Mode=OneWay}" />
+                        </Grid>
+                    </StackPanel>
+                </ui:Card>
+
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Page>

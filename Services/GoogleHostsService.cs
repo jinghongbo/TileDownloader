@@ -45,6 +45,8 @@ namespace MapDownloader.Services
 
             using var http = new HttpClient(new SocketsHttpHandler { UseProxy = false })
             { Timeout = TimeSpan.FromSeconds(15) };
+            // DoH JSON API 要求的 Accept 头（Cloudflare 必需，阿里/Google 兼容）
+            http.DefaultRequestHeaders.Accept.ParseAdd("application/dns-json");
 
             while (queue.Count > 0 && visited.Count < 16)
             {

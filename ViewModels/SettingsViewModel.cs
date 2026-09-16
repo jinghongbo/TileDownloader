@@ -152,7 +152,7 @@ namespace MapDownloader.ViewModels
                 {
                     BestGoogleIp = null;
                     BestGoogleIpMs = 0;
-                    GoogleHostsMessage = "未找到可访问的 Google IP，请检查网络或开启代理后重试";
+                    GoogleHostsMessage = "未找到可访问的 Google IP，请检查网络连通性（探测始终直连，不走代理）";
                 }
             }
             catch (OperationCanceledException)
@@ -270,9 +270,9 @@ namespace MapDownloader.ViewModels
                 Directory.CreateDirectory(Path.GetDirectoryName(SettingsFile)!);
                 var s = new PersistedSettings
                 {
-                    UseProxy = _useProxy,
-                    BestGoogleIp = _bestGoogleIp,
-                    BestGoogleIpMs = _bestGoogleIpMs,
+                    UseProxy = UseProxy,
+                    BestGoogleIp = BestGoogleIp,
+                    BestGoogleIpMs = BestGoogleIpMs,
                 };
                 File.WriteAllText(SettingsFile, JsonConvert.SerializeObject(s, Formatting.Indented));
             }

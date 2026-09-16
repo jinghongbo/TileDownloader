@@ -69,6 +69,63 @@
                                           SmallChange="1"
                                           ClearButtonEnabled="False" />
                         </Grid>
+                        <Grid Margin="0,14,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <ui:TextBlock Style="{StaticResource SettingTitle}" Text="下载使用代理" />
+                                <TextBlock Style="{StaticResource SettingHint}" Margin="0,2,0,0"
+                                           Text="默认直连，配合下方 Google Hosts 加速使用；开启后跟随系统代理（VPN/科学上网）" />
+                            </StackPanel>
+                            <ui:ToggleSwitch Grid.Column="1"
+                                             VerticalAlignment="Center"
+                                             IsChecked="{Binding UseProxy, Mode=TwoWay}" />
+                        </Grid>
+                    </StackPanel>
+                </ui:Card>
+
+                <!--  Google Hosts 加速  -->
+                <ui:Card Style="{StaticResource SettingCard}">
+                    <StackPanel>
+                        <ui:TextBlock FontTypography="BodyStrong" Text="Google Hosts 加速" />
+                        <TextBlock Style="{StaticResource SettingHint}" Margin="0,4,0,12"
+                                   Text="查询 _spf.google.com 的 SPF 记录，自动探测可访问 Google 瓦片的最快 IP，用于替换本机 hosts 中 mt0-3.google.com，加速卫星地图下载" />
+
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <ui:TextBlock Style="{StaticResource SettingTitle}" Text="最快 IP" />
+                                <TextBlock Style="{StaticResource SettingHint}" Margin="0,2,0,0"
+                                           Text="{Binding BestGoogleHostsText, Mode=OneWay}" />
+                            </StackPanel>
+                            <ui:Button Grid.Column="1"
+                                        VerticalAlignment="Center"
+                                        Content="查找最快 IP"
+                                        Command="{Binding ProbeGoogleHostsCommand}"
+                                        Appearance="Primary" />
+                        </Grid>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <ui:Button Content="复制 hosts 条目"
+                                        Command="{Binding CopyHostsCommand}"
+                                        Margin="0,0,8,0" />
+                            <ui:Button Content="打开 hosts 文件"
+                                        Command="{Binding OpenHostsCommand}" />
+                        </StackPanel>
+
+                        <TextBlock Style="{StaticResource SettingHint}"
+                                   Text="{Binding GoogleHostsEntriesText, Mode=OneWay}"
+                                   FontFamily="Consolas"
+                                   Margin="0,0,0,8" />
+
+                        <TextBlock Style="{StaticResource SettingHint}"
+                                   Text="{Binding GoogleHostsMessage, Mode=OneWay}"
+                                   TextWrapping="Wrap" />
                     </StackPanel>
                 </ui:Card>
 

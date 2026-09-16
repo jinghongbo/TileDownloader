@@ -170,6 +170,7 @@ namespace MapDownloader.ViewModels
                 FormatId = record.FormatId,
                 Concurrent = _settings.Concurrent,
                 Retry = _settings.Retry,
+                UseProxy = _settings.UseProxy,
             };
         }
 
@@ -260,6 +261,7 @@ namespace MapDownloader.ViewModels
             }
             item.Request.Concurrent = _settings.Concurrent;
             item.Request.Retry = _settings.Retry;
+            item.Request.UseProxy = _settings.UseProxy;
             _ = RunTaskAsync(item);
         }
 

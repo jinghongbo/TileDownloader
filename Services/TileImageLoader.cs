@@ -31,6 +31,27 @@ namespace MapDownloader.Services
         private readonly object _evictLock = new();
         private readonly ConcurrentDictionary<string, HttpClient> _clients = new(StringComparer.Ordinal);
         private readonly string _diskRoot;
+        private bool _useProxy = false;
+
+        /// <summary>是否使用系统代理（默认直连；切换后清空缓存 client 重建）</summary>
+        public bool UseProxy
+        {
+            get => _useProxy;
+            set
+            {
+                if (_useProxy == value)
+                {
+                    return;
+                }
+                _useProxy = value;
+                // 重建按源缓存的 client，使新设置立即生效
+                foreach (var c in _clients.Values)
+                {
+                    try { c.Dispose(); } catch { }
+                }
+                _clients.Clear();
+            }
+        }
 
         public TileImageLoader()
         {
@@ -127,7 +148,7 @@ namespace MapDownloader.Services
                     Referer = referer,
                     Cookies = cookies,
                 };
-                return TileUrlBuilder.CreateClient(source);
+                return TileUrlBuilder.CreateClient(source, _useProxy);
             });
         }
 

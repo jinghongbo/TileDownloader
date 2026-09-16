@@ -6,14 +6,14 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using MapDownloader.Models;
+using TileDownloader.Models;
 
-namespace MapDownloader.Services
+namespace TileDownloader.Services
 {
     /// <summary>
     /// 瓦片图加载服务实现：
     /// - 内存缓存（容量上限 ~256，超限按最近访问淘汰一半）
-    /// - 磁盘缓存 %LOCALAPPDATA%\MapDownloader\tilecache\{源名}\{z}\{x}\{y}.png
+    /// - 磁盘缓存 %LOCALAPPDATA%\TileDownloader\tilecache\{源名}\{z}\{x}\{y}.png
     /// - HttpClient 按源缓存复用（UA/Referer/Cookies）
     /// 网络 IO 均在后台线程，调用方负责 UI 调度。
     /// </summary>
@@ -57,7 +57,7 @@ namespace MapDownloader.Services
         {
             var baseDir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "MapDownloader");
+                "TileDownloader");
             _diskRoot = Path.Combine(baseDir, "tilecache");
         }
 

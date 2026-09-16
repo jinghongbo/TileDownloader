@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using FreeSql;
 using FreeSql.DataAnnotations;
 
-namespace MapDownloader.Services
+namespace TileDownloader.Services
 {
     /// <summary>
     /// MBTiles 1.x 存储：

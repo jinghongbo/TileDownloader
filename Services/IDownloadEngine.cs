@@ -1,8 +1,8 @@
 using System.Threading;
 using System.Threading.Tasks;
-using MapDownloader.Models;
+using TileDownloader.Models;
 
-namespace MapDownloader.Services
+namespace TileDownloader.Services
 {
     /// <summary>
     /// 下载引擎回调进度接口——由 ViewModel 侧实现并做 UI 线程调度，

@@ -1,7 +1,7 @@
 using System.Windows.Controls;
-using MapDownloader.ViewModels;
+using TileDownloader.ViewModels;
 
-namespace MapDownloader.Views
+namespace TileDownloader.Views
 {
     /// <summary>
     /// 设置页：并发/重试/主题

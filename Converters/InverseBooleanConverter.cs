@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Data;
 
-namespace MapDownloader.Converters
+namespace TileDownloader.Converters
 {
     public class InverseBooleanConverter : IValueConverter
     {

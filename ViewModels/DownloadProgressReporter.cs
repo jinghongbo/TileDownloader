@@ -4,10 +4,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using MapDownloader.Models;
-using MapDownloader.Services;
+using TileDownloader.Models;
+using TileDownloader.Services;
 
-namespace MapDownloader.ViewModels
+namespace TileDownloader.ViewModels
 {
     /// <summary>
     /// IDownloadProgress 的 ViewModel 侧实现：

@@ -1,11 +1,11 @@
 using System;
 using System.Windows;
-using MapDownloader.ViewModels;
+using TileDownloader.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 
-namespace MapDownloader.Views
+namespace TileDownloader.Views
 {
     /// <summary>
     /// 主窗口：WPF-UI 4.3 内建导航（TargetPageType + SetServiceProvider 自动切换页面），

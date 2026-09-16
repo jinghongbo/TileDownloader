@@ -4,9 +4,9 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using FreeSql;
-using MapDownloader.Models;
+using TileDownloader.Models;
 
-namespace MapDownloader.Services
+namespace TileDownloader.Services
 {
     /// <summary>
     /// 单文件 pak 存储（旧格式，向后兼容）：

@@ -3,7 +3,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
 
-namespace MapDownloader.Converters
+namespace TileDownloader.Converters
 {
     /// <summary>
     /// bool → Visibility 转换器（设置 Inverse=True 时取反，用于控件按布尔状态显隐）

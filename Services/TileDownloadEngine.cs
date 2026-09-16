@@ -3,9 +3,9 @@ using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using MapDownloader.Models;
+using TileDownloader.Models;
 
-namespace MapDownloader.Services
+namespace TileDownloader.Services
 {
     /// <summary>
     /// 通用瓦片下载引擎（自研 XYZ 数学，不依赖 BruTile）：

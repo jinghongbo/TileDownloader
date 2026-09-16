@@ -1,12 +1,12 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using MapDownloader.Models;
+using TileDownloader.Models;
 
-namespace MapDownloader.Services
+namespace TileDownloader.Services
 {
     /// <summary>
-    /// 下载任务持久化（SQLite via FreeSql，库文件 %LOCALAPPDATA%\MapDownloader\tasks.db）
+    /// 下载任务持久化（SQLite via FreeSql，库文件 %LOCALAPPDATA%\TileDownloader\tasks.db）
     /// </summary>
     public interface ITaskManager
     {

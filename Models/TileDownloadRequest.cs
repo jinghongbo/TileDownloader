@@ -1,6 +1,6 @@
 using NetTopologySuite.Geometries;
 
-namespace MapDownloader.Models
+namespace TileDownloader.Models
 {
     /// <summary>
     /// 瓦片下载请求（引擎入参）

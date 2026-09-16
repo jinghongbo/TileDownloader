@@ -4,13 +4,13 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using FreeSql;
-using MapDownloader.Models;
+using TileDownloader.Models;
 
-namespace MapDownloader.Services
+namespace TileDownloader.Services
 {
     /// <summary>
     /// 下载任务持久化实现（FreeSql SQLite，AutoSyncStructure 自动建表），
-    /// 库文件 %LOCALAPPDATA%\MapDownloader\tasks.db
+    /// 库文件 %LOCALAPPDATA%\TileDownloader\tasks.db
     /// </summary>
     public class TaskManager : ITaskManager
     {
@@ -20,7 +20,7 @@ namespace MapDownloader.Services
         {
             var dir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "MapDownloader");
+                "TileDownloader");
             Directory.CreateDirectory(dir);
             var dbFile = Path.Combine(dir, "tasks.db");
 

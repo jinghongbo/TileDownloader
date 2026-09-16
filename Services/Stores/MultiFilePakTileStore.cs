@@ -5,9 +5,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using FreeSql;
 using FreeSql.DataAnnotations;
-using MapDownloader.Models;
+using TileDownloader.Models;
 
-namespace MapDownloader.Services
+namespace TileDownloader.Services
 {
     /// <summary>
     /// 多文件 pak 存储（默认输出格式）：

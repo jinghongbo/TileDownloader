@@ -1,7 +1,7 @@
 # Tasks
 
 - [x] Task 1: 升级依赖并修复编译
-  - [x] SubTask 1.1: 更新 MapDownloader.csproj 包引用（CommunityToolkit.Mvvm 8.4.0、Microsoft.Extensions.DependencyInjection 10.x、WPF-UI 4.3.0、FreeSql.Provider.Sqlite 3.5.311、BruTile 6.0.0、NetTopologySuite 2.6.0、ProjNet 最新稳定版、Newtonsoft.Json 13.0.4；移除 Prism.DryIoc、MaterialDesignThemes、XAML.MapControl、NetTopologySuite.IO.GeoJSON）
+  - [x] SubTask 1.1: 更新 TileDownloader.csproj 包引用（CommunityToolkit.Mvvm 8.4.0、Microsoft.Extensions.DependencyInjection 10.x、WPF-UI 4.3.0、FreeSql.Provider.Sqlite 3.5.311、BruTile 6.0.0、NetTopologySuite 2.6.0、ProjNet 最新稳定版、Newtonsoft.Json 13.0.4；移除 Prism.DryIoc、MaterialDesignThemes、XAML.MapControl、NetTopologySuite.IO.GeoJSON）
   - [x] SubTask 1.2: App.xaml(.cs) 改为标准 WPF Application + ServiceProvider 构建（页面/ViewModel/Services 注册），移除 PrismApplication
   - [x] SubTask 1.3: ViewModels 迁移到 CommunityToolkit.Mvvm（ObservableObject、[ObservableProperty]、[RelayCommand]），移除 BindableBase/DelegateCommand/ViewModelLocator
   - [x] SubTask 1.4: 移除 GSCloudDownloadSource.cs、TiandituDownloadSource.cs，Sources.json 仅保留通用瓦片源配置；修复 BruTile 6 / FreeSql 3 API 变更

@@ -1,13 +1,13 @@
 using System;
 using System.Windows;
 using System.Windows.Threading;
-using MapDownloader.Services;
-using MapDownloader.ViewModels;
-using MapDownloader.Views;
+using TileDownloader.Services;
+using TileDownloader.ViewModels;
+using TileDownloader.Views;
 using Microsoft.Extensions.DependencyInjection;
 using Wpf.Ui;
 
-namespace MapDownloader
+namespace TileDownloader
 {
     /// <summary>
     /// 应用入口：标准 WPF Application + Microsoft.Extensions.DependencyInjection
@@ -72,7 +72,7 @@ namespace MapDownloader
             try
             {
                 System.IO.File.AppendAllText(
-                    System.IO.Path.Combine(System.IO.Path.GetTempPath(), "mapdownloader_crash.log"),
+                    System.IO.Path.Combine(System.IO.Path.GetTempPath(), "tiledownloader_crash.log"),
                     $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {msg}\n\n");
             }
             catch

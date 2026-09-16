@@ -67,11 +67,19 @@ jobs:
           if ($zips.Count -eq 0) { throw "No zip packages were produced" }
           $zips | ForEach-Object { Write-Host "Package: $($_.Name) ($([math]::Round($_.Length / 1MB, 2)) MB)" }
 
-      - name: Upload build artifacts
+      - name: Upload artifact (self-contained)
         uses: actions/upload-artifact@v4
         with:
-          name: TileDownloader-${{ steps.version.outputs.version }}
-          path: dist/*.zip
+          name: TileDownloader-${{ steps.version.outputs.version }}-win-x64-self-contained
+          path: dist/TileDownloader-*win-x64-self-contained.zip
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload artifact (framework-dependent)
+        uses: actions/upload-artifact@v4
+        with:
+          name: TileDownloader-${{ steps.version.outputs.version }}-win-x64
+          path: dist/TileDownloader-v*-win-x64.zip
           if-no-files-found: error
           retention-days: 14
 

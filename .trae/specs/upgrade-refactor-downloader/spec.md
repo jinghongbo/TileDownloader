@@ -1,4 +1,4 @@
-# MapDownloader 升级与重构 Spec
+# TileDownloader 升级与重构 Spec
 
 ## Why
 当前项目依赖陈旧（MaterialDesignThemes 4.1、Prism 8、BruTile 3.1、FreeSql 2.5、XAML.MapControl 5.6），界面布局陈旧且交互分散；下载流程暴露过多配置细节（并发、重试、UA/Referer/Cookies 动态表单），普通用户难以上手；下载进度仅一个进度条，缺乏可视化；外部地图控件笨重且样式难以统一；瓦片源仅能输出单文件 pak 格式；代码目录扁平、下载逻辑直接耦合在 Models 与 ViewModel 之间。此外现有 GSCloud/天地图特殊下载逻辑属于特定平台 hack，不再维护。
@@ -36,7 +36,7 @@
   - 瓦片目录：{输出目录}/{z}/{x}/{y}.{ext}
 - 目录结构重组（**BREAKING**：代码文件位置调整）：
   ```
-  MapDownloader/
+  TileDownloader/
   ├── App.xaml(.cs)          # 标准启动 + DI 容器构建
   ├── Views/                 # 窗口与页面
   ├── ViewModels/            # CommunityToolkit MVVM
@@ -51,7 +51,7 @@
 
 ## Impact
 - Affected specs: 无既有 spec（首个）
-- Affected code: MapDownloader.csproj、App.xaml(.cs)、Views/、ViewModels/、Models/、Controls/MapPickControl（重写为自研地图控件）、Converters/、Attributes/；新增 Services/ 与 Sources/（一源一 JSON）；删除 GSCloudDownloadSource.cs、TiandituDownloadSource.cs、Sources.json
+- Affected code: TileDownloader.csproj、App.xaml(.cs)、Views/、ViewModels/、Models/、Controls/MapPickControl（重写为自研地图控件）、Converters/、Attributes/；新增 Services/ 与 Sources/（一源一 JSON）；删除 GSCloudDownloadSource.cs、TiandituDownloadSource.cs、Sources.json
 
 ## ADDED Requirements
 

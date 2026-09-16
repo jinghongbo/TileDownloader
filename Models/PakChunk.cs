@@ -1,6 +1,6 @@
 using FreeSql.DataAnnotations;
 
-namespace MapDownloader.Models
+namespace TileDownloader.Models
 {
     /// <summary>
     /// 多文件 pak 的分块索引（存于主文件 .pak 的 chunks 表）：

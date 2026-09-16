@@ -1,4 +1,4 @@
-namespace MapDownloader.Models
+namespace TileDownloader.Models
 {
     /// <summary>
     /// 地图下载来源（仅通用瓦片源，来自 Sources.json 配置）

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace MapDownloader.Services
+namespace TileDownloader.Services
 {
     /// <summary>
     /// 存储格式注册表：

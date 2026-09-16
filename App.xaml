@@ -1,8 +1,8 @@
-<Application x:Class="MapDownloader.App"
+<Application x:Class="TileDownloader.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:MapDownloader"
-             xmlns:cvt="clr-namespace:MapDownloader.Converters"
+             xmlns:local="clr-namespace:TileDownloader"
+             xmlns:cvt="clr-namespace:TileDownloader.Converters"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
     <Application.Resources>
         <ResourceDictionary>

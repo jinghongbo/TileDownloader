@@ -2,8 +2,8 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-    xmlns:controls="clr-namespace:MapDownloader.Controls"
-    x:Class="MapDownloader.Views.NewDownloadPage">
+    xmlns:controls="clr-namespace:TileDownloader.Controls"
+    x:Class="TileDownloader.Views.NewDownloadPage">
 
     <Page.Resources>
         <!--  右栏卡片统一样式  -->

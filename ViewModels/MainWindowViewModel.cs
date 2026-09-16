@@ -1,6 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 
-namespace MapDownloader.ViewModels
+namespace TileDownloader.ViewModels
 {
     /// <summary>
     /// 主窗口 ViewModel（极简：导航切换在窗口 code-behind 处理）

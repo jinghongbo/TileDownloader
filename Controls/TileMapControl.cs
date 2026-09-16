@@ -9,14 +9,14 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
-using MapDownloader.Models;
-using MapDownloader.Services;
+using TileDownloader.Models;
+using TileDownloader.Services;
 using Microsoft.Extensions.DependencyInjection;
 using NetTopologySuite.Geometries;
 // 本文件中的 Point 均指 WPF 屏幕坐标点
 using Point = System.Windows.Point;
 
-namespace MapDownloader.Controls
+namespace TileDownloader.Controls
 {
     /// <summary>
     /// 完全自研的 XYZ 瓦片地图控件（Web Mercator / EPSG:3857 投影，EPSG:4326 经纬度输入输出）。
@@ -25,7 +25,7 @@ namespace MapDownloader.Controls
     /// - 右键拖拽（或 Ctrl+左键拖拽）= 平移地图；
     /// - 滚轮 = 以鼠标位置为锚点整数级缩放（0–20）。
     /// 瓦片通过 ITileImageLoader 异步加载（复用其内存/磁盘缓存），当前级未就绪时自动回退绘制祖先瓦片。
-    /// 直接以 XAML 使用：<code>xmlns:controls="clr-namespace:MapDownloader.Controls"</code>
+    /// 直接以 XAML 使用：<code>xmlns:controls="clr-namespace:TileDownloader.Controls"</code>
     /// </summary>
     public class TileMapControl : FrameworkElement
     {

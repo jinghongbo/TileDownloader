@@ -5,11 +5,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using MapDownloader.Models;
-using MapDownloader.Services;
+using TileDownloader.Models;
+using TileDownloader.Services;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace MapDownloader.ViewModels
+namespace TileDownloader.ViewModels
 {
     /// <summary>
     /// 任务中心：任务列表 + 继续/取消/删除 + 历史任务恢复 + 下载执行入口

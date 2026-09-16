@@ -1,7 +1,7 @@
 using System.Windows.Controls;
-using MapDownloader.ViewModels;
+using TileDownloader.ViewModels;
 
-namespace MapDownloader.Views
+namespace TileDownloader.Views
 {
     /// <summary>
     /// 任务中心页：任务列表 + 继续/取消/删除

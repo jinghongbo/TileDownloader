@@ -1,9 +1,9 @@
 using System.Windows;
 using System.Windows.Controls;
-using MapDownloader.ViewModels;
+using TileDownloader.ViewModels;
 using NetTopologySuite.Geometries;
 
-namespace MapDownloader.Views
+namespace TileDownloader.Views
 {
     /// <summary>
     /// 新建下载页：左侧自研地图（拖拽框选），右侧极简三步流（选择来源 → 框选范围 → 开始下载）

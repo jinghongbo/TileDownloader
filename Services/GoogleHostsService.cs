@@ -13,7 +13,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace MapDownloader.Services
+namespace TileDownloader.Services
 {
     /// <summary>
     /// Google Hosts 探测服务：

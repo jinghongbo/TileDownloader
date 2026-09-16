@@ -1,10 +1,10 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using MapDownloader.Models;
+using TileDownloader.Models;
 using Newtonsoft.Json;
 
-namespace MapDownloader.Services
+namespace TileDownloader.Services
 {
     /// <summary>
     /// 来源配置服务：加载 Sources 目录下的一源一 JSON 配置文件

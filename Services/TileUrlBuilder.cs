@@ -1,9 +1,9 @@
 using System;
 using System.Globalization;
 using System.Net.Http;
-using MapDownloader.Models;
+using TileDownloader.Models;
 
-namespace MapDownloader.Services
+namespace TileDownloader.Services
 {
     /// <summary>
     /// XYZ 瓦片 URL 构造与瓦片坐标计算（自研，不依赖 BruTile）

@@ -4,7 +4,7 @@ using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Wpf.Ui.Controls;
 
-namespace MapDownloader.Models
+namespace TileDownloader.Models
 {
     /// <summary>
     /// 任务状态（UI 展示用）

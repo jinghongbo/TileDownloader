@@ -7,11 +7,11 @@ using System.Threading.Tasks;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using MapDownloader.Services;
+using TileDownloader.Services;
 using Newtonsoft.Json;
 using Wpf.Ui.Appearance;
 
-namespace MapDownloader.ViewModels
+namespace TileDownloader.ViewModels
 {
     /// <summary>
     /// 设置页：引擎参数、外观主题、下载代理开关、Google Hosts 加速
@@ -231,7 +231,7 @@ namespace MapDownloader.ViewModels
             {
                 var dir = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "MapDownloader");
+                    "TileDownloader");
                 return Path.Combine(dir, "settings.json");
             }
         }

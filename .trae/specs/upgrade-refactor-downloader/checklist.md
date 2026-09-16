@@ -22,7 +22,7 @@
 
 ## 来源配置与用户密钥
 - [x] URL 含 {k} 的来源在新建下载页显示密钥输入框，由用户填写
-- [x] 密钥持久化到本机（%LOCALAPPDATA%\MapDownloader\user_keys.json），重启无需重填
+- [x] 密钥持久化到本机（%LOCALAPPDATA%\TileDownloader\user_keys.json），重启无需重填
 - [x] EffectiveSource 注入地图预览与下载请求，来源配置文件本身不含密钥
 
 ## 自研地图控件
@@ -33,7 +33,7 @@
 
 ## 极简下载流程
 - [x] 三步完成下载：选来源 → 框选范围 → 开始下载，无需其他配置
-- [x] 层级范围默认自动、输出格式默认多文件 pak、输出路径默认上次目录（%LOCALAPPDATA%\MapDownloader\last_output.txt）
+- [x] 层级范围默认自动、输出格式默认多文件 pak、输出路径默认上次目录（%LOCALAPPDATA%\TileDownloader\last_output.txt）
 - [x] 高级选项折叠在 Expander（层级/格式/路径）；并发/重试仅存在于设置页
 - [x] UI 无动态参数表单（UA/Referer/Cookies 等仅存于来源 JSON）
 

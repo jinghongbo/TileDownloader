@@ -1,7 +1,7 @@
 using System;
 using FreeSql.DataAnnotations;
 
-namespace MapDownloader.Models
+namespace TileDownloader.Models
 {
     /// <summary>
     /// 任务持久化状态（数据库 int 存储）

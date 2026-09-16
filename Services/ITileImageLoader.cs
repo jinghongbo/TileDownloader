@@ -1,7 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace MapDownloader.Services
+namespace TileDownloader.Services
 {
     /// <summary>
     /// 瓦片图加载服务（地图控件与下载引擎复用）：内存缓存 + 磁盘缓存

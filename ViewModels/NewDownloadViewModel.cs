@@ -6,14 +6,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using MapDownloader.Models;
-using MapDownloader.Services;
+using TileDownloader.Models;
+using TileDownloader.Services;
 using Microsoft.Win32;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Extensions;
 
-namespace MapDownloader.ViewModels
+namespace TileDownloader.ViewModels
 {
     /// <summary>
     /// 新建下载页：选择来源 → 地图框选范围 → 开始下载（极简三步流）
@@ -63,14 +63,14 @@ namespace MapDownloader.ViewModels
             }
         }
 
-        /// <summary>上次输出目录持久化文件（%LOCALAPPDATA%\MapDownloader\last_output.txt）</summary>
+        /// <summary>上次输出目录持久化文件（%LOCALAPPDATA%\TileDownloader\last_output.txt）</summary>
         private static string LastDirFile
         {
             get
             {
                 var dir = System.IO.Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "MapDownloader");
+                    "TileDownloader");
                 return System.IO.Path.Combine(dir, "last_output.txt");
             }
         }
@@ -104,14 +104,14 @@ namespace MapDownloader.ViewModels
             }
         }
 
-        /// <summary>用户密钥持久化文件（%LOCALAPPDATA%\MapDownloader\user_keys.json，按来源名映射）</summary>
+        /// <summary>用户密钥持久化文件（%LOCALAPPDATA%\TileDownloader\user_keys.json，按来源名映射）</summary>
         private static string UserKeysFile
         {
             get
             {
                 var dir = System.IO.Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "MapDownloader");
+                    "TileDownloader");
                 return System.IO.Path.Combine(dir, "user_keys.json");
             }
         }

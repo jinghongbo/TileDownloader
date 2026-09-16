@@ -50,10 +50,10 @@ namespace MapDownloader.ViewModels
         [ObservableProperty]
         private int _retry = 4;
 
-        /// <summary>下载是否使用系统代理（关闭=直连，配合 Google Hosts 加速；开启=跟随系统代理/VPN）</summary>
+        /// <summary>下载是否使用系统代理（默认关闭=直连，配合 Google Hosts 加速；开启=跟随系统代理/VPN）</summary>
         [ObservableProperty]
         [NotifyCanExecuteChangedFor(nameof(CopyHostsCommand))]
-        private bool _useProxy = true;
+        private bool _useProxy = false;
 
         partial void OnUseProxyChanged(bool value)
         {
@@ -238,7 +238,8 @@ namespace MapDownloader.ViewModels
 
         private sealed class PersistedSettings
         {
-            public bool UseProxy { get; set; } = true;
+            /// <summary>默认直连（false），配合 Google Hosts 加速</summary>
+            public bool UseProxy { get; set; } = false;
             public string? BestGoogleIp { get; set; }
             public long BestGoogleIpMs { get; set; }
         }

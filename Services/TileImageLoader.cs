@@ -31,9 +31,9 @@ namespace MapDownloader.Services
         private readonly object _evictLock = new();
         private readonly ConcurrentDictionary<string, HttpClient> _clients = new(StringComparer.Ordinal);
         private readonly string _diskRoot;
-        private bool _useProxy = true;
+        private bool _useProxy = false;
 
-        /// <summary>是否使用系统代理（切换后清空缓存 client 重建）</summary>
+        /// <summary>是否使用系统代理（默认直连；切换后清空缓存 client 重建）</summary>
         public bool UseProxy
         {
             get => _useProxy;

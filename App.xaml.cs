@@ -27,6 +27,7 @@ namespace MapDownloader
             // Services
             services.AddSingleton<TileStoreRegistry>();
             services.AddSingleton<SourcesConfigService>();
+            services.AddSingleton<GoogleHostsService>();
             services.AddSingleton<ITileImageLoader, TileImageLoader>();
             services.AddSingleton<ITaskManager, TaskManager>();
             services.AddTransient<IDownloadEngine, TileDownloadEngine>();

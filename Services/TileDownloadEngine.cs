@@ -43,7 +43,7 @@ namespace MapDownloader.Services
             try
             {
                 // 每个源复用一个 HttpClient（UA/Referer/Cookies）
-                using var client = TileUrlBuilder.CreateClient(source);
+                using var client = TileUrlBuilder.CreateClient(source, request.UseProxy);
                 var subdomains = source.GetSubdomains();
 
                 using var semaphore = new SemaphoreSlim(Math.Max(1, request.Concurrent));

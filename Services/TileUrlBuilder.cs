@@ -87,13 +87,15 @@ namespace MapDownloader.Services
         }
 
         /// <summary>
-        /// 按来源配置创建 HttpClient（UA/Referer/Cookies），同一来源复用
+        /// 按来源配置创建 HttpClient（UA/Referer/Cookies），同一来源复用。
+        /// useProxy=true 跟随系统代理（默认），false 直连（配合 Google Hosts 加速）。
         /// </summary>
-        public static HttpClient CreateClient(DownloadSource source)
+        public static HttpClient CreateClient(DownloadSource source, bool useProxy = true)
         {
             var handler = new HttpClientHandler
             {
                 AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate,
+                UseProxy = useProxy,
             };
             if (!string.IsNullOrWhiteSpace(source.Cookies))
             {

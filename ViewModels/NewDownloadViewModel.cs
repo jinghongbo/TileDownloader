@@ -293,6 +293,7 @@ namespace MapDownloader.ViewModels
                 FormatId = FormatId,
                 Concurrent = _settings.Concurrent,
                 Retry = _settings.Retry,
+                UseProxy = _settings.UseProxy,
             };
 
             var item = new TaskItem

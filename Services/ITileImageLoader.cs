@@ -9,6 +9,12 @@ namespace MapDownloader.Services
     public interface ITileImageLoader
     {
         /// <summary>
+        /// 是否使用系统代理（true=跟随系统代理，false=直连，配合 Google Hosts 加速）。
+        /// 切换后已缓存的 HttpClient 会被重建。
+        /// </summary>
+        bool UseProxy { get; set; }
+
+        /// <summary>
         /// 获取瓦片原始字节（png/jpg）。磁盘缓存命中直接读，否则网络获取并写盘。
         /// 失败/404 返回 null。
         /// </summary>

@@ -31,6 +31,9 @@ namespace MapDownloader.Models
         /// <summary>失败重试次数</summary>
         public int Retry { get; set; } = 4;
 
+        /// <summary>下载是否使用系统代理（false=直连，配合 Google Hosts 加速）</summary>
+        public bool UseProxy { get; set; } = true;
+
         /// <summary>快照为持久化任务记录</summary>
         public TaskRecord ToRecord(string name)
         {

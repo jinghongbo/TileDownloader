@@ -54,6 +54,18 @@ namespace MapDownloader.Services
 
                     var (firstCol, lastCol) = TileUrlBuilder.ColRange(request.Range.MinX, request.Range.MaxX, z);
                     var (firstRow, lastRow) = TileUrlBuilder.RowRange(request.Range.MinY, request.Range.MaxY, z);
+
+                    // 多文件 pak 格式：z≥10 按 512×512 块对齐扩展下载范围，
+                    // 使每个 blocks_{z}_{tx}_{ty}.pak 物理文件含该块的完整 512×512 瓦片（任务范围外也下）
+                    if (request.FormatId == "MultiPak" && z > 9)
+                    {
+                        const int blockSize = 512;
+                        firstCol = firstCol / blockSize * blockSize;
+                        lastCol = Math.Min((lastCol / blockSize + 1) * blockSize - 1, (1 << z) - 1);
+                        firstRow = firstRow / blockSize * blockSize;
+                        lastRow = Math.Min((lastRow / blockSize + 1) * blockSize - 1, (1 << z) - 1);
+                    }
+
                     var total = (long)(lastCol - firstCol + 1) * (lastRow - firstRow + 1);
                     progress.ReportLevelTotal(z, total);
 

@@ -123,7 +123,8 @@ namespace MapDownloader.Services
                             Tx = tx,
                             Ty = ty,
                             Filename = filename,
-                            TileCount = CountBlockTiles(z, tx, ty, fc, lc, fr, lr),
+                            // 整块完整性：z>9（独立物理文件）需 512×512 全部齐；z≤9（合并 blocks.pak）按任务范围交集
+                            TileCount = z > SingleFileMaxLevel ? BlockSize * BlockSize : CountBlockTiles(z, tx, ty, fc, lc, fr, lr),
                             Status = 0,
                         });
 
@@ -161,7 +162,8 @@ namespace MapDownloader.Services
                     Tx = tx,
                     Ty = ty,
                     Filename = name,
-                    TileCount = CountBlockTiles(z, tx, ty, fc, lc, fr, lr),
+                    // 整块完整性：z>9 需 512×512 齐全；z≤9 按任务范围交集
+                    TileCount = z > SingleFileMaxLevel ? BlockSize * BlockSize : CountBlockTiles(z, tx, ty, fc, lc, fr, lr),
                     Status = 0,
                 };
                 _chunks[ChunkKey(z, tx, ty)] = chunk;
@@ -183,8 +185,8 @@ namespace MapDownloader.Services
             var filename = BlockFileName(z, tx, ty);
             var chunk = _chunks.TryGetValue(ChunkKey(z, tx, ty), out var c) ? c : null;
 
-            // 已完成分块且层级在任务范围内：分块内任务范围瓦片必然全部存在，直接命中，
-            // 不必打开分块库逐瓦片查询（文件粒度续传的关键）
+            // 已完成分块且层级在任务范围内：分块内瓦片必然全部存在（z>9 为整块 512×512，z≤9 为任务范围交集），
+            // 直接命中，不必打开分块库逐瓦片查询（文件粒度续传的关键）
             if (chunk != null && chunk.Status == 1
                 && _options != null && z >= _options.MinLevel && z <= _options.MaxLevel)
             {
@@ -339,19 +341,32 @@ namespace MapDownloader.Services
             return x0 > x1 || y0 > y1 ? 0 : (x1 - x0 + 1) * (y1 - y0 + 1);
         }
 
-        /// <summary>判断分块内属于任务范围的瓦片是否全部存在于缓存</summary>
+        /// <summary>判断分块是否完整：z>9 需整块 512×512 全部存在；z≤9 仅任务范围交集需存在</summary>
         private bool IsChunkComplete(PakChunk chunk)
         {
             if (chunk.TileCount <= 0 || _options == null)
             {
                 return false;
             }
-            var (fc, lc) = TileUrlBuilder.ColRange(_options.MinX, _options.MaxX, chunk.Z);
-            var (fr, lr) = TileUrlBuilder.RowRange(_options.MinY, _options.MaxY, chunk.Z);
-            var x0 = Math.Max(fc, chunk.Tx * BlockSize);
-            var x1 = Math.Min(lc, chunk.Tx * BlockSize + BlockSize - 1);
-            var y0 = Math.Max(fr, chunk.Ty * BlockSize);
-            var y1 = Math.Min(lr, chunk.Ty * BlockSize + BlockSize - 1);
+            int x0, x1, y0, y1;
+            if (chunk.Z > SingleFileMaxLevel)
+            {
+                // 整块完整性：512×512 全部需在缓存
+                x0 = chunk.Tx * BlockSize;
+                x1 = x0 + BlockSize - 1;
+                y0 = chunk.Ty * BlockSize;
+                y1 = y0 + BlockSize - 1;
+            }
+            else
+            {
+                // 低层级合并文件：仅任务范围交集
+                var (fc, lc) = TileUrlBuilder.ColRange(_options.MinX, _options.MaxX, chunk.Z);
+                var (fr, lr) = TileUrlBuilder.RowRange(_options.MinY, _options.MaxY, chunk.Z);
+                x0 = Math.Max(fc, chunk.Tx * BlockSize);
+                x1 = Math.Min(lc, chunk.Tx * BlockSize + BlockSize - 1);
+                y0 = Math.Max(fr, chunk.Ty * BlockSize);
+                y1 = Math.Min(lr, chunk.Ty * BlockSize + BlockSize - 1);
+            }
             if (x0 > x1 || y0 > y1)
             {
                 return false;

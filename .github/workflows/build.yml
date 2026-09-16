@@ -1,0 +1,101 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build TileDownloader
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: TileDownloader.csproj
+
+      - name: Resolve version
+        id: version
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          else
+            VERSION="0.0.0-${GITHUB_SHA::7}"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Building version: $VERSION"
+
+      - name: Restore dependencies
+        run: dotnet restore TileDownloader.csproj
+
+      - name: Build (Release)
+        run: dotnet build TileDownloader.csproj -c Release --no-restore -p:Version=${{ steps.version.outputs.version }}
+
+      - name: Publish self-contained (win-x64)
+        run: dotnet publish TileDownloader.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:Version=${{ steps.version.outputs.version }} -o publish/self-contained
+
+      - name: Publish framework-dependent (win-x64)
+        run: dotnet publish TileDownloader.csproj -c Release -r win-x64 --self-contained false -p:Version=${{ steps.version.outputs.version }} -o publish/framework-dependent
+
+      - name: Package artifacts
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          New-Item -ItemType Directory -Path "dist" -Force | Out-Null
+          Compress-Archive -Path "publish/self-contained/*" -DestinationPath "dist/TileDownloader-v$version-win-x64-self-contained.zip" -Force
+          Compress-Archive -Path "publish/framework-dependent/*" -DestinationPath "dist/TileDownloader-v$version-win-x64.zip" -Force
+          $zips = Get-ChildItem "dist" -Filter *.zip
+          if ($zips.Count -eq 0) { throw "No zip packages were produced" }
+          $zips | ForEach-Object { Write-Host "Package: $($_.Name) ($([math]::Round($_.Length / 1MB, 2)) MB)" }
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: TileDownloader-${{ steps.version.outputs.version }}
+          path: dist/*.zip
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Verify release packages
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          $zips = Get-ChildItem "dist" -Filter *.zip
+          if ($zips.Count -lt 2) { throw "Expected 2 zip packages for release, found $($zips.Count)" }
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: TileDownloader v${{ steps.version.outputs.version }}
+          generate_release_notes: true
+          body: |
+            ## TileDownloader v${{ steps.version.outputs.version }}
+
+            - **TileDownloader-v${{ steps.version.outputs.version }}-win-x64-self-contained.zip**：自带 .NET 运行时，解压即用，无需安装 .NET
+            - **TileDownloader-v${{ steps.version.outputs.version }}-win-x64.zip**：体积更小，需要已安装 .NET 10 Desktop Runtime
+          files: dist/*.zip
+          fail_on_unmatched_files: true
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.version, '-') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

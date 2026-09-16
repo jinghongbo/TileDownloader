@@ -60,30 +60,41 @@ jobs:
         shell: pwsh
         run: |
           $version = "${{ steps.version.outputs.version }}"
-          Compress-Archive -Path "publish/self-contained/*" -DestinationPath "TileDownloader-v$version-win-x64-self-contained.zip"
-          Compress-Archive -Path "publish/framework-dependent/*" -DestinationPath "TileDownloader-v$version-win-x64.zip"
+          New-Item -ItemType Directory -Path "dist" -Force | Out-Null
+          Compress-Archive -Path "publish/self-contained/*" -DestinationPath "dist/TileDownloader-v$version-win-x64-self-contained.zip" -Force
+          Compress-Archive -Path "publish/framework-dependent/*" -DestinationPath "dist/TileDownloader-v$version-win-x64.zip" -Force
+          $zips = Get-ChildItem "dist" -Filter *.zip
+          if ($zips.Count -eq 0) { throw "No zip packages were produced" }
+          $zips | ForEach-Object { Write-Host "Package: $($_.Name) ($([math]::Round($_.Length / 1MB, 2)) MB)" }
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: TileDownloader-${{ steps.version.outputs.version }}
-          path: |
-            *.zip
+          path: dist/*.zip
           if-no-files-found: error
           retention-days: 14
+
+      - name: Verify release packages
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          $zips = Get-ChildItem "dist" -Filter *.zip
+          if ($zips.Count -lt 2) { throw "Expected 2 zip packages for release, found $($zips.Count)" }
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           name: TileDownloader v${{ steps.version.outputs.version }}
+          generate_release_notes: true
           body: |
             ## TileDownloader v${{ steps.version.outputs.version }}
 
             - **TileDownloader-v${{ steps.version.outputs.version }}-win-x64-self-contained.zip**：自带 .NET 运行时，解压即用，无需安装 .NET
             - **TileDownloader-v${{ steps.version.outputs.version }}-win-x64.zip**：体积更小，需要已安装 .NET 10 Desktop Runtime
-          files: |
-            *.zip
+          files: dist/*.zip
+          fail_on_unmatched_files: true
           draft: false
           prerelease: ${{ contains(steps.version.outputs.version, '-') }}
         env:

@@ -126,5 +126,35 @@ namespace TileDownloader.Services
             }
             return client;
         }
+
+        /// <summary>
+        /// 计算某层级指定经纬度范围对应的瓦片总数
+        /// </summary>
+        public static long CalculateLevelTileCount(double minLon, double maxLon, double minLat, double maxLat, int z)
+        {
+            if (minLon > maxLon) (minLon, maxLon) = (maxLon, minLon);
+            if (minLat > maxLat) (minLat, maxLat) = (maxLat, minLat);
+            var (firstCol, lastCol) = ColRange(minLon, maxLon, z);
+            var (firstRow, lastRow) = RowRange(minLat, maxLat, z);
+            return Math.Max(0L, (long)(lastCol - firstCol + 1) * (lastRow - firstRow + 1));
+        }
+
+        /// <summary>
+        /// 提前计算指定经纬度范围和层级区间的总瓦片数
+        /// </summary>
+        public static long CalculateTotalTileCount(double minLon, double maxLon, double minLat, double maxLat, int minLevel, int maxLevel)
+        {
+            if (minLevel > maxLevel)
+            {
+                (minLevel, maxLevel) = (maxLevel, minLevel);
+            }
+
+            long total = 0;
+            for (int z = minLevel; z <= maxLevel; z++)
+            {
+                total += CalculateLevelTileCount(minLon, maxLon, minLat, maxLat, z);
+            }
+            return total;
+        }
     }
 }

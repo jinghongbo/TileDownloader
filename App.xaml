@@ -15,6 +15,14 @@
             <cvt:BoolToVisibilityConverter x:Key="BoolToVis" />
             <cvt:BoolToVisibilityConverter x:Key="InverseBoolToVis" Inverse="True" />
             <cvt:EnvelopeConverter x:Key="EnvelopeCvt" />
+
+            <!-- 全局 TextBlock 前景色绑定，确保深色模式下所有文本默认使用白色/主文本色，绝不退化为系统默认黑色 -->
+            <Style TargetType="TextBlock">
+                <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+            </Style>
+            <Style TargetType="ui:TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+            </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

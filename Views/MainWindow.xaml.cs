@@ -15,23 +15,27 @@ namespace TileDownloader.Views
     {
         private readonly ISnackbarService _snackbarService;
         private readonly IContentDialogService _contentDialogService;
+        private readonly INavigationService _navigationService;
 
         public MainWindow(MainWindowViewModel viewModel,
             ISnackbarService snackbarService,
-            IContentDialogService contentDialogService)
+            IContentDialogService contentDialogService,
+            INavigationService navigationService)
         {
             InitializeComponent();
             DataContext = viewModel;
             _snackbarService = snackbarService;
             _contentDialogService = contentDialogService;
+            _navigationService = navigationService;
             Loaded += MainWindow_Loaded;
         }
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            // 绑定全局提示/弹窗宿主（页面 VM 通过 DI 解析同一服务实例）
+            // 绑定全局提示/弹窗/导航宿主（页面 VM 通过 DI 解析同一服务实例）
             _snackbarService.SetSnackbarPresenter(SnackbarPresenter);
             _contentDialogService.SetDialogHost(RootDialogHost);
+            _navigationService.SetNavigationControl(NavView);
 
             // 注入页面容器后由 NavigationView 内建导航接管：点击项按 TargetPageType 自动切换
             NavView.SetServiceProvider(App.Services);

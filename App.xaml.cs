@@ -38,9 +38,10 @@ namespace TileDownloader
             services.AddSingleton<TasksViewModel>();
             services.AddSingleton<NewDownloadViewModel>();
 
-            // WPF-UI 服务（Snackbar 提示 / ContentDialog 弹窗，宿主在 MainWindow 设置）
+            // WPF-UI 服务（Snackbar 提示 / ContentDialog 弹窗 / 导航服务，宿主在 MainWindow 设置）
             services.AddSingleton<ISnackbarService, SnackbarService>();
             services.AddSingleton<IContentDialogService, ContentDialogService>();
+            services.AddSingleton<INavigationService, NavigationService>();
 
             // Views / Pages（单例：Navigation 内建导航复用实例，保留页面状态如地图视野）
             services.AddSingleton<MainWindow>();
@@ -49,6 +50,21 @@ namespace TileDownloader
             services.AddSingleton<SettingsPage>();
 
             Services = services.BuildServiceProvider();
+
+            // 恢复并应用用户保存的主题（默认深色）
+            var settings = Services.GetRequiredService<SettingsViewModel>();
+            if (settings.SelectedThemeMode?.Theme.HasValue == true)
+            {
+                Wpf.Ui.Appearance.ApplicationThemeManager.Apply(settings.SelectedThemeMode.Theme.Value);
+            }
+            else if (settings.SelectedThemeMode != null && !settings.SelectedThemeMode.Theme.HasValue)
+            {
+                Wpf.Ui.Appearance.ApplicationThemeManager.ApplySystemTheme();
+            }
+            else
+            {
+                Wpf.Ui.Appearance.ApplicationThemeManager.Apply(Wpf.Ui.Appearance.ApplicationTheme.Dark);
+            }
 
             var mainWindow = Services.GetRequiredService<MainWindow>();
             mainWindow.Show();

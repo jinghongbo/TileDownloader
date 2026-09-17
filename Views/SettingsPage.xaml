@@ -6,13 +6,15 @@
 
     <Page.Resources>
         <!--  设置卡片统一样式  -->
-        <Style x:Key="SettingCard" TargetType="ui:Card">
+        <Style x:Key="SettingCard" TargetType="ui:Card" BasedOn="{StaticResource {x:Type ui:Card}}">
             <Setter Property="Margin" Value="0,0,0,12" />
             <Setter Property="Padding" Value="20" />
         </Style>
         <!--  设置行：左侧标题+说明，右侧控件  -->
-        <Style x:Key="SettingTitle" TargetType="ui:TextBlock">
+        <Style x:Key="SettingTitle" TargetType="ui:TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
             <Setter Property="FontTypography" Value="Body" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
         </Style>
         <Style x:Key="SettingHint" TargetType="TextBlock">
             <Setter Property="FontSize" Value="12" />
@@ -28,12 +30,12 @@
             <StackPanel MaxWidth="760" HorizontalAlignment="Center" Margin="16,8,16,16">
 
                 <ui:TextBlock FontTypography="Title" Text="设置" />
-                <ui:TextBlock FontTypography="Body" Opacity="0.7" Margin="0,2,0,12" Text="下载引擎参数与外观偏好，修改后即时生效" />
+                <ui:TextBlock FontTypography="Body" Opacity="0.7" Margin="0,2,0,16" Text="下载引擎参数与外观偏好，修改后即时生效" />
 
                 <!--  下载  -->
                 <ui:Card Style="{StaticResource SettingCard}">
                     <StackPanel>
-                        <ui:TextBlock FontTypography="BodyStrong" Text="下载" />
+                        <ui:TextBlock FontTypography="Subtitle" Margin="0,0,0,8" Text="下载" />
                         <Grid Margin="0,14,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -90,7 +92,7 @@
                 <!--  Google Hosts 加速  -->
                 <ui:Card Style="{StaticResource SettingCard}">
                     <StackPanel>
-                        <ui:TextBlock FontTypography="BodyStrong" Text="Google Hosts 加速" />
+                        <ui:TextBlock FontTypography="Subtitle" Margin="0,0,0,4" Text="Google Hosts 加速" />
                         <TextBlock Style="{StaticResource SettingHint}" Margin="0,4,0,12"
                                    Text="拉取 Google 官方 IP 段（goog.json 扣除 GCP 段）并结合 mt0-3 的 DNS 解析结果，直连逐个取瓦片找出能真正下到图的最快 IP，写入本机 hosts 替换 mt0-3.google.com 以加速卫星地图下载。命中满意延迟即结束；需要本机可直连 Google（不走代理）" />
 
@@ -146,7 +148,7 @@
                 <!--  外观  -->
                 <ui:Card Style="{StaticResource SettingCard}">
                     <StackPanel>
-                        <ui:TextBlock FontTypography="BodyStrong" Text="外观" />
+                        <ui:TextBlock FontTypography="Subtitle" Margin="0,0,0,8" Text="外观" />
                         <Grid Margin="0,14,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -170,7 +172,7 @@
                 <!--  关于  -->
                 <ui:Card Style="{StaticResource SettingCard}">
                     <StackPanel>
-                        <ui:TextBlock FontTypography="BodyStrong" Text="关于" />
+                        <ui:TextBlock FontTypography="Subtitle" Margin="0,0,0,8" Text="关于" />
                         <Grid Margin="0,14,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -179,7 +181,7 @@
                             <StackPanel>
                                 <ui:TextBlock Style="{StaticResource SettingTitle}" Text="地图下载器" />
                                 <TextBlock Style="{StaticResource SettingHint}" Margin="0,2,0,0"
-                                           Text="通用瓦片地图下载工具 · 支持多文件 pak / MBTiles / 瓦片目录输出" />
+                                           Text="通用瓦片地图下载工具 · 支持多文件 pak / 单文件 pak / MBTiles / 瓦片目录输出" />
                             </StackPanel>
                             <ui:TextBlock Grid.Column="1"
                                           FontTypography="Body"

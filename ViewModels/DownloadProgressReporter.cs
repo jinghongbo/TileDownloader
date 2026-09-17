@@ -43,26 +43,38 @@ namespace TileDownloader.ViewModels
             _item = item;
             _taskManager = taskManager;
             _syncContext = SynchronizationContext.Current;
+            if (item.Total > 0)
+            {
+                _total = item.Total;
+            }
+            if (item.Completed > 0)
+            {
+                _completed = item.Completed;
+            }
         }
 
         public void ReportLevelTotal(int z, long total)
         {
-            Interlocked.Add(ref _total, total);
-            _levelCompleted[z] = 0;
+            _levelCompleted.TryAdd(z, 0);
             Post(() =>
             {
                 var existing = _item.Levels.FirstOrDefault(l => l.Level == z);
                 if (existing != null)
                 {
                     existing.Total = total;
-                    existing.Completed = 0;
                 }
                 else
                 {
                     // 引擎按层级升序回调，追加即为有序
                     _item.Levels.Add(new LevelProgress { Level = z, Total = total, Completed = 0 });
                 }
-                _item.Total = Interlocked.Read(ref _total);
+
+                long sum = _item.Levels.Sum(l => l.Total);
+                if (sum > 0)
+                {
+                    Interlocked.Exchange(ref _total, sum);
+                    _item.Total = sum;
+                }
             });
         }
 

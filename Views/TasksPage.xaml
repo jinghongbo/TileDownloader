@@ -81,6 +81,7 @@
                                            Visibility="{Binding IsRunning, Mode=OneWay, Converter={StaticResource InverseBoolToVis}}" />
                             <TextBlock Text="{Binding StateText, Mode=OneWay}"
                                        Foreground="{Binding StateBrush, Mode=OneWay}"
+                                       FontWeight="SemiBold"
                                        Margin="6,0,0,0"
                                        VerticalAlignment="Center" />
                         </StackPanel>
@@ -101,12 +102,14 @@
                             <TextBlock Grid.Column="1"
                                        Text="{Binding Progress, Mode=OneWay, StringFormat={}{0:F1}%}"
                                        Margin="10,0,0,0"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                        VerticalAlignment="Center" />
                         </Grid>
-                        <TextBlock Margin="0,8,0,0" Opacity="0.75">
-                            <Run Text="已完成 " /><Run Text="{Binding Completed, Mode=OneWay}" /><Run Text=" / " /><Run Text="{Binding Total, Mode=OneWay}" />
-                            <Run Text=" · 速度 " /><Run Text="{Binding Speed, Mode=OneWay}" />
-                            <Run Text=" · 剩余 " /><Run Text="{Binding Remaining, Mode=OneWay}" />
+                        <TextBlock Margin="0,8,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                            <Run Text="已完成 " /><Run Text="{Binding Completed, Mode=OneWay, StringFormat={}{0:N0}}" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" /><Run Text=" / " /><Run Text="{Binding Total, Mode=OneWay, StringFormat={}{0:N0}}" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                            <Run Text=" · 速度 " /><Run Text="{Binding Speed, Mode=OneWay}" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                            <Run Text=" · 剩余 " /><Run Text="{Binding Remaining, Mode=OneWay}" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                         </TextBlock>
 
                         <!--  分层级进度明细  -->
@@ -128,8 +131,8 @@
                                                      Value="{Binding Progress, Mode=OneWay}"
                                                      Height="6"
                                                      VerticalAlignment="Center" />
-                                        <TextBlock Grid.Column="2" FontSize="12" Margin="10,0,0,0" VerticalAlignment="Center">
-                                            <Run Text="{Binding Completed, Mode=OneWay}" /><Run Text="/" /><Run Text="{Binding Total, Mode=OneWay}" />
+                                        <TextBlock Grid.Column="2" FontSize="12" Margin="10,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                                            <Run Text="{Binding Completed, Mode=OneWay, StringFormat={}{0:N0}}" /><Run Text="/" /><Run Text="{Binding Total, Mode=OneWay, StringFormat={}{0:N0}}" />
                                         </TextBlock>
                                     </Grid>
                                 </DataTemplate>
@@ -138,10 +141,11 @@
                     </StackPanel>
 
                     <!--  非进行中：最终状态摘要（完成数量 + 结束时间）  -->
-                    <TextBlock Grid.Row="1" Margin="0,12,0,0" Opacity="0.75"
+                    <TextBlock Grid.Row="1" Margin="0,12,0,0"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                Visibility="{Binding IsRunning, Mode=OneWay, Converter={StaticResource InverseBoolToVis}}">
-                        <Run Text="共 " /><Run Text="{Binding Total, Mode=OneWay}" /><Run Text=" 瓦片，已完成 " /><Run Text="{Binding Completed, Mode=OneWay}" />
-                        <Run Text="{Binding FinishedText, Mode=OneWay}" />
+                        <Run Text="共 " /><Run Text="{Binding Total, Mode=OneWay, StringFormat={}{0:N0}}" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" /><Run Text=" 瓦片 · 已完成 " /><Run Text="{Binding Completed, Mode=OneWay, StringFormat={}{0:N0}}" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                        <Run Text=" · " /><Run Text="{Binding FinishedText, Mode=OneWay}" />
                     </TextBlock>
 
                     <!--  行 2：错误信息  -->
@@ -234,10 +238,10 @@
                 </Style>
             </StackPanel.Style>
             <ui:SymbolIcon Symbol="ArrowDownload24" FontSize="44" Opacity="0.35" HorizontalAlignment="Center" />
-            <TextBlock Text="暂无下载任务"
-                       FontSize="15"
-                       Margin="0,12,0,0"
-                       HorizontalAlignment="Center" />
+            <ui:TextBlock Text="暂无下载任务"
+                          FontTypography="Subtitle"
+                          Margin="0,12,0,0"
+                          HorizontalAlignment="Center" />
             <TextBlock Text="在「新建下载」页选择地图来源并框选范围即可开始"
                        FontSize="12"
                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"

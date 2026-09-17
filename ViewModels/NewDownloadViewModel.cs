@@ -215,6 +215,9 @@ namespace TileDownloader.ViewModels
         /// <summary>下载范围（EPSG:4326 度；null 表示尚未框选）</summary>
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(HasRange))]
+        [NotifyPropertyChangedFor(nameof(EstimatedTileCount))]
+        [NotifyPropertyChangedFor(nameof(EstimatedTileCountText))]
+        [NotifyPropertyChangedFor(nameof(StartDownloadButtonText))]
         [NotifyCanExecuteChangedFor(nameof(StartDownloadCommand))]
         private NetTopologySuite.Geometries.Envelope? _range;
 
@@ -223,11 +226,37 @@ namespace TileDownloader.ViewModels
 
         /// <summary>最小层级</summary>
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(EstimatedTileCount))]
+        [NotifyPropertyChangedFor(nameof(EstimatedTileCountText))]
+        [NotifyPropertyChangedFor(nameof(StartDownloadButtonText))]
         private int _minLevel = 2;
 
         /// <summary>最大层级</summary>
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(EstimatedTileCount))]
+        [NotifyPropertyChangedFor(nameof(EstimatedTileCountText))]
+        [NotifyPropertyChangedFor(nameof(StartDownloadButtonText))]
         private int _maxLevel = 15;
+
+        /// <summary>预估下载瓦片总量</summary>
+        public long EstimatedTileCount
+        {
+            get
+            {
+                if (!HasRange || Range == null || Range.IsNull) return 0;
+                var min = Math.Min(MinLevel, MaxLevel);
+                var max = Math.Max(MinLevel, MaxLevel);
+                return TileUrlBuilder.CalculateTotalTileCount(Range.MinX, Range.MaxX, Range.MinY, Range.MaxY, min, max);
+            }
+        }
+
+        /// <summary>预估瓦片量描述文本</summary>
+        public string EstimatedTileCountText =>
+            EstimatedTileCount > 0 ? $"{EstimatedTileCount:N0} 张瓦片" : "0 张瓦片";
+
+        /// <summary>开始下载按钮文本</summary>
+        public string StartDownloadButtonText =>
+            EstimatedTileCount > 0 ? $"开始下载（共 {EstimatedTileCount:N0} 张）" : "开始下载";
 
         /// <summary>输出路径</summary>
         [ObservableProperty]
@@ -237,6 +266,48 @@ namespace TileDownloader.ViewModels
         /// <summary>输出格式 Id（默认多文件 pak）</summary>
         [ObservableProperty]
         private string _formatId = "MultiPak";
+
+        partial void OnFormatIdChanged(string value)
+        {
+            var descriptor = _storeRegistry.Descriptors.FirstOrDefault(d => d.FormatId == value);
+            var isDir = descriptor is { DefaultExtension: "" };
+            var lastDir = LoadLastOutputDir();
+
+            if (string.IsNullOrWhiteSpace(OutputPath))
+            {
+                if (!string.IsNullOrWhiteSpace(lastDir) && Directory.Exists(lastDir))
+                {
+                    OutputPath = isDir ? lastDir : System.IO.Path.Combine(lastDir, "map" + (descriptor?.DefaultExtension ?? ".pak"));
+                }
+                return;
+            }
+
+            if (isDir)
+            {
+                // 切换为目录类格式（多文件 pak / 瓦片目录）：若当前为文件路径，转换为其所在目录
+                if (System.IO.Path.HasExtension(OutputPath))
+                {
+                    var dir = System.IO.Path.GetDirectoryName(OutputPath);
+                    if (!string.IsNullOrWhiteSpace(dir))
+                    {
+                        OutputPath = dir;
+                    }
+                }
+            }
+            else
+            {
+                // 切换为文件类格式（单文件 pak / MBTiles）
+                var ext = descriptor?.DefaultExtension ?? ".pak";
+                if (Directory.Exists(OutputPath) || !System.IO.Path.HasExtension(OutputPath))
+                {
+                    OutputPath = System.IO.Path.Combine(OutputPath, "map" + ext);
+                }
+                else
+                {
+                    OutputPath = System.IO.Path.ChangeExtension(OutputPath, ext);
+                }
+            }
+        }
 
         /// <summary>是否下载中</summary>
         [ObservableProperty]
@@ -281,7 +352,8 @@ namespace TileDownloader.ViewModels
             }
 
             // 记录本次输出目录，下次启动默认使用
-            SaveLastOutputDir(FormatId == "Directory" ? OutputPath : System.IO.Path.GetDirectoryName(OutputPath));
+            var currentExt = _storeRegistry.Descriptors.FirstOrDefault(d => d.FormatId == FormatId)?.DefaultExtension;
+            SaveLastOutputDir(string.IsNullOrEmpty(currentExt) ? OutputPath : System.IO.Path.GetDirectoryName(OutputPath));
 
             var request = new TileDownloadRequest
             {
@@ -296,10 +368,12 @@ namespace TileDownloader.ViewModels
                 UseProxy = _settings.UseProxy,
             };
 
+            var total = request.CalculateTotalTiles();
             var item = new TaskItem
             {
                 Name = $"{SelectedSource.Name}（z{request.MinLevel}-z{request.MaxLevel}）",
                 Request = request,
+                Total = total,
             };
             _currentItem = item;
             _tasksViewModel.Tasks.Add(item);

@@ -236,7 +236,7 @@ namespace TileDownloader.Models
         public string? FormatLabel => Request?.FormatId switch
         {
             "MultiPak" => "多文件 pak",
-            "Pak" => "单文件 pak（旧）",
+            "Pak" => "单文件 pak",
             "MBTiles" => "MBTiles",
             "Directory" => "瓦片目录",
             null => null,

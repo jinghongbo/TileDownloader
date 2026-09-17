@@ -1,4 +1,5 @@
 using NetTopologySuite.Geometries;
+using TileDownloader.Services;
 
 namespace TileDownloader.Models
 {
@@ -34,6 +35,13 @@ namespace TileDownloader.Models
         /// <summary>下载是否使用系统代理（默认 false=直连，配合 Google Hosts 加速；true=跟随系统代理/VPN）</summary>
         public bool UseProxy { get; set; } = false;
 
+        /// <summary>提前计算该请求对应的瓦片总量</summary>
+        public long CalculateTotalTiles()
+        {
+            if (Range == null || Range.IsNull) return 0;
+            return TileUrlBuilder.CalculateTotalTileCount(Range.MinX, Range.MaxX, Range.MinY, Range.MaxY, MinLevel, MaxLevel);
+        }
+
         /// <summary>快照为持久化任务记录</summary>
         public TaskRecord ToRecord(string name)
         {
@@ -49,6 +57,8 @@ namespace TileDownloader.Models
                 MinY = Range?.MinY ?? 0,
                 MaxX = Range?.MaxX ?? 0,
                 MaxY = Range?.MaxY ?? 0,
+                Total = CalculateTotalTiles(),
+                Completed = 0,
                 CreatedAt = System.DateTime.Now,
                 Status = (int)TaskStatus2.Running,
             };

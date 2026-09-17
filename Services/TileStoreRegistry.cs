@@ -7,7 +7,7 @@ namespace TileDownloader.Services
     /// 存储格式注册表：
     /// 提供四种格式的元数据描述（供格式选择 UI 展示），
     /// 并在 <see cref="CreateStore"/> 中按 FormatId 创建对应存储实现：
-    /// MultiPak（多文件 pak，默认）/ Pak（单文件 pak·旧）/ MBTiles / Directory（瓦片目录）
+    /// MultiPak（多文件 pak，默认）/ Pak（单文件 pak）/ MBTiles / Directory（瓦片目录）
     /// </summary>
     public class TileStoreRegistry
     {
@@ -21,8 +21,8 @@ namespace TileDownloader.Services
         /// <summary>全部支持的输出格式元数据</summary>
         public IReadOnlyList<ITileStoreDescriptor> Descriptors { get; } = new List<ITileStoreDescriptor>
         {
-            new Descriptor { FormatId = "MultiPak", DisplayName = "多文件 pak", DefaultExtension = ".pak" },
-            new Descriptor { FormatId = "Pak", DisplayName = "单文件 pak（旧）", DefaultExtension = ".pak" },
+            new Descriptor { FormatId = "MultiPak", DisplayName = "多文件 pak", DefaultExtension = "" },
+            new Descriptor { FormatId = "Pak", DisplayName = "单文件 pak", DefaultExtension = ".pak" },
             new Descriptor { FormatId = "MBTiles", DisplayName = "MBTiles", DefaultExtension = ".mbtiles" },
             new Descriptor { FormatId = "Directory", DisplayName = "瓦片目录", DefaultExtension = "" },
         };
@@ -35,7 +35,7 @@ namespace TileDownloader.Services
         {
             return formatId switch
             {
-                "MultiPak" => new MultiFilePakTileStore(),
+                "MultiPak" => new MultiPakTileStore(),
                 "Pak" => new PakTileStore(),
                 "MBTiles" => new MbTilesTileStore(),
                 "Directory" => new DirectoryTileStore(),

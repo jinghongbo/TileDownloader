@@ -132,15 +132,22 @@ namespace TileDownloader.ViewModels
                             _ => TaskState.Cancelled, // Running/Cancelled 重启后均为中断
                         };
 
+                        var request = RebuildRequest(record, sources);
+                        long total = record.Total;
+                        if (total <= 0 && request != null)
+                        {
+                            total = request.CalculateTotalTiles();
+                        }
+
                         var item = new TaskItem
                         {
                             Name = record.Name,
                             Completed = record.Completed,
-                            Total = record.Total,
+                            Total = total,
                             Error = record.Error,
                             State = state,
                             RecordId = record.Id,
-                            Request = RebuildRequest(record, sources),
+                            Request = request,
                         };
                         Tasks.Add(item);
                     }
@@ -184,6 +191,10 @@ namespace TileDownloader.ViewModels
             item.Error = null;
             item.Completed = 0;
             item.State = TaskState.Running;
+            if (item.Total <= 0)
+            {
+                item.Total = request.CalculateTotalTiles();
+            }
 
             try
             {

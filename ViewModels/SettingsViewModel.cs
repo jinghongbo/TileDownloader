@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -32,11 +33,12 @@ namespace TileDownloader.ViewModels
 
             _selectedThemeMode = ThemeModes[0];
 
-            // 恢复持久化设置（UseProxy / 最快 Google IP）
+            // 恢复持久化设置（UseProxy / 最快 Google IP / 主题）
             var saved = LoadSettings();
             _useProxy = saved.UseProxy;
             _bestGoogleIp = saved.BestGoogleIp;
             _bestGoogleIpMs = saved.BestGoogleIpMs;
+            _selectedThemeMode = ThemeModes.FirstOrDefault(m => m.Label == saved.Theme) ?? ThemeModes[0];
 
             // 将代理设置同步到地图预览（下载侧在构造请求时读取本 VM）
             _tileImageLoader.UseProxy = _useProxy;
@@ -89,6 +91,8 @@ namespace TileDownloader.ViewModels
             {
                 ApplicationThemeManager.ApplySystemTheme();
             }
+
+            SaveSettings();
         }
 
         // ===== Google Hosts 加速 =====
@@ -259,6 +263,7 @@ namespace TileDownloader.ViewModels
             public bool UseProxy { get; set; } = false;
             public string? BestGoogleIp { get; set; }
             public long BestGoogleIpMs { get; set; }
+            public string Theme { get; set; } = "深色";
         }
 
         private static PersistedSettings LoadSettings()
@@ -291,6 +296,7 @@ namespace TileDownloader.ViewModels
                     UseProxy = UseProxy,
                     BestGoogleIp = BestGoogleIp,
                     BestGoogleIpMs = BestGoogleIpMs,
+                    Theme = SelectedThemeMode?.Label ?? "深色",
                 };
                 File.WriteAllText(SettingsFile, JsonConvert.SerializeObject(s, Formatting.Indented));
             }

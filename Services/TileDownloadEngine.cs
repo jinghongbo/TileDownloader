@@ -53,15 +53,21 @@ namespace TileDownloader.Services
                     CancellationToken = ct,
                 };
 
+                // 提前预先计算所有层级与总瓦片数，上报至进度汇报器建立预算
+                for (var z = request.MinLevel; z <= request.MaxLevel; z++)
+                {
+                    var (firstCol, lastCol) = TileUrlBuilder.ColRange(request.Range.MinX, request.Range.MaxX, z);
+                    var (firstRow, lastRow) = TileUrlBuilder.RowRange(request.Range.MinY, request.Range.MaxY, z);
+                    var total = (long)(lastCol - firstCol + 1) * (lastRow - firstRow + 1);
+                    progress.ReportLevelTotal(z, total);
+                }
+
                 for (var z = request.MinLevel; z <= request.MaxLevel; z++)
                 {
                     ct.ThrowIfCancellationRequested();
 
                     var (firstCol, lastCol) = TileUrlBuilder.ColRange(request.Range.MinX, request.Range.MaxX, z);
                     var (firstRow, lastRow) = TileUrlBuilder.RowRange(request.Range.MinY, request.Range.MaxY, z);
-
-                    var total = (long)(lastCol - firstCol + 1) * (lastRow - firstRow + 1);
-                    progress.ReportLevelTotal(z, total);
 
                     static IEnumerable<(int x, int y)> EnumerateTiles(int fc, int lc, int fr, int lr)
                     {

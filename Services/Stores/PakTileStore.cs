@@ -11,7 +11,7 @@ using TileDownloader.Models;
 namespace TileDownloader.Services
 {
     /// <summary>
-    /// 单文件 pak 存储（旧格式，向后兼容）：
+    /// 单文件 pak 存储：
     /// 单一 SQLite 文件（OutputPath），含 infos 表 + blocks 主表（z&lt;10）+ blocks_{z}_{tx}_{ty} 分表（z&gt;=10），
     /// 分表规则沿用 PakBlock.GetTable。续传按瓦片粒度：初始化时预加载任务涉及分表的全部瓦片主键
     /// </summary>
@@ -21,7 +21,7 @@ namespace TileDownloader.Services
         private const int BlockSize = 512;
 
         public string FormatId => "Pak";
-        public string DisplayName => "单文件 pak（旧）";
+        public string DisplayName => "单文件 pak";
         public string DefaultExtension => ".pak";
 
         private TileTaskOptions? _options;
@@ -45,7 +45,7 @@ namespace TileDownloader.Services
                 .UseAutoSyncStructure(true)
                 .Build();
 
-            // 旧格式语义（沿用历史实现）：infos 只保留当前任务一条，先清空再插入，检查点清零
+            // 单文件 pak 语义：infos 存放当前任务配置，先清空再插入，检查点清零
             await _db.Delete<PakInfo>().Where(x => true).ExecuteAffrowsAsync(ct);
             await _db.Insert<PakInfo>().AppendData(new PakInfo
             {

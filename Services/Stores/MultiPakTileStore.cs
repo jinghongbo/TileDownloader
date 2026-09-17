@@ -42,6 +42,9 @@ namespace TileDownloader.Services
         /// <summary>分块库连接缓存（文件名 → IFreeSql，懒打开；IFreeSql 线程安全，可并发使用）</summary>
         private readonly ConcurrentDictionary<string, IFreeSql> _blockDbs = new();
 
+        /// <summary>分块库创建锁：保证每个分块文件只被创建/初始化一次</summary>
+        private readonly object _blockDbLock = new();
+
         /// <summary>瓦片存在缓存（"z_x_y" → 1/0）：引擎查询或写入过的瓦片都登记于此</summary>
         private readonly ConcurrentDictionary<string, byte> _exists = new();
 
@@ -271,10 +274,15 @@ namespace TileDownloader.Services
         }
 
         /// <summary>构造分块库连接（连接串缩小连接池，避免多分块时句柄占用过多）</summary>
+        /// <remarks>
+        /// journal mode=WAL + busy_timeout：同一分块文件会被多个线程（读取线程与落盘线程）同时打开，
+        /// 默认回滚日志模式下读写会相互阻塞，且 SQLite 在锁冲突时可能不触发 busy handler 而直接返回
+        /// database is locked；WAL 下读不阻塞写、写不阻塞读，busy_timeout 保证冲突时等待而不是立即失败。
+        /// </remarks>
         private static IFreeSql BuildSqlite(string file, int poolSize)
         {
             return new FreeSqlBuilder()
-                .UseConnectionString(DataType.Sqlite, $"data source={file};poolsize={poolSize}")
+                .UseConnectionString(DataType.Sqlite, $"data source={file};poolsize={poolSize};journal mode=WAL;busy_timeout=15000")
                 .UseAutoSyncStructure(false)
                 .Build();
         }
@@ -282,10 +290,22 @@ namespace TileDownloader.Services
         /// <summary>懒打开分块库（按文件名缓存），且保证具备与文件名同名的瓦片表以及 infos 表</summary>
         private IFreeSql GetBlockDb(string filename)
         {
-            return _blockDbs.GetOrAdd(filename, f =>
+            if (_blockDbs.TryGetValue(filename, out var cached))
             {
-                var db = BuildSqlite(Path.Combine(_dir, f), poolSize: 3);
-                var tableName = Path.GetFileNameWithoutExtension(f);
+                return cached;
+            }
+
+            // 同一文件只允许创建/初始化一次：ConcurrentDictionary.GetOrAdd 的工厂可能被并发执行，
+            // 会产生多个连接同时对该文件执行建表语句（database is locked），且失败者无人释放
+            lock (_blockDbLock)
+            {
+                if (_blockDbs.TryGetValue(filename, out cached))
+                {
+                    return cached;
+                }
+
+                var db = BuildSqlite(Path.Combine(_dir, filename), poolSize: 3);
+                var tableName = Path.GetFileNameWithoutExtension(filename);
 
                 // 确保数据库中存在与文件名同名的瓦片表（结构与 PakBlock 一致）以及 infos 表
                 db.Ado.ExecuteNonQuery(
@@ -315,8 +335,10 @@ namespace TileDownloader.Services
                     {
                     }
                 }
+
+                _blockDbs[filename] = db;
                 return db;
-            });
+            }
         }
 
         /// <summary>分块内部表名：与文件名（不含扩展名）完全一致。z&lt;10 为 blocks，z&gt;=10 为 blocks_{z}_{tx}_{ty}</summary>

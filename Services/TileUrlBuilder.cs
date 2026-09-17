@@ -14,6 +14,12 @@ namespace TileDownloader.Services
         /// <summary>Web Mercator 纬度上限</summary>
         public const double MaxLatitude = 85.05112878;
 
+        /// <summary>pak 存储的分块边长（与 PakBlock.GetTable / 多文件 pak 命名规则一致）</summary>
+        public const int BlockSize = 512;
+
+        /// <summary>统一存进 blocks（单文件 pak 的 blocks 表 / 多文件 pak 的 blocks.pak）的最高层级</summary>
+        public const int PakSingleFileMaxLevel = 9;
+
         /// <summary>
         /// 按 XYZ 方案（EPSG:3857，原点左上）计算经纬度对应的瓦片坐标
         /// </summary>
@@ -34,36 +40,67 @@ namespace TileDownloader.Services
         }
 
         /// <summary>
-        /// 计算某层级指定经度范围对应的列号区间（含端点）
+        /// 计算某层级指定经度范围对应的列号区间（含端点）。
+        /// fullBlock=true 时按 pak 分块规则扩展到完整块：z≤9 扩展为该层级全图，z≥10 扩展为 512×512 整块（边缘裁剪到 2^z-1）
         /// </summary>
-        public static (int firstCol, int lastCol) ColRange(double minLon, double maxLon, int z)
+        public static (int firstCol, int lastCol) ColRange(double minLon, double maxLon, int z, bool fullBlock = false)
         {
             var n = Math.Pow(2, z);
+            var max = (int)n - 1;
+
+            if (fullBlock)
+            {
+                if (z <= PakSingleFileMaxLevel)
+                {
+                    // z≤9 统一写进 blocks：含该层级全部瓦片
+                    return (0, max);
+                }
+                var firstEdge = Math.Floor((minLon + 180d) / 360d * n);
+                var lastEdge = Math.Floor((maxLon + 180d) / 360d * n);
+                var firstBlock = Math.Clamp((int)firstEdge, 0, max) / BlockSize * BlockSize;
+                var lastBlock = Math.Clamp((int)lastEdge, 0, max) / BlockSize * BlockSize + BlockSize - 1;
+                return (firstBlock, Math.Min(lastBlock, max));
+            }
+
             var first = Math.Floor((minLon + 180d) / 360d * n);
             var last = Math.Floor((maxLon + 180d) / 360d * n);
-            var max = (int)n - 1;
             return (Math.Clamp((int)first, 0, max), Math.Clamp((int)last, 0, max));
         }
 
         /// <summary>
-        /// 计算某层级指定纬度范围对应的行号区间（含端点，原点左上）
+        /// 计算某层级指定纬度范围对应的行号区间（含端点，原点左上）。
+        /// fullBlock=true 时按 pak 分块规则扩展到完整块：z≤9 扩展为该层级全图，z≥10 扩展为 512×512 整块（边缘裁剪到 2^z-1）
         /// </summary>
-        public static (int firstRow, int lastRow) RowRange(double minLat, double maxLat, int z)
+        public static (int firstRow, int lastRow) RowRange(double minLat, double maxLat, int z, bool fullBlock = false)
         {
             var n = Math.Pow(2, z);
             maxLat = Math.Clamp(maxLat, -MaxLatitude, MaxLatitude);
             minLat = Math.Clamp(minLat, -MaxLatitude, MaxLatitude);
+            var max = (int)n - 1;
+
+            if (fullBlock)
+            {
+                if (z <= PakSingleFileMaxLevel)
+                {
+                    // z≤9 统一写进 blocks：含该层级全部瓦片
+                    return (0, max);
+                }
+                var firstEdge = Math.Floor(RowOf(maxLat));
+                var lastEdge = Math.Floor(RowOf(minLat));
+                var firstBlock = Math.Clamp((int)firstEdge, 0, max) / BlockSize * BlockSize;
+                var lastBlock = Math.Clamp((int)lastEdge, 0, max) / BlockSize * BlockSize + BlockSize - 1;
+                return (firstBlock, Math.Min(lastBlock, max));
+            }
+
+            var first = Math.Floor(RowOf(maxLat));
+            var last = Math.Floor(RowOf(minLat));
+            return (Math.Clamp((int)first, 0, max), Math.Clamp((int)last, 0, max));
 
             double RowOf(double lat)
             {
                 var latRad = lat * Math.PI / 180d;
                 return (1d - Math.Log(Math.Tan(latRad) + 1d / Math.Cos(latRad)) / Math.PI) / 2d * n;
             }
-
-            var first = Math.Floor(RowOf(maxLat));
-            var last = Math.Floor(RowOf(minLat));
-            var max = (int)n - 1;
-            return (Math.Clamp((int)first, 0, max), Math.Clamp((int)last, 0, max));
         }
 
         /// <summary>
@@ -128,21 +165,21 @@ namespace TileDownloader.Services
         }
 
         /// <summary>
-        /// 计算某层级指定经纬度范围对应的瓦片总数
+        /// 计算某层级指定经纬度范围对应的瓦片总数（fullBlock=true 时按 pak 完整块规则扩展）
         /// </summary>
-        public static long CalculateLevelTileCount(double minLon, double maxLon, double minLat, double maxLat, int z)
+        public static long CalculateLevelTileCount(double minLon, double maxLon, double minLat, double maxLat, int z, bool fullBlock = false)
         {
             if (minLon > maxLon) (minLon, maxLon) = (maxLon, minLon);
             if (minLat > maxLat) (minLat, maxLat) = (maxLat, minLat);
-            var (firstCol, lastCol) = ColRange(minLon, maxLon, z);
-            var (firstRow, lastRow) = RowRange(minLat, maxLat, z);
+            var (firstCol, lastCol) = ColRange(minLon, maxLon, z, fullBlock);
+            var (firstRow, lastRow) = RowRange(minLat, maxLat, z, fullBlock);
             return Math.Max(0L, (long)(lastCol - firstCol + 1) * (lastRow - firstRow + 1));
         }
 
         /// <summary>
-        /// 提前计算指定经纬度范围和层级区间的总瓦片数
+        /// 提前计算指定经纬度范围和层级区间的总瓦片数（fullBlock=true 时按 pak 完整块规则扩展）
         /// </summary>
-        public static long CalculateTotalTileCount(double minLon, double maxLon, double minLat, double maxLat, int minLevel, int maxLevel)
+        public static long CalculateTotalTileCount(double minLon, double maxLon, double minLat, double maxLat, int minLevel, int maxLevel, bool fullBlock = false)
         {
             if (minLevel > maxLevel)
             {
@@ -152,7 +189,7 @@ namespace TileDownloader.Services
             long total = 0;
             for (int z = minLevel; z <= maxLevel; z++)
             {
-                total += CalculateLevelTileCount(minLon, maxLon, minLat, maxLat, z);
+                total += CalculateLevelTileCount(minLon, maxLon, minLat, maxLat, z, fullBlock);
             }
             return total;
         }

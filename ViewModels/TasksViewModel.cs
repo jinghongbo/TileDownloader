@@ -175,6 +175,7 @@ namespace TileDownloader.ViewModels
                 MaxLevel = record.MaxLevel,
                 OutputPath = record.OutputPath,
                 FormatId = record.FormatId,
+                FullBlock = record.FullBlock == true,
                 Concurrent = _settings.Concurrent,
                 Retry = _settings.Retry,
                 UseProxy = _settings.UseProxy,

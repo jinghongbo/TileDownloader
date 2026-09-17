@@ -314,6 +314,16 @@
                                            Margin="8,0,0,0"
                                            Command="{Binding BrowseOutputCommand}" />
                             </Grid>
+
+                            <!--  完整块（仅 pak 格式生效）  -->
+                            <CheckBox Margin="0,12,0,0"
+                                      Content="完整块"
+                                      IsChecked="{Binding FullBlock, Mode=TwoWay}"
+                                      Visibility="{Binding IsPakFormat, Converter={StaticResource BoolToVis}}" />
+                            <TextBlock Style="{StaticResource HintText}"
+                                       Margin="0,4,0,0"
+                                       Text="勾选后：z≤9 的 blocks 写满该层级全部瓦片；z≥10 的 blocks_{z}_{tx}_{ty} 写满 512×512 整块（下载量会明显增加）"
+                                       Visibility="{Binding IsPakFormat, Converter={StaticResource BoolToVis}}" />
                         </StackPanel>
                     </Expander>
                 </ui:Card>

@@ -475,6 +475,19 @@ namespace TileDownloader.ViewModels
         [NotifyPropertyChangedFor(nameof(StartDownloadButtonText))]
         private int _maxLevel = 15;
 
+        /// <summary>是否勾选完整块（仅 pak 格式生效）</summary>
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(EstimatedTileCount))]
+        [NotifyPropertyChangedFor(nameof(EstimatedTileCountText))]
+        [NotifyPropertyChangedFor(nameof(StartDownloadButtonText))]
+        private bool _fullBlock;
+
+        /// <summary>当前输出格式是否为 pak 系列（决定「完整块」选项可见与生效）</summary>
+        public bool IsPakFormat => FormatId is "Pak" or "MultiPak";
+
+        /// <summary>实际生效的完整块开关（非 pak 格式一律忽略勾选值）</summary>
+        private bool EffectiveFullBlock => IsPakFormat && FullBlock;
+
         /// <summary>预估下载瓦片总量</summary>
         public long EstimatedTileCount
         {
@@ -483,7 +496,7 @@ namespace TileDownloader.ViewModels
                 if (!HasRange || Range == null || Range.IsNull) return 0;
                 var min = Math.Min(MinLevel, MaxLevel);
                 var max = Math.Max(MinLevel, MaxLevel);
-                return TileUrlBuilder.CalculateTotalTileCount(Range.MinX, Range.MaxX, Range.MinY, Range.MaxY, min, max);
+                return TileUrlBuilder.CalculateTotalTileCount(Range.MinX, Range.MaxX, Range.MinY, Range.MaxY, min, max, EffectiveFullBlock);
             }
         }
 
@@ -506,6 +519,12 @@ namespace TileDownloader.ViewModels
 
         partial void OnFormatIdChanged(string value)
         {
+            // 完整块选项仅对 pak 系列可见/生效，切换格式后预估数量随之变化
+            OnPropertyChanged(nameof(IsPakFormat));
+            OnPropertyChanged(nameof(EstimatedTileCount));
+            OnPropertyChanged(nameof(EstimatedTileCountText));
+            OnPropertyChanged(nameof(StartDownloadButtonText));
+
             var descriptor = _storeRegistry.Descriptors.FirstOrDefault(d => d.FormatId == value);
             var isDir = descriptor is { DefaultExtension: "" };
             var lastDir = LoadLastOutputDir();
@@ -723,6 +742,7 @@ namespace TileDownloader.ViewModels
                 MaxLevel = Math.Max(MinLevel, MaxLevel),
                 OutputPath = OutputPath,
                 FormatId = FormatId,
+                FullBlock = EffectiveFullBlock,
                 Concurrent = _settings.Concurrent,
                 Retry = _settings.Retry,
                 UseProxy = _settings.UseProxy,

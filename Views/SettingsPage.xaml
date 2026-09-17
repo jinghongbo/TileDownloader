@@ -179,9 +179,9 @@
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <StackPanel>
-                                <ui:TextBlock Style="{StaticResource SettingTitle}" Text="地图下载器" />
+                                <ui:TextBlock Style="{StaticResource SettingTitle}" Text="通用瓦片地图下载工具" />
                                 <TextBlock Style="{StaticResource SettingHint}" Margin="0,2,0,0"
-                                           Text="通用瓦片地图下载工具 · 支持多文件 pak / 单文件 pak / MBTiles / 瓦片目录输出" />
+                                           Text="批量下载 XYZ 瓦片地图 · 支持多文件 pak / 单文件 pak / MBTiles / 瓦片目录输出" />
                             </StackPanel>
                             <ui:TextBlock Grid.Column="1"
                                           FontTypography="Body"
@@ -189,6 +189,24 @@
                                           VerticalAlignment="Center"
                                           Text="{Binding AppVersion, Mode=OneWay}" />
                         </Grid>
+
+                        <!--  仓库与版权信息  -->
+                        <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                            <ui:SymbolIcon Symbol="Code24"
+                                           VerticalAlignment="Center"
+                                           Margin="0,0,8,0"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            <ui:HyperlinkButton Content="{Binding RepositoryText, Mode=OneWay}"
+                                                NavigateUri="{Binding RepositoryUri, Mode=OneWay}"
+                                                ToolTip="在浏览器中打开项目仓库" />
+                            <TextBlock Style="{StaticResource SettingHint}"
+                                       VerticalAlignment="Center"
+                                       Margin="12,0,0,0"
+                                       Text="{Binding AppCopyright, Mode=OneWay}" />
+                        </StackPanel>
+                        <TextBlock Style="{StaticResource SettingHint}"
+                                   Margin="24,4,0,0"
+                                   Text="反馈问题或提交建议请前往仓库 Issues" />
                     </StackPanel>
                 </ui:Card>
 

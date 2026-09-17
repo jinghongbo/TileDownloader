@@ -158,7 +158,10 @@ namespace TileDownloader.ViewModels
                     GoogleHostsProgressPercent = p.Percent;
                     GoogleHostsProgressText = $"已扫描 {p.Done}/{p.Total}，命中 {p.Reachable}";
                 });
-                var best = await _googleHostsService.FindBestAsync(progress, ct, scanProgress);
+                // 探测是 CPU 与网络密集型工作（枚举数万个候选 IP、逐个做 TLS 瓦片验证），
+                // 整体放到线程池执行：否则服务内部每个 await 之后的续体都会回到 UI 线程，
+                // 造成界面卡死；进度仍由 Progress<T> 回到 UI 线程更新
+                var best = await Task.Run(() => _googleHostsService.FindBestAsync(progress, ct, scanProgress), ct);
 
                 if (best != null)
                 {
@@ -243,6 +246,15 @@ namespace TileDownloader.ViewModels
         /// <summary>应用版本（主程序集版本）</summary>
         public string AppVersion =>
             "v" + (Assembly.GetEntryAssembly()?.GetName().Version?.ToString(3) ?? "1.0.0");
+
+        /// <summary>项目仓库地址</summary>
+        public Uri RepositoryUri { get; } = new("https://github.com/jinghongbo/TileDownloader");
+
+        /// <summary>项目仓库地址展示文本（省略协议前缀）</summary>
+        public string RepositoryText => "github.com/jinghongbo/TileDownloader";
+
+        /// <summary>版权信息</summary>
+        public string AppCopyright => "© 2026 jinghongbo";
 
         // ===== 持久化（仅持久化新增的代理与 Google Hosts 设置）=====
 

@@ -9,6 +9,6 @@ namespace TileDownloader.ViewModels
     {
         /// <summary>窗口标题</summary>
         [ObservableProperty]
-        private string _title = "地图下载器";
+        private string _title = "通用瓦片地图下载工具";
     }
 }

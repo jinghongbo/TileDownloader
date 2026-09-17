@@ -93,5 +93,9 @@ namespace TileDownloader.Models
         /// <summary>检查点：当前 Y</summary>
         [Column(Name = "cur_y")]
         public int CurY { get; set; }
+
+        /// <summary>是否完整块（仅 pak 格式生效；历史记录为 NULL，按未勾选处理）</summary>
+        [Column(Name = "full_block")]
+        public bool? FullBlock { get; set; }
     }
 }

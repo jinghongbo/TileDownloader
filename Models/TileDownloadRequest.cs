@@ -35,11 +35,14 @@ namespace TileDownloader.Models
         /// <summary>下载是否使用系统代理（默认 false=直连，配合 Google Hosts 加速；true=跟随系统代理/VPN）</summary>
         public bool UseProxy { get; set; } = false;
 
+        /// <summary>是否完整块（仅 pak 格式生效：blocks 写满该层级全部瓦片，blocks_{z}_{tx}_{ty} 写满 512×512 整块）</summary>
+        public bool FullBlock { get; set; }
+
         /// <summary>提前计算该请求对应的瓦片总量</summary>
         public long CalculateTotalTiles()
         {
             if (Range == null || Range.IsNull) return 0;
-            return TileUrlBuilder.CalculateTotalTileCount(Range.MinX, Range.MaxX, Range.MinY, Range.MaxY, MinLevel, MaxLevel);
+            return TileUrlBuilder.CalculateTotalTileCount(Range.MinX, Range.MaxX, Range.MinY, Range.MaxY, MinLevel, MaxLevel, FullBlock);
         }
 
         /// <summary>快照为持久化任务记录</summary>
@@ -59,6 +62,7 @@ namespace TileDownloader.Models
                 MaxY = Range?.MaxY ?? 0,
                 Total = CalculateTotalTiles(),
                 Completed = 0,
+                FullBlock = FullBlock,
                 CreatedAt = System.DateTime.Now,
                 Status = (int)TaskStatus2.Running,
             };

@@ -4,7 +4,7 @@
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     xmlns:views="clr-namespace:TileDownloader.Views"
     x:Class="TileDownloader.Views.MainWindow"
-    Title="地图下载器"
+    Title="通用瓦片地图下载工具"
     Height="800" Width="1280"
     MinHeight="640" MinWidth="960"
     WindowStartupLocation="CenterScreen"
@@ -20,7 +20,7 @@
         </Grid.RowDefinitions>
 
         <!--  自绘标题栏（含最小化/最大化/关闭按钮）；ExtendsContentIntoTitleBar=True 时需显式提供  -->
-        <ui:TitleBar Grid.Row="0" Title="地图下载器" />
+        <ui:TitleBar Grid.Row="0" Title="通用瓦片地图下载工具" />
 
         <!--  WPF-UI 4.3 内建导航：TargetPageType 必填（OnClick 仅在此属性非空时触发导航），
               页面实例由 SetServiceProvider 注入的容器提供  -->

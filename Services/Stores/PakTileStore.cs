@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using FreeSql;
 using TileDownloader.Models;
@@ -24,6 +26,8 @@ namespace TileDownloader.Services
 
         private TileTaskOptions? _options;
         private IFreeSql? _db;
+        private Channel<(string table, PakBlock block)>? _tileChannel;
+        private Task? _writerTask;
 
         /// <summary>瓦片存在缓存（"z_x_y" → 1），初始化时按涉及分表全量预加载</summary>
         private readonly ConcurrentDictionary<string, byte> _exists = new();
@@ -91,6 +95,15 @@ namespace TileDownloader.Services
                     _exists.TryAdd(TileKey(row.Z, row.X, row.Y), 1);
                 }
             }
+
+            // 启动批量落盘通道，避免多线程 SQLite 分表写锁冲突
+            _tileChannel = Channel.CreateBounded<(string table, PakBlock block)>(new BoundedChannelOptions(2000)
+            {
+                SingleReader = true,
+                SingleWriter = false,
+                FullMode = BoundedChannelFullMode.Wait,
+            });
+            _writerTask = Task.Run(ProcessTileWriterLoopAsync);
         }
 
         public Task<bool> TileExistsAsync(int z, int x, int y, CancellationToken ct)
@@ -102,20 +115,77 @@ namespace TileDownloader.Services
         public async Task SaveTileAsync(int z, int x, int y, byte[] data, CancellationToken ct)
         {
             var table = PakBlock.GetTable(z, x, y);
-
-            // 沿用旧实现：AsTable 定位分表 + InsertOrUpdate 按复合主键 (z,x,y) upsert，并发安全
-            await _db.InsertOrUpdate<PakBlock>().AsTable(_ => table)
-                .SetSource(new PakBlock { Z = z, X = x, Y = y, Tile = data })
-                .ExecuteAffrowsAsync(ct);
-
             _exists[TileKey(z, x, y)] = 1;
             _curLevel = z;
             _curX = x;
             _curY = y;
+
+            if (_tileChannel != null)
+            {
+                await _tileChannel.Writer.WriteAsync((table, new PakBlock { Z = z, X = x, Y = y, Tile = data }), ct);
+            }
+        }
+
+        private async Task ProcessTileWriterLoopAsync()
+        {
+            if (_tileChannel == null || _db == null)
+            {
+                return;
+            }
+
+            var reader = _tileChannel.Reader;
+            var batch = new List<(string table, PakBlock block)>(100);
+
+            while (await reader.WaitToReadAsync())
+            {
+                while (batch.Count < 100 && reader.TryRead(out var item))
+                {
+                    batch.Add(item);
+                }
+
+                if (batch.Count > 0)
+                {
+                    foreach (var group in batch.GroupBy(b => b.table))
+                    {
+                        try
+                        {
+                            await _db.InsertOrUpdate<PakBlock>().AsTable(_ => group.Key)
+                                .SetSource(group.Select(g => g.block))
+                                .ExecuteAffrowsAsync();
+                        }
+                        catch
+                        {
+                            try
+                            {
+                                await Task.Delay(50);
+                                await _db.InsertOrUpdate<PakBlock>().AsTable(_ => group.Key)
+                                    .SetSource(group.Select(g => g.block))
+                                    .ExecuteAffrowsAsync();
+                            }
+                            catch
+                            {
+                            }
+                        }
+                    }
+                    batch.Clear();
+                }
+            }
         }
 
         public async Task FinalizeAsync(CancellationToken ct)
         {
+            // 排空写入通道中的全部在途瓦片
+            if (_tileChannel != null)
+            {
+                _tileChannel.Writer.Complete();
+                if (_writerTask != null)
+                {
+                    await _writerTask;
+                }
+                _tileChannel = null;
+                _writerTask = null;
+            }
+
             if (_db == null || _options == null)
             {
                 return;

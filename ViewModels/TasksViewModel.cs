@@ -182,6 +182,7 @@ namespace TileDownloader.ViewModels
             var request = item.Request ?? throw new InvalidOperationException("任务缺少下载请求");
             item.Cts = new CancellationTokenSource();
             item.Error = null;
+            item.Completed = 0;
             item.State = TaskState.Running;
 
             try

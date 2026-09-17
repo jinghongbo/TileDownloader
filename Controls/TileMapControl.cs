@@ -226,6 +226,13 @@ namespace TileDownloader.Controls
             };
 
             Loaded += OnControlLoaded;
+            Unloaded += OnControlUnloaded;
+        }
+
+        private void OnControlUnloaded(object sender, RoutedEventArgs e)
+        {
+            _viewDirtyTimer.Stop();
+            _viewCts?.Cancel();
         }
 
         private void OnControlLoaded(object sender, RoutedEventArgs e)
@@ -532,7 +539,7 @@ namespace TileDownloader.Controls
             return image;
         }
 
-        /// <summary>写入瓦片缓存（UI 线程）并触发重绘；超容量时整体清空（重载会命中磁盘缓存）</summary>
+        /// <summary>写入瓦片缓存（UI 线程）并触发重绘；超容量时按 FIFO 平滑淘汰最旧的一半瓦片</summary>
         private void SetTileInCache(int z, int x, int y, BitmapImage? image)
         {
             var key = (z, x, y);
@@ -542,8 +549,12 @@ namespace TileDownloader.Controls
                 _cacheOrder.Enqueue(key);
                 if (_tileCache.Count > TileCacheCapacity)
                 {
-                    _tileCache.Clear();
-                    _cacheOrder.Clear();
+                    var removeCount = TileCacheCapacity / 2;
+                    for (var i = 0; i < removeCount && _cacheOrder.Count > 0; i++)
+                    {
+                        var oldest = _cacheOrder.Dequeue();
+                        _tileCache.Remove(oldest);
+                    }
                 }
             }
 

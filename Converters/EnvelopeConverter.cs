@@ -1,4 +1,4 @@
-﻿using BruTile;
+using BruTile;
 using NetTopologySuite.Geometries;
 using System;
 using System.Collections.Generic;
@@ -14,19 +14,31 @@ namespace TileDownloader.Converters
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value is Envelope range)
+            if (value is Envelope range && !range.IsNull)
             {
-                return $"{range.MinX},{range.MaxX},{range.MinY},{range.MaxY}";
+                var inv = CultureInfo.InvariantCulture;
+                return string.Format(inv, "{0},{1},{2},{3}", range.MinX, range.MaxX, range.MinY, range.MaxY);
             }
             return "";
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value is string str)
+            if (value is string str && !string.IsNullOrWhiteSpace(str))
             {
-                var arr = str.Split(",").Select(System.Convert.ToDouble).ToArray();
-                return new Envelope(arr[0], arr[1], arr[2], arr[3]);
+                try
+                {
+                    var inv = CultureInfo.InvariantCulture;
+                    var arr = str.Split(',').Select(s => double.Parse(s.Trim(), inv)).ToArray();
+                    if (arr.Length == 4)
+                    {
+                        return new Envelope(arr[0], arr[1], arr[2], arr[3]);
+                    }
+                }
+                catch
+                {
+                    // 格式不合法时返回 null
+                }
             }
             return null;
         }

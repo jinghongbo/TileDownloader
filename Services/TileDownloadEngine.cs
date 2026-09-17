@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
@@ -46,7 +47,11 @@ namespace TileDownloader.Services
                 using var client = TileUrlBuilder.CreateClient(source, request.UseProxy);
                 var subdomains = source.GetSubdomains();
 
-                using var semaphore = new SemaphoreSlim(Math.Max(1, request.Concurrent));
+                var parallelOptions = new ParallelOptions
+                {
+                    MaxDegreeOfParallelism = Math.Max(1, request.Concurrent),
+                    CancellationToken = ct,
+                };
 
                 for (var z = request.MinLevel; z <= request.MaxLevel; z++)
                 {
@@ -55,36 +60,24 @@ namespace TileDownloader.Services
                     var (firstCol, lastCol) = TileUrlBuilder.ColRange(request.Range.MinX, request.Range.MaxX, z);
                     var (firstRow, lastRow) = TileUrlBuilder.RowRange(request.Range.MinY, request.Range.MaxY, z);
 
-                    // 多文件 pak 格式：z≥10 按 512×512 块对齐扩展下载范围，
-                    // 使每个 blocks_{z}_{tx}_{ty}.pak 物理文件含该块的完整 512×512 瓦片（任务范围外也下）
-                    if (request.FormatId == "MultiPak" && z > 9)
-                    {
-                        const int blockSize = 512;
-                        firstCol = firstCol / blockSize * blockSize;
-                        lastCol = Math.Min((lastCol / blockSize + 1) * blockSize - 1, (1 << z) - 1);
-                        firstRow = firstRow / blockSize * blockSize;
-                        lastRow = Math.Min((lastRow / blockSize + 1) * blockSize - 1, (1 << z) - 1);
-                    }
-
                     var total = (long)(lastCol - firstCol + 1) * (lastRow - firstRow + 1);
                     progress.ReportLevelTotal(z, total);
 
-                    for (var x = firstCol; x <= lastCol; x++)
+                    static IEnumerable<(int x, int y)> EnumerateTiles(int fc, int lc, int fr, int lr)
                     {
-                        for (var y = firstRow; y <= lastRow; y++)
+                        for (var x = fc; x <= lc; x++)
                         {
-                            ct.ThrowIfCancellationRequested();
-                            await semaphore.WaitAsync(ct);
-                            try
+                            for (var y = fr; y <= lr; y++)
                             {
-                                await DownloadTileAsync(client, store, progress, source, subdomains, z, x, y, request.Retry, ct);
-                            }
-                            finally
-                            {
-                                semaphore.Release();
+                                yield return (x, y);
                             }
                         }
                     }
+
+                    await Parallel.ForEachAsync(EnumerateTiles(firstCol, lastCol, firstRow, lastRow), parallelOptions, async (tile, token) =>
+                    {
+                        await DownloadTileAsync(client, store, progress, source, subdomains, z, tile.x, tile.y, request.Retry, token);
+                    });
                 }
             }
             finally

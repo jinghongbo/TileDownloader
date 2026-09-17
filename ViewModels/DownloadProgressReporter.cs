@@ -51,8 +51,17 @@ namespace TileDownloader.ViewModels
             _levelCompleted[z] = 0;
             Post(() =>
             {
-                // 引擎按层级升序回调，追加即为有序
-                _item.Levels.Add(new LevelProgress { Level = z, Total = total, Completed = 0 });
+                var existing = _item.Levels.FirstOrDefault(l => l.Level == z);
+                if (existing != null)
+                {
+                    existing.Total = total;
+                    existing.Completed = 0;
+                }
+                else
+                {
+                    // 引擎按层级升序回调，追加即为有序
+                    _item.Levels.Add(new LevelProgress { Level = z, Total = total, Completed = 0 });
+                }
                 _item.Total = Interlocked.Read(ref _total);
             });
         }

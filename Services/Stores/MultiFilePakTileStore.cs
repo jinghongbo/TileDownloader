@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using FreeSql;
 using FreeSql.DataAnnotations;
@@ -33,6 +36,8 @@ namespace TileDownloader.Services
         private string _dir = string.Empty;
         private string _prefix = string.Empty;
         private IFreeSql? _mainDb;
+        private Channel<(string filename, PakBlock block)>? _tileChannel;
+        private Task? _writerTask;
 
         /// <summary>分块库连接缓存（文件名 → IFreeSql，懒打开；IFreeSql 线程安全，可并发使用）</summary>
         private readonly ConcurrentDictionary<string, IFreeSql> _blockDbs = new();
@@ -123,8 +128,8 @@ namespace TileDownloader.Services
                             Tx = tx,
                             Ty = ty,
                             Filename = filename,
-                            // 整块完整性：z>9（独立物理文件）需 512×512 全部齐；z≤9（合并 blocks.pak）按任务范围交集
-                            TileCount = z > SingleFileMaxLevel ? BlockSize * BlockSize : CountBlockTiles(z, tx, ty, fc, lc, fr, lr),
+                            // 分块瓦片数量按当前任务范围与分块的实际交集计算，严格按用户范围
+                            TileCount = CountBlockTiles(z, tx, ty, fc, lc, fr, lr),
                             Status = 0,
                         });
 
@@ -132,6 +137,24 @@ namespace TileDownloader.Services
                         if (File.Exists(Path.Combine(_dir, filename)))
                         {
                             _existingFiles[filename] = 1;
+                            if (chunk.Status == 0)
+                            {
+                                try
+                                {
+                                    // 续传优化：一次性预查未完成分块的已有瓦片坐标，避免逐瓦片单条 SQL 探测
+                                    var blockDb = GetBlockDb(filename);
+                                    var existingTiles = await blockDb.Select<PakBlock>()
+                                        .Where(b => b.Z == z)
+                                        .ToListAsync(b => new { b.X, b.Y }, ct);
+                                    foreach (var t in existingTiles)
+                                    {
+                                        _exists.TryAdd(TileKey(z, t.X, t.Y), 1);
+                                    }
+                                }
+                                catch
+                                {
+                                }
+                            }
                         }
                         else if (chunk.Status == 1)
                         {
@@ -162,14 +185,22 @@ namespace TileDownloader.Services
                     Tx = tx,
                     Ty = ty,
                     Filename = name,
-                    // 整块完整性：z>9 需 512×512 齐全；z≤9 按任务范围交集
-                    TileCount = z > SingleFileMaxLevel ? BlockSize * BlockSize : CountBlockTiles(z, tx, ty, fc, lc, fr, lr),
+                    TileCount = CountBlockTiles(z, tx, ty, fc, lc, fr, lr),
                     Status = 0,
                 };
                 _chunks[ChunkKey(z, tx, ty)] = chunk;
                 _existingFiles[name] = 1;
                 await _mainDb.InsertOrUpdate<PakChunk>().SetSource(chunk).ExecuteAffrowsAsync(ct);
             }
+
+            // 启动批量落盘通道，避免多线程 SQLite 分块文件写锁争用
+            _tileChannel = Channel.CreateBounded<(string filename, PakBlock block)>(new BoundedChannelOptions(2000)
+            {
+                SingleReader = true,
+                SingleWriter = false,
+                FullMode = BoundedChannelFullMode.Wait,
+            });
+            _writerTask = Task.Run(ProcessTileWriterLoopAsync);
         }
 
         public async Task<bool> TileExistsAsync(int z, int x, int y, CancellationToken ct)
@@ -226,23 +257,80 @@ namespace TileDownloader.Services
         public async Task SaveTileAsync(int z, int x, int y, byte[] data, CancellationToken ct)
         {
             var filename = BlockFileName(z, x / BlockSize, y / BlockSize);
-            var db = GetBlockDb(filename);
-
-            // FreeSql InsertOrUpdate 按复合主键 (z,x,y) upsert：不存在则插入、存在则覆盖 tile，
-            // 无需先查后写，并发下语义可靠
-            await db.InsertOrUpdate<PakBlock>()
-                .SetSource(new PakBlock { Z = z, X = x, Y = y, Tile = data })
-                .ExecuteAffrowsAsync(ct);
-
             _existingFiles[filename] = 1;
             _exists[TileKey(z, x, y)] = 1;
             _curLevel = z;
             _curX = x;
             _curY = y;
+
+            if (_tileChannel != null)
+            {
+                await _tileChannel.Writer.WriteAsync((filename, new PakBlock { Z = z, X = x, Y = y, Tile = data }), ct);
+            }
+        }
+
+        private async Task ProcessTileWriterLoopAsync()
+        {
+            if (_tileChannel == null)
+            {
+                return;
+            }
+
+            var reader = _tileChannel.Reader;
+            var batch = new List<(string filename, PakBlock block)>(100);
+
+            while (await reader.WaitToReadAsync())
+            {
+                while (batch.Count < 100 && reader.TryRead(out var item))
+                {
+                    batch.Add(item);
+                }
+
+                if (batch.Count > 0)
+                {
+                    foreach (var group in batch.GroupBy(b => b.filename))
+                    {
+                        try
+                        {
+                            var db = GetBlockDb(group.Key);
+                            await db.InsertOrUpdate<PakBlock>()
+                                .SetSource(group.Select(g => g.block))
+                                .ExecuteAffrowsAsync();
+                        }
+                        catch
+                        {
+                            try
+                            {
+                                await Task.Delay(50);
+                                var db = GetBlockDb(group.Key);
+                                await db.InsertOrUpdate<PakBlock>()
+                                    .SetSource(group.Select(g => g.block))
+                                    .ExecuteAffrowsAsync();
+                            }
+                            catch
+                            {
+                            }
+                        }
+                    }
+                    batch.Clear();
+                }
+            }
         }
 
         public async Task FinalizeAsync(CancellationToken ct)
         {
+            // 排空写入通道中的全部在途瓦片
+            if (_tileChannel != null)
+            {
+                _tileChannel.Writer.Complete();
+                if (_writerTask != null)
+                {
+                    await _writerTask;
+                }
+                _tileChannel = null;
+                _writerTask = null;
+            }
+
             if (_mainDb == null)
             {
                 return;
@@ -341,32 +429,21 @@ namespace TileDownloader.Services
             return x0 > x1 || y0 > y1 ? 0 : (x1 - x0 + 1) * (y1 - y0 + 1);
         }
 
-        /// <summary>判断分块是否完整：z>9 需整块 512×512 全部存在；z≤9 仅任务范围交集需存在</summary>
+        /// <summary>判断分块是否完整：分块内属于任务范围的交集瓦片全部存在于缓存即判定为完成</summary>
         private bool IsChunkComplete(PakChunk chunk)
         {
             if (chunk.TileCount <= 0 || _options == null)
             {
                 return false;
             }
-            int x0, x1, y0, y1;
-            if (chunk.Z > SingleFileMaxLevel)
-            {
-                // 整块完整性：512×512 全部需在缓存
-                x0 = chunk.Tx * BlockSize;
-                x1 = x0 + BlockSize - 1;
-                y0 = chunk.Ty * BlockSize;
-                y1 = y0 + BlockSize - 1;
-            }
-            else
-            {
-                // 低层级合并文件：仅任务范围交集
-                var (fc, lc) = TileUrlBuilder.ColRange(_options.MinX, _options.MaxX, chunk.Z);
-                var (fr, lr) = TileUrlBuilder.RowRange(_options.MinY, _options.MaxY, chunk.Z);
-                x0 = Math.Max(fc, chunk.Tx * BlockSize);
-                x1 = Math.Min(lc, chunk.Tx * BlockSize + BlockSize - 1);
-                y0 = Math.Max(fr, chunk.Ty * BlockSize);
-                y1 = Math.Min(lr, chunk.Ty * BlockSize + BlockSize - 1);
-            }
+
+            var (fc, lc) = TileUrlBuilder.ColRange(_options.MinX, _options.MaxX, chunk.Z);
+            var (fr, lr) = TileUrlBuilder.RowRange(_options.MinY, _options.MaxY, chunk.Z);
+            var x0 = Math.Max(fc, chunk.Tx * BlockSize);
+            var x1 = Math.Min(lc, chunk.Tx * BlockSize + BlockSize - 1);
+            var y0 = Math.Max(fr, chunk.Ty * BlockSize);
+            var y1 = Math.Min(lr, chunk.Ty * BlockSize + BlockSize - 1);
+
             if (x0 > x1 || y0 > y1)
             {
                 return false;

@@ -63,7 +63,7 @@ namespace TileDownloader
             var sb = new System.Text.StringBuilder();
             for (var cur = (Exception?)ex; cur != null; cur = cur.InnerException)
             {
-                sb.AppendLine($"[{ex.GetType().Name}] {cur.Message}");
+                sb.AppendLine($"[{cur.GetType().Name}] {cur.Message}");
             }
             sb.AppendLine(ex.StackTrace);
             string msg = sb.ToString();

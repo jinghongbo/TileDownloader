@@ -154,7 +154,7 @@ namespace TileDownloader.Services
             }
         }
 
-        /// <summary>从 CIDR 取首个可用 IPv4（网络地址 +1），非 IPv4 返回 null</summary>
+        /// <summary>从 CIDR 取首个可用 IPv4（网络地址 +1）；单一 IP（无 / 或 /32）直接返回原 IP</summary>
         private static string? FirstIpv4OfCidr(string cidr)
         {
             var parts = cidr.Split('/');
@@ -162,18 +162,21 @@ namespace TileDownloader.Services
             {
                 return null;
             }
-            var bytes = ip.GetAddressBytes();
-            if (parts.Length == 2 && int.TryParse(parts[1], out var prefix) && prefix < 32)
+            if (parts.Length == 1 || (int.TryParse(parts[1], out var p) && p >= 32))
             {
-                var fullBytes = prefix / 8;
-                for (var i = fullBytes; i < 4; i++)
-                {
-                    bytes[i] = 0;
-                }
-                if (prefix % 8 != 0 && fullBytes < 4)
-                {
-                    bytes[fullBytes] &= (byte)(0xFF << (8 - prefix % 8));
-                }
+                return ip.ToString();
+            }
+
+            var prefix = int.Parse(parts[1]);
+            var bytes = ip.GetAddressBytes();
+            var fullBytes = prefix / 8;
+            for (var i = fullBytes; i < 4; i++)
+            {
+                bytes[i] = 0;
+            }
+            if (prefix % 8 != 0 && fullBytes < 4)
+            {
+                bytes[fullBytes] &= (byte)(0xFF << (8 - prefix % 8));
             }
             bytes[3] = (byte)((bytes[3] + 1) & 0xFF);
             return new IPAddress(bytes).ToString();

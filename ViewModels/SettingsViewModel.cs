@@ -111,6 +111,14 @@ namespace TileDownloader.ViewModels
         [NotifyCanExecuteChangedFor(nameof(ProbeGoogleHostsCommand))]
         private bool _isProbingGoogleHosts;
 
+        /// <summary>探测进度百分比（0-100，仅探测中有效）</summary>
+        [ObservableProperty]
+        private double _googleHostsProgressPercent;
+
+        /// <summary>探测进度文本（如 已探测 1234/98304，可达 5）</summary>
+        [ObservableProperty]
+        private string? _googleHostsProgressText;
+
         /// <summary>探测进度/结果消息</summary>
         [ObservableProperty]
         private string? _googleHostsMessage;
@@ -136,10 +144,17 @@ namespace TileDownloader.ViewModels
 
             IsProbingGoogleHosts = true;
             GoogleHostsMessage = "开始查找…";
+            GoogleHostsProgressPercent = 0;
+            GoogleHostsProgressText = null;
             try
             {
                 var progress = new Progress<string>(msg => GoogleHostsMessage = msg);
-                var best = await _googleHostsService.FindBestAsync(progress, ct);
+                var scanProgress = new Progress<GoogleHostScanProgress>(p =>
+                {
+                    GoogleHostsProgressPercent = p.Percent;
+                    GoogleHostsProgressText = $"已探测 {p.Done}/{p.Total}，可达 {p.Reachable}";
+                });
+                var best = await _googleHostsService.FindBestAsync(progress, ct, scanProgress);
 
                 if (best != null)
                 {
@@ -166,6 +181,8 @@ namespace TileDownloader.ViewModels
             finally
             {
                 IsProbingGoogleHosts = false;
+                GoogleHostsProgressPercent = 0;
+                GoogleHostsProgressText = null;
             }
         }
 

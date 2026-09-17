@@ -19,6 +19,7 @@
             <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
             <Setter Property="TextWrapping" Value="Wrap" />
         </Style>
+        <BooleanToVisibilityConverter x:Key="BoolToVisConverter" />
     </Page.Resources>
 
     <Grid>
@@ -91,7 +92,7 @@
                     <StackPanel>
                         <ui:TextBlock FontTypography="BodyStrong" Text="Google Hosts 加速" />
                         <TextBlock Style="{StaticResource SettingHint}" Margin="0,4,0,12"
-                                   Text="查询 _spf.google.com 的 SPF 记录，自动探测可访问 Google 瓦片的最快 IP，用于替换本机 hosts 中 mt0-3.google.com，加速卫星地图下载" />
+                                   Text="查询 _spf.google.com 的 SPF 记录获取 Google IPv4 段，全量扫描（TCP 快筛 + 瓦片验证）找出最快 IP，写入本机 hosts 替换 mt0-3.google.com 以加速卫星地图下载。全量扫描约 10 万个 IP，通常需要 1-3 分钟" />
 
                         <Grid Margin="0,0,0,8">
                             <Grid.ColumnDefinitions>
@@ -109,6 +110,19 @@
                                         Command="{Binding ProbeGoogleHostsCommand}"
                                         Appearance="Primary" />
                         </Grid>
+
+                        <!--  全量扫描进度（仅探测中显示）  -->
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8"
+                                    Visibility="{Binding IsProbingGoogleHosts, Converter={StaticResource BoolToVisConverter}}">
+                            <ProgressBar Width="200" Height="6"
+                                         VerticalAlignment="Center"
+                                         Maximum="100"
+                                         Value="{Binding GoogleHostsProgressPercent, Mode=OneWay}" />
+                            <TextBlock Style="{StaticResource SettingHint}"
+                                       Margin="10,0,0,0"
+                                       VerticalAlignment="Center"
+                                       Text="{Binding GoogleHostsProgressText, Mode=OneWay}" />
+                        </StackPanel>
 
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                             <ui:Button Content="复制 hosts 条目"

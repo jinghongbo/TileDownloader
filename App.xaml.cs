@@ -30,6 +30,7 @@ namespace TileDownloader
             services.AddSingleton<GoogleHostsService>();
             services.AddSingleton<ITileImageLoader, TileImageLoader>();
             services.AddSingleton<ITaskManager, TaskManager>();
+            services.AddSingleton<RegionService>();
             services.AddTransient<IDownloadEngine, TileDownloadEngine>();
 
             // ViewModels（单例，页面间共享任务集合与设置）
@@ -41,6 +42,7 @@ namespace TileDownloader
             // WPF-UI 服务（Snackbar 提示 / ContentDialog 弹窗 / 导航服务，宿主在 MainWindow 设置）
             services.AddSingleton<ISnackbarService, SnackbarService>();
             services.AddSingleton<IContentDialogService, ContentDialogService>();
+            services.AddSingleton<Wpf.Ui.Abstractions.INavigationViewPageProvider, NavigationViewPageProvider>();
             services.AddSingleton<INavigationService, NavigationService>();
 
             // Views / Pages（单例：Navigation 内建导航复用实例，保留页面状态如地图视野）
@@ -98,6 +100,24 @@ namespace TileDownloader
             MessageBox.Show(msg, "UI线程异常");
 
             e.Handled = true; // 表示异常已处理，可以继续运行
+        }
+    }
+
+    /// <summary>
+    /// 为 WPF-UI 4.3 提供基于 DI 容器的页面实例解析服务
+    /// </summary>
+    public class NavigationViewPageProvider : Wpf.Ui.Abstractions.INavigationViewPageProvider
+    {
+        private readonly IServiceProvider _serviceProvider;
+
+        public NavigationViewPageProvider(IServiceProvider serviceProvider)
+        {
+            _serviceProvider = serviceProvider;
+        }
+
+        public object? GetPage(Type pageType)
+        {
+            return _serviceProvider.GetService(pageType);
         }
     }
 }

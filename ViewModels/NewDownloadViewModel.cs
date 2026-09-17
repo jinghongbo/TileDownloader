@@ -25,8 +25,14 @@ namespace TileDownloader.ViewModels
         private readonly SettingsViewModel _settings;
         private readonly ISnackbarService _snackbarService;
         private readonly IContentDialogService _dialogService;
+        private readonly RegionService _regionService;
 
         private TaskItem? _currentItem;
+        private bool _isApplyingCascade;
+        private bool _isInternalRangeUpdate;
+
+        /// <summary>请求地图平移并缩放到指定经纬度外包框事件</summary>
+        public event Action<NetTopologySuite.Geometries.Envelope>? RequestZoomToRange;
 
         public NewDownloadViewModel(
             SourcesConfigService sourcesConfig,
@@ -34,13 +40,15 @@ namespace TileDownloader.ViewModels
             TasksViewModel tasksViewModel,
             SettingsViewModel settings,
             ISnackbarService snackbarService,
-            IContentDialogService dialogService)
+            IContentDialogService dialogService,
+            RegionService regionService)
         {
             _storeRegistry = storeRegistry;
             _tasksViewModel = tasksViewModel;
             _settings = settings;
             _snackbarService = snackbarService;
             _dialogService = dialogService;
+            _regionService = regionService;
 
             try
             {
@@ -212,6 +220,235 @@ namespace TileDownloader.ViewModels
             EffectiveSource = runtime;
         }
 
+        /// <summary>是否处于行政区划选择模式（与地图手动框选模式二选一）</summary>
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(IsManualMode))]
+        private bool _isRegionMode = true;
+
+        public bool IsManualMode
+        {
+            get => !IsRegionMode;
+            set => IsRegionMode = !value;
+        }
+
+        /// <summary>全国省/自治区/直辖市列表</summary>
+        public IReadOnlyList<AdministrativeRegion> Provinces => _regionService.Provinces;
+
+        /// <summary>选中的省份</summary>
+        [ObservableProperty]
+        private AdministrativeRegion? _selectedProvince;
+
+        /// <summary>当前省份下的地级市列表</summary>
+        [ObservableProperty]
+        private List<AdministrativeRegion> _cities = new();
+
+        /// <summary>选中的地级市（或全省范围）</summary>
+        [ObservableProperty]
+        private AdministrativeRegion? _selectedCity;
+
+        /// <summary>当前地级市下的区县列表</summary>
+        [ObservableProperty]
+        private List<AdministrativeRegion> _districts = new();
+
+        /// <summary>选中的区县（或全市范围）</summary>
+        [ObservableProperty]
+        private AdministrativeRegion? _selectedDistrict;
+
+        /// <summary>当前选区文字描述（如：浙江省 杭州市 西湖区）</summary>
+        [ObservableProperty]
+        private string? _selectedRegionText;
+
+        /// <summary>搜索框关键词</summary>
+        [ObservableProperty]
+        private string? _searchKeyword;
+
+        /// <summary>搜索联想结果列表</summary>
+        [ObservableProperty]
+        private List<RegionSearchResult> _searchResults = new();
+
+        /// <summary>搜索联想下拉是否展开</summary>
+        [ObservableProperty]
+        private bool _isSearchResultsOpen;
+
+        partial void OnSearchKeywordChanged(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                SearchResults = new List<RegionSearchResult>();
+                IsSearchResultsOpen = false;
+                return;
+            }
+            var results = _regionService.Search(value);
+            SearchResults = results.ToList();
+            IsSearchResultsOpen = SearchResults.Count > 0;
+        }
+
+        partial void OnSelectedProvinceChanged(AdministrativeRegion? value)
+        {
+            if (_isApplyingCascade) return;
+            UpdateCitiesForProvince(value);
+        }
+
+        partial void OnSelectedCityChanged(AdministrativeRegion? value)
+        {
+            if (_isApplyingCascade) return;
+            UpdateDistrictsForCity(value);
+        }
+
+        partial void OnSelectedDistrictChanged(AdministrativeRegion? value)
+        {
+            if (_isApplyingCascade) return;
+            if (value != null)
+            {
+                var desc = $"{SelectedProvince?.Name} {SelectedCity?.Name} {value.Name}".Trim();
+                ApplyRegionEnvelope(value.ToEnvelope(), desc);
+            }
+            else if (SelectedCity != null)
+            {
+                var desc = $"{SelectedProvince?.Name} {SelectedCity.Name}".Trim();
+                ApplyRegionEnvelope(SelectedCity.ToEnvelope(), desc);
+            }
+        }
+
+        private void UpdateCitiesForProvince(AdministrativeRegion? prov)
+        {
+            _isApplyingCascade = true;
+            try
+            {
+                SelectedCity = null;
+                SelectedDistrict = null;
+                Districts = new List<AdministrativeRegion>();
+
+                if (prov == null)
+                {
+                    Cities = new List<AdministrativeRegion>();
+                    if (IsRegionMode)
+                    {
+                        ApplyRegionEnvelope(null, null);
+                    }
+                    return;
+                }
+
+                var list = new List<AdministrativeRegion>();
+
+                // 直辖市/特别行政区：其直接子节点通常就是单一城市节点且包含所有区县
+                if (prov.Children.Count == 1 && prov.Children[0].Name == prov.Name)
+                {
+                    var singleCity = prov.Children[0];
+                    list.Add(singleCity);
+                    Cities = list;
+                    SelectedCity = singleCity;
+
+                    var distList = new List<AdministrativeRegion>
+                    {
+                        new AdministrativeRegion
+                        {
+                            Code = singleCity.Code,
+                            Name = $"全市（{prov.Name}）",
+                            Bbox = singleCity.Bbox,
+                            Level = "city"
+                        }
+                    };
+                    distList.AddRange(singleCity.Children);
+                    Districts = distList;
+                    SelectedDistrict = distList[0];
+                    ApplyRegionEnvelope(singleCity.ToEnvelope(), prov.Name);
+                    return;
+                }
+
+                // 普通省份：添加“全省”选项 + 各地级市
+                list.Add(new AdministrativeRegion
+                {
+                    Code = prov.Code,
+                    Name = $"全省（{prov.Name}）",
+                    Bbox = prov.Bbox,
+                    Level = "province"
+                });
+                list.AddRange(prov.Children);
+                Cities = list;
+                SelectedCity = list[0];
+                ApplyRegionEnvelope(prov.ToEnvelope(), prov.Name);
+            }
+            finally
+            {
+                _isApplyingCascade = false;
+            }
+        }
+
+        private void UpdateDistrictsForCity(AdministrativeRegion? city)
+        {
+            _isApplyingCascade = true;
+            try
+            {
+                SelectedDistrict = null;
+
+                if (city == null || city.Level == "province")
+                {
+                    Districts = new List<AdministrativeRegion>();
+                    if (SelectedProvince != null)
+                    {
+                        ApplyRegionEnvelope(SelectedProvince.ToEnvelope(), SelectedProvince.Name);
+                    }
+                    return;
+                }
+
+                var list = new List<AdministrativeRegion>();
+                if (city.Children.Count > 0)
+                {
+                    list.Add(new AdministrativeRegion
+                    {
+                        Code = city.Code,
+                        Name = $"全市（{city.Name}）",
+                        Bbox = city.Bbox,
+                        Level = "city"
+                    });
+                    list.AddRange(city.Children);
+                }
+                Districts = list;
+                SelectedDistrict = list.Count > 0 ? list[0] : null;
+
+                var desc = $"{SelectedProvince?.Name} {city.Name}".Trim();
+                ApplyRegionEnvelope(city.ToEnvelope(), desc);
+            }
+            finally
+            {
+                _isApplyingCascade = false;
+            }
+        }
+
+        private void ApplyRegionEnvelope(NetTopologySuite.Geometries.Envelope? env, string? desc)
+        {
+            _isInternalRangeUpdate = true;
+            try
+            {
+                Range = env;
+                SelectedRegionText = desc;
+                if (env is { IsNull: false })
+                {
+                    RequestZoomToRange?.Invoke(env);
+                }
+            }
+            finally
+            {
+                _isInternalRangeUpdate = false;
+            }
+        }
+
+        partial void OnRangeChanged(NetTopologySuite.Geometries.Envelope? value)
+        {
+            OnPropertyChanged(nameof(SelectedRegionCoordinatesText));
+            if (!_isInternalRangeUpdate)
+            {
+                SelectedRegionText = value is { IsNull: false } ? "地图手动框选范围" : null;
+            }
+        }
+
+        /// <summary>经纬度范围友好描述文本</summary>
+        public string SelectedRegionCoordinatesText =>
+            Range is { IsNull: false } r
+                ? $"东经 {r.MinX:F3}° ~ {r.MaxX:F3}°, 北纬 {r.MinY:F3}° ~ {r.MaxY:F3}°"
+                : "尚未选择范围";
+
         /// <summary>下载范围（EPSG:4326 度；null 表示尚未框选）</summary>
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(HasRange))]
@@ -325,6 +562,129 @@ namespace TileDownloader.ViewModels
         /// <summary>任务中心集合（供页面绑定展示最近任务）</summary>
         public System.Collections.ObjectModel.ObservableCollection<TaskItem> Tasks => _tasksViewModel.Tasks;
 
+        /// <summary>选中搜索结果项并联动更新下拉框与地图选区</summary>
+        [RelayCommand]
+        private void SelectSearchResult(RegionSearchResult? result)
+        {
+            if (result == null) return;
+
+            IsSearchResultsOpen = false;
+            SearchKeyword = string.Empty;
+
+            _isApplyingCascade = true;
+            try
+            {
+                if (result.Province != null)
+                {
+                    SelectedProvince = Provinces.FirstOrDefault(p => p.Code == result.Province.Code);
+                    if (SelectedProvince != null)
+                    {
+                        var list = new List<AdministrativeRegion>();
+                        if (SelectedProvince.Children.Count == 1 && SelectedProvince.Children[0].Name == SelectedProvince.Name)
+                        {
+                            list.Add(SelectedProvince.Children[0]);
+                        }
+                        else
+                        {
+                            list.Add(new AdministrativeRegion
+                            {
+                                Code = SelectedProvince.Code,
+                                Name = $"全省（{SelectedProvince.Name}）",
+                                Bbox = SelectedProvince.Bbox,
+                                Level = "province"
+                            });
+                            list.AddRange(SelectedProvince.Children);
+                        }
+                        Cities = list;
+
+                        if (result.City != null)
+                        {
+                            SelectedCity = Cities.FirstOrDefault(c => c.Code == result.City.Code);
+                            if (SelectedCity != null && SelectedCity.Children.Count > 0)
+                            {
+                                var distList = new List<AdministrativeRegion>
+                                {
+                                    new AdministrativeRegion
+                                    {
+                                        Code = SelectedCity.Code,
+                                        Name = $"全市（{SelectedCity.Name}）",
+                                        Bbox = SelectedCity.Bbox,
+                                        Level = "city"
+                                    }
+                                };
+                                distList.AddRange(SelectedCity.Children);
+                                Districts = distList;
+
+                                if (result.District != null)
+                                {
+                                    SelectedDistrict = Districts.FirstOrDefault(d => d.Code == result.District.Code);
+                                }
+                                else
+                                {
+                                    SelectedDistrict = distList[0];
+                                }
+                            }
+                            else
+                            {
+                                Districts = new List<AdministrativeRegion>();
+                                SelectedDistrict = null;
+                            }
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                _isApplyingCascade = false;
+            }
+
+            ApplyRegionEnvelope(result.Region.ToEnvelope(), result.FullName);
+        }
+
+        /// <summary>定位地图到当前选区</summary>
+        [RelayCommand]
+        private void LocateRange()
+        {
+            if (Range is { IsNull: false } env)
+            {
+                RequestZoomToRange?.Invoke(env);
+            }
+        }
+
+        /// <summary>清空当前选区与行政区联动状态</summary>
+        [RelayCommand]
+        private void ClearRange()
+        {
+            _isApplyingCascade = true;
+            try
+            {
+                SelectedProvince = null;
+                SelectedCity = null;
+                SelectedDistrict = null;
+                Cities = new List<AdministrativeRegion>();
+                Districts = new List<AdministrativeRegion>();
+                ApplyRegionEnvelope(null, null);
+            }
+            finally
+            {
+                _isApplyingCascade = false;
+            }
+        }
+
+        /// <summary>切换为行政区划模式</summary>
+        [RelayCommand]
+        private void SwitchToRegionMode()
+        {
+            IsRegionMode = true;
+        }
+
+        /// <summary>切换为地图手动画框模式</summary>
+        [RelayCommand]
+        private void SwitchToManualMode()
+        {
+            IsRegionMode = false;
+        }
+
         /// <summary>开始下载</summary>
         [RelayCommand(CanExecute = nameof(CanStartDownload))]
         private async Task StartDownloadAsync()
@@ -342,7 +702,7 @@ namespace TileDownloader.ViewModels
             }
             if (!HasRange)
             {
-                await ShowParameterDialogAsync("请先在左侧地图上按住左键拖拽框选下载范围");
+                await ShowParameterDialogAsync("请先在「② 下载区域」中选择行政区或在地图上拖拽框选下载范围");
                 return;
             }
             if (string.IsNullOrWhiteSpace(OutputPath))
@@ -369,9 +729,10 @@ namespace TileDownloader.ViewModels
             };
 
             var total = request.CalculateTotalTiles();
+            var regionSuffix = !string.IsNullOrWhiteSpace(SelectedRegionText) ? $" [{SelectedRegionText}]" : "";
             var item = new TaskItem
             {
-                Name = $"{SelectedSource.Name}（z{request.MinLevel}-z{request.MaxLevel}）",
+                Name = $"{SelectedSource.Name}{regionSuffix}（z{request.MinLevel}-z{request.MaxLevel}）",
                 Request = request,
                 Total = total,
             };

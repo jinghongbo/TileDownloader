@@ -23,6 +23,8 @@
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Resources\logo.png" />
+    <EmbeddedResource Include="Resources\regions.json" />
+    <None Include="Resources\regions.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Sources\**\*.json" CopyToOutputDirectory="PreserveNewest" />

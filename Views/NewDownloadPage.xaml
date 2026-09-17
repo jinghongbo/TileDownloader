@@ -91,7 +91,7 @@
                     </StackPanel>
                 </ui:Card>
 
-                <!--  ② 框选范围  -->
+                <!--  ② 下载区域（支持省市区选择与地图框选）  -->
                 <ui:Card Style="{StaticResource SideCard}">
                     <StackPanel>
                         <Grid>
@@ -99,7 +99,7 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <ui:TextBlock Style="{StaticResource CardTitle}" Text="② 框选范围" />
+                            <ui:TextBlock Style="{StaticResource CardTitle}" Text="② 下载区域" />
                             <!--  状态图标：未选灰 / 已选绿  -->
                             <ui:SymbolIcon Grid.Column="1">
                                 <ui:SymbolIcon.Style>
@@ -117,21 +117,118 @@
                             </ui:SymbolIcon>
                         </Grid>
 
-                        <!--  范围值只读展示（未选/已选两种文案）  -->
-                        <TextBlock Margin="0,10,0,0" TextWrapping="Wrap">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="Text" Value="尚未框选范围" />
-                                    <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding HasRange}" Value="True">
-                                            <Setter Property="Text" Value="{Binding Range, Converter={StaticResource EnvelopeCvt}}" />
-                                            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
+                        <!--  模式切换：省市区选择 vs 地图手动框选  -->
+                        <StackPanel Orientation="Horizontal" Margin="0,2,0,10">
+                            <RadioButton Content="省市区选择"
+                                         GroupName="AreaModeGroup"
+                                         IsChecked="{Binding IsRegionMode, Mode=TwoWay}"
+                                         Margin="0,0,16,0" />
+                            <RadioButton Content="地图手动框选"
+                                         GroupName="AreaModeGroup"
+                                         IsChecked="{Binding IsManualMode, Mode=TwoWay}" />
+                        </StackPanel>
+
+                        <!--  行政区划模式专属控件  -->
+                        <StackPanel Visibility="{Binding IsRegionMode, Converter={StaticResource BoolToVis}}">
+                            <!--  搜索检索框  -->
+                            <ui:TextBox PlaceholderText="🔍 搜索省/市/区县（如：西湖区）"
+                                        Text="{Binding SearchKeyword, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                        ClearButtonEnabled="True"
+                                        Margin="0,0,0,6" />
+
+                            <!--  搜索联想结果弹出列表卡片  -->
+                            <Border Background="{DynamicResource ApplicationBackgroundBrush}"
+                                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="6"
+                                    Padding="4"
+                                    Margin="0,0,0,8"
+                                    MaxHeight="160"
+                                    Visibility="{Binding IsSearchResultsOpen, Converter={StaticResource BoolToVis}}">
+                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                    <ItemsControl ItemsSource="{Binding SearchResults}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <ui:Button HorizontalAlignment="Stretch"
+                                                           HorizontalContentAlignment="Left"
+                                                           Appearance="Transparent"
+                                                           Padding="8,6"
+                                                           Margin="0,1"
+                                                           Command="{Binding DataContext.SelectSearchResultCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                                           CommandParameter="{Binding}">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <ui:SymbolIcon Symbol="Location24" Margin="0,0,6,0" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+                                                        <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                    </StackPanel>
+                                                </ui:Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </Border>
+
+                            <!--  省 / 市 / 区 三级联动下拉框  -->
+                            <TextBlock Style="{StaticResource HintText}" Text="省份 / 直辖市" Margin="0,2,0,4" />
+                            <ComboBox ItemsSource="{Binding Provinces}"
+                                      SelectedItem="{Binding SelectedProvince, Mode=TwoWay}"
+                                      DisplayMemberPath="Name"
+                                      Margin="0,0,0,8" />
+
+                            <TextBlock Style="{StaticResource HintText}" Text="城市" Margin="0,2,0,4" />
+                            <ComboBox ItemsSource="{Binding Cities}"
+                                      SelectedItem="{Binding SelectedCity, Mode=TwoWay}"
+                                      DisplayMemberPath="Name"
+                                      Margin="0,0,0,8" />
+
+                            <TextBlock Style="{StaticResource HintText}" Text="区 / 县" Margin="0,2,0,4" />
+                            <ComboBox ItemsSource="{Binding Districts}"
+                                      SelectedItem="{Binding SelectedDistrict, Mode=TwoWay}"
+                                      DisplayMemberPath="Name"
+                                      Margin="0,0,0,6" />
+                        </StackPanel>
+
+                        <!--  地图手动框选模式提示说明  -->
+                        <StackPanel Visibility="{Binding IsManualMode, Converter={StaticResource BoolToVis}}" Margin="0,2,0,6">
+                            <TextBlock Style="{StaticResource HintText}"
+                                       Text="在左侧地图上按住左键拖拽框选矩形范围，再次拖拽可重新选择" />
+                        </StackPanel>
+
+                        <!--  已选范围信息展示卡片（两种模式共用）  -->
+                        <Border Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="10"
+                                Margin="0,4,0,0"
+                                Visibility="{Binding HasRange, Converter={StaticResource BoolToVis}}">
+                            <StackPanel>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock FontWeight="SemiBold"
+                                               Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
+                                               Text="{Binding SelectedRegionText, FallbackValue='已选择区域'}"
+                                               TextWrapping="Wrap" />
+                                    <ui:Button Grid.Column="1"
+                                               Appearance="Transparent"
+                                               Icon="{ui:SymbolIcon Dismiss24}"
+                                               ToolTip="清空选区"
+                                               Padding="4"
+                                               Command="{Binding ClearRangeCommand}" />
+                                </Grid>
+                                <TextBlock Style="{StaticResource HintText}"
+                                           Margin="0,4,0,0"
+                                           Text="{Binding SelectedRegionCoordinatesText}" />
+                            </StackPanel>
+                        </Border>
+
+                        <!--  未选范围提示  -->
+                        <TextBlock Margin="0,8,0,0"
+                                   Text="尚未选择或框选下载范围"
+                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                   Visibility="{Binding HasRange, Converter={StaticResource InverseBoolToVis}}" />
 
                         <!--  预估瓦片总量提示徽章卡片  -->
                         <Border Background="{DynamicResource ControlFillColorSecondaryBrush}"
@@ -139,7 +236,7 @@
                                 BorderThickness="1"
                                 CornerRadius="6"
                                 Padding="10,8"
-                                Margin="0,10,0,0"
+                                Margin="0,8,0,0"
                                 Visibility="{Binding HasRange, Converter={StaticResource BoolToVis}}">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                 <ui:SymbolIcon Symbol="Layer24" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" Margin="0,0,8,0" />
@@ -150,9 +247,15 @@
                             </StackPanel>
                         </Border>
 
-                        <TextBlock Style="{StaticResource HintText}"
-                                   Margin="0,8,0,0"
-                                   Text="在左侧地图上按住左键拖拽框选范围，再次拖拽可重新选择" />
+                        <!--  定位地图快捷按钮  -->
+                        <ui:Button Margin="0,8,0,0"
+                                   Appearance="Secondary"
+                                   Icon="{ui:SymbolIcon MyLocation24}"
+                                   Content="定位地图至当前选区"
+                                   HorizontalAlignment="Stretch"
+                                   HorizontalContentAlignment="Center"
+                                   Visibility="{Binding HasRange, Converter={StaticResource BoolToVis}}"
+                                   Command="{Binding LocateRangeCommand}" />
                     </StackPanel>
                 </ui:Card>
 

@@ -14,6 +14,14 @@ namespace TileDownloader.Views
         {
             InitializeComponent();
             DataContext = viewModel;
+
+            viewModel.RequestZoomToRange += env =>
+            {
+                if (env is { IsNull: false })
+                {
+                    Map.ZoomToWorld(env.MinX, env.MinY, env.MaxX, env.MaxY);
+                }
+            };
         }
 
         /// <summary>定位到当前选区：把地图视野调整到已框选的范围</summary>

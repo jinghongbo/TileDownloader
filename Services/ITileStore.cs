@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -25,6 +26,12 @@ namespace TileDownloader.Services
 
         /// <summary>最大层级</summary>
         public int MaxLevel { get; set; }
+
+        /// <summary>是否完整块（仅 pak 格式生效）：store 据此计算与引擎枚举完全一致的预加载范围</summary>
+        public bool FullBlock { get; set; }
+
+        /// <summary>瓦片批量落盘最终失败时的上报回调（z, x, y, 错误信息）：由引擎接到进度上报，供 UI 提示</summary>
+        public Action<int, int, int, string>? OnTileWriteFailed { get; set; }
     }
 
     /// <summary>

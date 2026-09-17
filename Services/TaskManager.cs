@@ -67,5 +67,12 @@ namespace TileDownloader.Services
                 .ToListAsync(ct);
             return list;
         }
+
+        public Task DeleteAsync(long id, CancellationToken ct)
+        {
+            return _freeSql.Delete<TaskRecord>()
+                .Where(r => r.Id == id)
+                .ExecuteAffrowsAsync(ct);
+        }
     }
 }

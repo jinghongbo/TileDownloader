@@ -1,5 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,7 +14,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace TileDownloader.ViewModels
 {
     /// <summary>
-    /// 任务中心：任务列表 + 继续/取消/删除 + 历史任务恢复 + 下载执行入口
+    /// 任务中心：任务列表 + 开始/继续/重试/暂停/取消/删除/打开输出位置 + 历史任务恢复 + 下载执行入口
     /// </summary>
     public partial class TasksViewModel : ObservableObject
     {
@@ -129,6 +131,7 @@ namespace TileDownloader.ViewModels
                         {
                             (int)TaskStatus2.Completed => TaskState.Completed,
                             (int)TaskStatus2.Failed => TaskState.Failed,
+                            (int)TaskStatus2.Paused => TaskState.Paused,
                             _ => TaskState.Cancelled, // Running/Cancelled 重启后均为中断
                         };
 
@@ -149,6 +152,13 @@ namespace TileDownloader.ViewModels
                             RecordId = record.Id,
                             Request = request,
                         };
+
+                        // 来源配置已被删除/改名时无法续传，明确提示原因（已完成任务不需要续传）
+                        if (request == null && state != TaskState.Completed)
+                        {
+                            item.Error = "无法继续下载：未在来源配置中找到该任务的地图来源（Sources 目录），请恢复来源配置";
+                        }
+
                         Tasks.Add(item);
                     }
                 });
@@ -189,7 +199,9 @@ namespace TileDownloader.ViewModels
         {
             var request = item.Request ?? throw new InvalidOperationException("任务缺少下载请求");
             item.Cts = new CancellationTokenSource();
+            item.PauseRequested = false;
             item.Error = null;
+            item.FinishedText = null;
             item.Completed = 0;
             item.State = TaskState.Running;
             if (item.Total <= 0)
@@ -218,21 +230,19 @@ namespace TileDownloader.ViewModels
                 item.Speed = "--";
                 item.Remaining = "--";
                 item.FinishedText = $"完成于 {DateTime.Now:yyyy-MM-dd HH:mm}";
-                await _taskManager.UpdateStatusAsync(item.RecordId, TaskStatus2.Completed, null, CancellationToken.None);
+                await PersistStopAsync(item, TaskStatus2.Completed, null);
             }
             catch (OperationCanceledException)
             {
-                item.State = TaskState.Cancelled;
+                // 用户点「暂停」落为已暂停（可继续），点「取消」落为已中断
+                var paused = item.PauseRequested;
+                item.State = paused ? TaskState.Paused : TaskState.Cancelled;
                 item.Speed = "--";
                 item.Remaining = "--";
-                item.FinishedText = $"中断于 {DateTime.Now:yyyy-MM-dd HH:mm}";
-                try
-                {
-                    await _taskManager.UpdateStatusAsync(item.RecordId, TaskStatus2.Cancelled, "已中断", CancellationToken.None);
-                }
-                catch
-                {
-                }
+                item.FinishedText = paused
+                    ? $"暂停于 {DateTime.Now:yyyy-MM-dd HH:mm}"
+                    : $"中断于 {DateTime.Now:yyyy-MM-dd HH:mm}";
+                await PersistStopAsync(item, paused ? TaskStatus2.Paused : TaskStatus2.Cancelled, paused ? null : "已中断");
             }
             catch (Exception e)
             {
@@ -242,13 +252,7 @@ namespace TileDownloader.ViewModels
                 item.Speed = "--";
                 item.Remaining = "--";
                 item.FinishedText = $"失败于 {DateTime.Now:yyyy-MM-dd HH:mm}";
-                try
-                {
-                    await _taskManager.UpdateStatusAsync(item.RecordId, TaskStatus2.Failed, msg, CancellationToken.None);
-                }
-                catch
-                {
-                }
+                await PersistStopAsync(item, TaskStatus2.Failed, msg);
             }
             finally
             {
@@ -258,7 +262,35 @@ namespace TileDownloader.ViewModels
             }
         }
 
-        /// <summary>继续（断点续传：引擎按瓦片存在性跳过，输出路径与格式沿用原任务，仅补缺）</summary>
+        /// <summary>
+        /// 任务结束时落盘最终进度与状态：
+        /// 进度检查点为每 ~50 个瓦片一次，收尾补写避免丢失尾部进度（重启后展示更准确）
+        /// </summary>
+        private async Task PersistStopAsync(TaskItem item, TaskStatus2 status, string? error)
+        {
+            if (item.RecordId <= 0)
+            {
+                return;
+            }
+            try
+            {
+                await _taskManager.UpdateProgressAsync(item.RecordId, item.Completed, item.Total, 0, 0, 0, CancellationToken.None);
+            }
+            catch
+            {
+                // 进度写入失败不阻塞状态落盘
+            }
+            try
+            {
+                await _taskManager.UpdateStatusAsync(item.RecordId, status, error, CancellationToken.None);
+            }
+            catch
+            {
+                // 收尾写入失败不影响 UI 状态
+            }
+        }
+
+        /// <summary>开始/继续/重试（断点续传：引擎按瓦片存在性跳过，输出路径与格式沿用原任务，仅补缺）</summary>
         [RelayCommand]
         private void Continue(TaskItem? item)
         {
@@ -268,8 +300,8 @@ namespace TileDownloader.ViewModels
             }
             if (item.Request == null)
             {
-                // 历史任务的来源已无法从 Sources.json 解析（被删除/改名）或记录不完整，无法续传
-                item.Error = "无法继续下载：未在来源配置中找到该任务的地图来源，请检查 Sources.json";
+                // 历史任务的来源已无法从 Sources 目录解析（被删除/改名）或记录不完整，无法续传
+                item.Error = "无法继续下载：未在来源配置中找到该任务的地图来源（Sources 目录），请恢复来源配置";
                 return;
             }
             item.Request.Concurrent = _settings.Concurrent;
@@ -278,7 +310,19 @@ namespace TileDownloader.ViewModels
             _ = RunTaskAsync(item);
         }
 
-        /// <summary>取消运行中的任务</summary>
+        /// <summary>暂停运行中的任务（保留已下载瓦片，可继续补齐）</summary>
+        [RelayCommand]
+        private void Pause(TaskItem? item)
+        {
+            if (item?.State != TaskState.Running)
+            {
+                return;
+            }
+            item.PauseRequested = true;
+            item.Cts?.Cancel();
+        }
+
+        /// <summary>取消运行中的任务（视为中断，可继续）</summary>
         [RelayCommand]
         private void Cancel(TaskItem? item)
         {
@@ -286,30 +330,92 @@ namespace TileDownloader.ViewModels
             {
                 return;
             }
+            item.PauseRequested = false;
             item.Cts?.Cancel();
         }
 
-        /// <summary>移除任务（运行中的不允许移除）</summary>
+        /// <summary>移除任务：列表移除并同步删除持久化记录（避免重启后再次出现）</summary>
         [RelayCommand]
-        private void Remove(TaskItem? item)
+        private async Task RemoveAsync(TaskItem? item)
         {
             if (item == null || item.State == TaskState.Running)
             {
                 return;
             }
             Tasks.Remove(item);
+            if (item.RecordId <= 0)
+            {
+                return;
+            }
+            try
+            {
+                await _taskManager.DeleteAsync(item.RecordId, CancellationToken.None);
+            }
+            catch
+            {
+                // 记录删除失败不阻塞移除
+            }
         }
 
-        /// <summary>清除全部已完成任务</summary>
+        /// <summary>清除全部已完成任务（同时删除持久化记录）</summary>
         [RelayCommand]
-        private void ClearCompleted()
+        private async Task ClearCompletedAsync()
         {
-            for (var i = Tasks.Count - 1; i >= 0; i--)
+            var completed = Tasks.Where(t => t.State == TaskState.Completed).ToList();
+            foreach (var item in completed)
             {
-                if (Tasks[i].State == TaskState.Completed)
+                Tasks.Remove(item);
+                if (item.RecordId <= 0)
                 {
-                    Tasks.RemoveAt(i);
+                    continue;
                 }
+                try
+                {
+                    await _taskManager.DeleteAsync(item.RecordId, CancellationToken.None);
+                }
+                catch
+                {
+                    // 记录删除失败不阻塞清除
+                }
+            }
+        }
+
+        /// <summary>打开输出位置：目录格式直接打开目录，文件格式在资源管理器中选中文件</summary>
+        [RelayCommand]
+        private void OpenOutput(TaskItem? item)
+        {
+            var path = item?.Request?.OutputPath;
+            if (item == null || string.IsNullOrWhiteSpace(path))
+            {
+                return;
+            }
+
+            try
+            {
+                if (Directory.Exists(path))
+                {
+                    Process.Start(new ProcessStartInfo("explorer.exe", $"\"{path}\"") { UseShellExecute = true });
+                    return;
+                }
+                if (File.Exists(path))
+                {
+                    Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{path}\"") { UseShellExecute = true });
+                    return;
+                }
+
+                // 输出文件尚未生成（未开始/失败）：退化为打开其所在目录
+                var dir = Path.GetDirectoryName(path);
+                if (!string.IsNullOrWhiteSpace(dir) && Directory.Exists(dir))
+                {
+                    Process.Start(new ProcessStartInfo("explorer.exe", $"\"{dir}\"") { UseShellExecute = true });
+                    return;
+                }
+
+                item.Error = "输出位置不存在，可能已被移动或删除";
+            }
+            catch (Exception e)
+            {
+                item.Error = $"无法打开输出位置：{e.Message}";
             }
         }
     }

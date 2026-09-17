@@ -770,11 +770,12 @@ namespace TileDownloader.ViewModels
                 {
                     TaskState.Completed => $"下载完成，用时见任务中心（共 {item.Total} 瓦片）",
                     TaskState.Cancelled => "下载已中断，可在任务中心继续",
+                    TaskState.Paused => "下载已暂停，可在任务中心继续",
                     TaskState.Failed => $"下载失败：{item.Error}",
                     _ => "下载结束",
                 };
 
-                // 结果提示（完成/中断/失败）
+                // 结果提示（完成/中断/暂停/失败）
                 switch (item.State)
                 {
                     case TaskState.Completed:
@@ -784,6 +785,10 @@ namespace TileDownloader.ViewModels
                     case TaskState.Cancelled:
                         ShowSnackbar("下载已中断", "可在任务中心点击「继续」补齐缺失瓦片",
                             ControlAppearance.Caution, SymbolRegular.Warning24);
+                        break;
+                    case TaskState.Paused:
+                        ShowSnackbar("下载已暂停", "可在任务中心点击「继续」补齐缺失瓦片",
+                            ControlAppearance.Caution, SymbolRegular.Pause24);
                         break;
                     case TaskState.Failed:
                         ShowSnackbar("下载失败", item.Error ?? "未知错误",

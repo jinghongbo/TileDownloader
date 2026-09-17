@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -26,6 +27,9 @@ namespace TileDownloader.ViewModels
         private readonly ITileImageLoader _tileImageLoader;
         private CancellationTokenSource? _probeCts;
 
+        /// <summary>上次写入磁盘的设置 JSON（用于跳过内容未变的重复落盘）</summary>
+        private string? _savedJson;
+
         public SettingsViewModel(GoogleHostsService googleHostsService, ITileImageLoader tileImageLoader)
         {
             _googleHostsService = googleHostsService;
@@ -33,11 +37,12 @@ namespace TileDownloader.ViewModels
 
             _selectedThemeMode = ThemeModes[0];
 
-            // 恢复持久化设置（UseProxy / 最快 Google IP / 主题）
+            // 恢复持久化设置（并发/重试 / UseProxy / 可用 Google IP 列表 / 主题）
             var saved = LoadSettings();
+            _concurrent = saved.Concurrent;
+            _retry = saved.Retry;
             _useProxy = saved.UseProxy;
-            _bestGoogleIp = saved.BestGoogleIp;
-            _bestGoogleIpMs = saved.BestGoogleIpMs;
+            _googleHosts = saved.BestGoogleHosts;
             _selectedThemeMode = ThemeModes.FirstOrDefault(m => m.Label == saved.Theme) ?? ThemeModes[0];
 
             // 将代理设置同步到地图预览（下载侧在构造请求时读取本 VM）
@@ -46,11 +51,15 @@ namespace TileDownloader.ViewModels
 
         /// <summary>并发数</summary>
         [ObservableProperty]
-        private int _concurrent = 4;
+        private int _concurrent = 64;
+
+        partial void OnConcurrentChanged(int value) => SaveSettings();
 
         /// <summary>失败重试次数</summary>
         [ObservableProperty]
         private int _retry = 4;
+
+        partial void OnRetryChanged(int value) => SaveSettings();
 
         /// <summary>下载是否使用系统代理（默认关闭=直连，配合 Google Hosts 加速；开启=跟随系统代理/VPN）</summary>
         [ObservableProperty]
@@ -97,18 +106,13 @@ namespace TileDownloader.ViewModels
 
         // ===== Google Hosts 加速 =====
 
-        /// <summary>探测出的最快 Google IP（null=未检测）</summary>
+        /// <summary>探测出的可用 Google IP 列表（空=未检测）</summary>
         [ObservableProperty]
         [NotifyCanExecuteChangedFor(nameof(CopyHostsCommand))]
         [NotifyPropertyChangedFor(nameof(BestGoogleHostsText))]
         [NotifyPropertyChangedFor(nameof(GoogleHostsEntriesText))]
         [NotifyPropertyChangedFor(nameof(CanApplyGoogleHosts))]
-        private string? _bestGoogleIp;
-
-        /// <summary>最快 IP 的响应延迟（ms）</summary>
-        [ObservableProperty]
-        [NotifyPropertyChangedFor(nameof(BestGoogleHostsText))]
-        private long _bestGoogleIpMs;
+        private IReadOnlyList<GoogleHostProbe> _googleHosts = Array.Empty<GoogleHostProbe>();
 
         /// <summary>是否正在探测</summary>
         [ObservableProperty]
@@ -127,18 +131,20 @@ namespace TileDownloader.ViewModels
         [ObservableProperty]
         private string? _googleHostsMessage;
 
-        /// <summary>最快 IP 展示文本</summary>
+        /// <summary>可用 IP 展示文本</summary>
         public string BestGoogleHostsText =>
-            string.IsNullOrEmpty(BestGoogleIp) ? "未检测" : $"{BestGoogleIp}（{BestGoogleIpMs}ms）";
+            GoogleHosts.Count == 0
+                ? "未检测"
+                : $"共 {GoogleHosts.Count} 个：" + string.Join("、", GoogleHosts.Select(p => $"{p.Ip}（{p.Milliseconds}ms）"));
 
         /// <summary>待写入 hosts 的条目文本（供展示与复制）</summary>
         public string GoogleHostsEntriesText =>
-            string.IsNullOrEmpty(BestGoogleIp) ? string.Empty : GoogleHostsService.BuildHostsEntries(BestGoogleIp);
+            GoogleHostsService.BuildHostsEntries(GoogleHosts.Select(p => p.Ip).ToList());
 
         /// <summary>是否可应用（复制）hosts 条目</summary>
-        public bool CanApplyGoogleHosts => !string.IsNullOrEmpty(BestGoogleIp);
+        public bool CanApplyGoogleHosts => GoogleHosts.Count > 0;
 
-        /// <summary>查找最快 Google IP：查询 SPF → 探测可访问 IP → 取最快</summary>
+        /// <summary>查找可用 Google IP：官方 IP 段 + DoH 解析 → 逐个直连取瓦片 → 稳定性复测，至少给出 4 个</summary>
         [RelayCommand(CanExecute = nameof(CanProbeGoogleHosts))]
         private async Task ProbeGoogleHostsAsync()
         {
@@ -158,22 +164,20 @@ namespace TileDownloader.ViewModels
                     GoogleHostsProgressPercent = p.Percent;
                     GoogleHostsProgressText = $"已扫描 {p.Done}/{p.Total}，命中 {p.Reachable}";
                 });
-                // 探测是 CPU 与网络密集型工作（枚举数万个候选 IP、逐个做 TLS 瓦片验证），
+                // 探测是 CPU 与网络密集型工作（枚举数万个候选 IP、逐个直连取瓦片），
                 // 整体放到线程池执行：否则服务内部每个 await 之后的续体都会回到 UI 线程，
                 // 造成界面卡死；进度仍由 Progress<T> 回到 UI 线程更新
-                var best = await Task.Run(() => _googleHostsService.FindBestAsync(progress, ct, scanProgress), ct);
+                var found = await Task.Run(() => _googleHostsService.FindUsableAsync(progress, ct, scanProgress), ct);
 
-                if (best != null)
+                GoogleHosts = found;
+                if (found.Count > 0)
                 {
-                    BestGoogleIp = best.Ip;
-                    BestGoogleIpMs = best.Milliseconds;
-                    GoogleHostsMessage = $"完成：{best.Ip}（{best.Milliseconds}ms）\n点击「复制 hosts 条目」后粘贴到 hosts 文件即可";
-                    SaveSettings();
+                    // IP 列表赋值已由 OnGoogleHostsChanged 触发落盘，此处无需再保存
+                    GoogleHostsMessage = $"完成：找到 {found.Count} 个可用 IP，最快 {found[0].Ip}（{found[0].Milliseconds}ms）\n" +
+                        "点击「复制 hosts 条目」后粘贴到 hosts 文件即可（mt0–mt3 各用一个 IP）";
                 }
                 else
                 {
-                    BestGoogleIp = null;
-                    BestGoogleIpMs = 0;
                     GoogleHostsMessage = "未找到能下载瓦片图片的 Google IP，请检查网络连通性（探测始终直连，不走代理）";
                 }
             }
@@ -199,18 +203,19 @@ namespace TileDownloader.ViewModels
         [RelayCommand(CanExecute = nameof(CanApplyGoogleHosts))]
         private void CopyHosts()
         {
-            if (string.IsNullOrEmpty(BestGoogleIp))
+            if (GoogleHosts.Count == 0)
             {
                 return;
             }
+            var entries = GoogleHostsService.BuildHostsEntries(GoogleHosts.Select(p => p.Ip).ToList());
             try
             {
-                Clipboard.SetText(GoogleHostsService.BuildHostsEntries(BestGoogleIp) + "\n");
+                Clipboard.SetText(entries + "\n");
                 GoogleHostsMessage = "已复制，请粘贴到 hosts 文件中（mt0-3.google.com）";
             }
             catch
             {
-                GoogleHostsMessage = "复制失败，请手动记录：" + GoogleHostsService.BuildHostsEntries(BestGoogleIp);
+                GoogleHostsMessage = "复制失败，请手动记录：" + entries;
             }
         }
 
@@ -271,10 +276,14 @@ namespace TileDownloader.ViewModels
 
         private sealed class PersistedSettings
         {
+            /// <summary>下载并发数</summary>
+            public int Concurrent { get; set; } = 64;
+            /// <summary>失败重试次数</summary>
+            public int Retry { get; set; } = 4;
             /// <summary>默认直连（false），配合 Google Hosts 加速</summary>
             public bool UseProxy { get; set; } = false;
-            public string? BestGoogleIp { get; set; }
-            public long BestGoogleIpMs { get; set; }
+            /// <summary>上次探测出的可用 Google IP 列表</summary>
+            public List<GoogleHostProbe> BestGoogleHosts { get; set; } = new();
             public string Theme { get; set; } = "深色";
         }
 
@@ -302,15 +311,23 @@ namespace TileDownloader.ViewModels
         {
             try
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(SettingsFile)!);
                 var s = new PersistedSettings
                 {
+                    Concurrent = Concurrent,
+                    Retry = Retry,
                     UseProxy = UseProxy,
-                    BestGoogleIp = BestGoogleIp,
-                    BestGoogleIpMs = BestGoogleIpMs,
+                    BestGoogleHosts = GoogleHosts.ToList(),
                     Theme = SelectedThemeMode?.Label ?? "深色",
                 };
-                File.WriteAllText(SettingsFile, JsonConvert.SerializeObject(s, Formatting.Indented));
+                var json = JsonConvert.SerializeObject(s, Formatting.Indented);
+                // 并发数/重试次数等高频变更（数值框逐次步进）会反复触发保存，内容未变时不再重复落盘
+                if (json == _savedJson)
+                {
+                    return;
+                }
+                Directory.CreateDirectory(Path.GetDirectoryName(SettingsFile)!);
+                File.WriteAllText(SettingsFile, json);
+                _savedJson = json;
             }
             catch
             {
@@ -318,7 +335,6 @@ namespace TileDownloader.ViewModels
             }
         }
 
-        partial void OnBestGoogleIpChanged(string? value) => SaveSettings();
-        partial void OnBestGoogleIpMsChanged(long value) => SaveSettings();
+        partial void OnGoogleHostsChanged(IReadOnlyList<GoogleHostProbe> value) => SaveSettings();
     }
 }

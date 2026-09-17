@@ -67,6 +67,22 @@
                                     <TextBlock Style="{StaticResource TagText}" Text="{Binding FormatLabel, Mode=OneWay}" />
                                 </Border>
                             </StackPanel>
+                            <!--  任务详情：层级范围 + 输出路径（无请求时隐藏）  -->
+                            <TextBlock Margin="0,6,0,0"
+                                       FontSize="12"
+                                       TextWrapping="Wrap"
+                                       Text="{Binding DetailText, Mode=OneWay}"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding DetailText, Mode=OneWay}" Value="{x:Null}">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
                         </StackPanel>
 
                         <!--  状态徽标：进行中 = 蓝色 ProgressRing；其余 = 图标 + 文案  -->
@@ -157,22 +173,34 @@
                                Margin="0,10,0,0"
                                Visibility="{Binding HasError, Mode=OneWay, Converter={StaticResource BoolToVis}}" />
 
-                    <!--  行 3：操作按钮（按状态显隐）  -->
+                    <!--  行 3：操作按钮（按状态显隐：打开位置 / 开始·继续·重试 / 暂停 / 取消 / 删除）  -->
                     <StackPanel Grid.Row="3"
                                 Orientation="Horizontal"
                                 HorizontalAlignment="Right"
                                 Margin="0,12,0,0">
-                        <ui:Button Content="继续"
+                        <ui:Button Content="打开位置"
+                                   Icon="{ui:SymbolIcon FolderOpen24}"
+                                   Margin="0,0,8,0"
+                                   Visibility="{Binding CanOpenOutput, Mode=OneWay, Converter={StaticResource BoolToVis}}"
+                                   Command="{Binding DataContext.OpenOutputCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                   CommandParameter="{Binding}" />
+                        <ui:Button Content="{Binding PrimaryActionText, Mode=OneWay}"
                                    Icon="{ui:SymbolIcon ArrowClockwise24}"
                                    Appearance="Primary"
                                    Margin="0,0,8,0"
                                    Visibility="{Binding CanContinue, Mode=OneWay, Converter={StaticResource BoolToVis}}"
                                    Command="{Binding DataContext.ContinueCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                    CommandParameter="{Binding}" />
+                        <ui:Button Content="暂停"
+                                   Icon="{ui:SymbolIcon Pause24}"
+                                   Margin="0,0,8,0"
+                                   Visibility="{Binding CanPause, Mode=OneWay, Converter={StaticResource BoolToVis}}"
+                                   Command="{Binding DataContext.PauseCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                   CommandParameter="{Binding}" />
                         <ui:Button Content="取消"
                                    Icon="{ui:SymbolIcon Dismiss24}"
                                    Margin="0,0,8,0"
-                                   Visibility="{Binding IsRunning, Mode=OneWay, Converter={StaticResource BoolToVis}}"
+                                   Visibility="{Binding CanCancel, Mode=OneWay, Converter={StaticResource BoolToVis}}"
                                    Command="{Binding DataContext.CancelCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                    CommandParameter="{Binding}" />
                         <ui:Button Content="删除"

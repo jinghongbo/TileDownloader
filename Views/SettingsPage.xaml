@@ -44,13 +44,13 @@
                             <StackPanel>
                                 <ui:TextBlock Style="{StaticResource SettingTitle}" Text="并发数" />
                                 <TextBlock Style="{StaticResource SettingHint}" Margin="0,2,0,0"
-                                           Text="同时下载瓦片的数量（1–32），过高可能触发服务端限流" />
+                                           Text="同时下载瓦片的数量（1–4096），过高可能触发服务端限流" />
                             </StackPanel>
                             <ui:NumberBox Grid.Column="1"
                                           Width="140"
                                           VerticalAlignment="Center"
                                           Value="{Binding Concurrent, Mode=TwoWay}"
-                                          Minimum="1" Maximum="32"
+                                          Minimum="1" Maximum="4096"
                                           SmallChange="1"
                                           ClearButtonEnabled="False" />
                         </Grid>
@@ -94,7 +94,7 @@
                     <StackPanel>
                         <ui:TextBlock FontTypography="Subtitle" Margin="0,0,0,4" Text="Google Hosts 加速" />
                         <TextBlock Style="{StaticResource SettingHint}" Margin="0,4,0,12"
-                                   Text="拉取 Google 官方 IP 段（goog.json 扣除 GCP 段）并结合 mt0-3 的 DNS 解析结果，直连逐个取瓦片找出能真正下到图的最快 IP，写入本机 hosts 替换 mt0-3.google.com 以加速卫星地图下载。命中满意延迟即结束；需要本机可直连 Google（不走代理）" />
+                                   Text="拉取 Google 官方 IP 段（goog.json 扣除 GCP 段）并结合 mt0-3 的 DNS 解析结果，直连逐个 IP 实际取一张瓦片，命中后连同该 IP 所在 /24 整段一起探测，凑够 4 个通过稳定性复测的可用 IP 后结束。写入本机 hosts 时按延迟顺序分给 mt0-3，加速卫星地图下载；需要本机可直连 Google（不走代理）" />
 
                         <Grid Margin="0,0,0,8">
                             <Grid.ColumnDefinitions>
@@ -102,13 +102,13 @@
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <StackPanel>
-                                <ui:TextBlock Style="{StaticResource SettingTitle}" Text="最快 IP" />
+                                <ui:TextBlock Style="{StaticResource SettingTitle}" Text="可用 IP（至少 4 个）" />
                                 <TextBlock Style="{StaticResource SettingHint}" Margin="0,2,0,0"
                                            Text="{Binding BestGoogleHostsText, Mode=OneWay}" />
                             </StackPanel>
                             <ui:Button Grid.Column="1"
                                         VerticalAlignment="Center"
-                                        Content="查找最快 IP"
+                                        Content="查找可用 IP"
                                         Command="{Binding ProbeGoogleHostsCommand}"
                                         Appearance="Primary" />
                         </Grid>

@@ -16,6 +16,8 @@ namespace TileDownloader.Models
         Failed = 2,
         /// <summary>已中断（取消/异常退出）</summary>
         Cancelled = 3,
+        /// <summary>已暂停（用户主动暂停，可继续）</summary>
+        Paused = 4,
     }
 
     /// <summary>

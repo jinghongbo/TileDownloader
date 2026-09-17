@@ -21,5 +21,8 @@ namespace TileDownloader.Services
 
         /// <summary>加载全部任务记录（启动时恢复历史任务）</summary>
         Task<IReadOnlyList<TaskRecord>> LoadAllAsync(CancellationToken ct);
+
+        /// <summary>删除任务记录（任务中心移除任务时同步清理，避免重启后复活）</summary>
+        Task DeleteAsync(long id, CancellationToken ct);
     }
 }

@@ -21,6 +21,8 @@ namespace TileDownloader.Models
         Failed,
         /// <summary>已中断</summary>
         Cancelled,
+        /// <summary>已暂停</summary>
+        Paused,
     }
 
     /// <summary>
@@ -158,8 +160,12 @@ namespace TileDownloader.Models
                     OnPropertyChanged(nameof(StateIcon));
                     OnPropertyChanged(nameof(StateBrush));
                     OnPropertyChanged(nameof(IsRunning));
+                    OnPropertyChanged(nameof(IsPaused));
                     OnPropertyChanged(nameof(CanContinue));
+                    OnPropertyChanged(nameof(CanPause));
+                    OnPropertyChanged(nameof(CanCancel));
                     OnPropertyChanged(nameof(CanRemove));
+                    OnPropertyChanged(nameof(PrimaryActionText));
                 }
             }
         }
@@ -182,6 +188,7 @@ namespace TileDownloader.Models
             TaskState.Running => "下载中",
             TaskState.Completed => "已完成",
             TaskState.Failed => "失败",
+            TaskState.Paused => "已暂停",
             _ => "已中断",
         };
 
@@ -191,6 +198,7 @@ namespace TileDownloader.Models
             TaskState.Completed => SymbolRegular.CheckmarkCircle24,
             TaskState.Failed => SymbolRegular.ErrorCircle24,
             TaskState.Cancelled => SymbolRegular.Warning24,
+            TaskState.Paused => SymbolRegular.Pause24,
             _ => SymbolRegular.Timer24,
         };
 
@@ -198,6 +206,7 @@ namespace TileDownloader.Models
         private static readonly Brush CompletedBrush = FreezeBrush(Color.FromRgb(0x6C, 0xCB, 0x7F));
         private static readonly Brush FailedBrush = FreezeBrush(Color.FromRgb(0xFF, 0x99, 0xA4));
         private static readonly Brush CancelledBrush = FreezeBrush(Color.FromRgb(0xFD, 0xB5, 0x6A));
+        private static readonly Brush PausedBrush = FreezeBrush(Color.FromRgb(0xE8, 0xC5, 0x6B));
 
         private static Brush FreezeBrush(Color color)
         {
@@ -206,23 +215,45 @@ namespace TileDownloader.Models
             return brush;
         }
 
-        /// <summary>状态颜色（进行中蓝/完成绿/失败红/中断橙）</summary>
+        /// <summary>状态颜色（进行中蓝/完成绿/失败红/中断橙/暂停黄）</summary>
         public Brush StateBrush => State switch
         {
             TaskState.Completed => CompletedBrush,
             TaskState.Failed => FailedBrush,
             TaskState.Cancelled => CancelledBrush,
+            TaskState.Paused => PausedBrush,
             _ => RunningBrush,
         };
 
         /// <summary>是否下载中（决定进度区/取消按钮显隐）</summary>
         public bool IsRunning => State == TaskState.Running;
 
-        /// <summary>是否可继续（失败/中断任务）</summary>
-        public bool CanContinue => State is TaskState.Failed or TaskState.Cancelled;
+        /// <summary>是否已暂停</summary>
+        public bool IsPaused => State == TaskState.Paused;
+
+        /// <summary>是否可继续/重试/开始（需具备可重建的下载请求）</summary>
+        public bool CanContinue => Request != null
+            && State is TaskState.Pending or TaskState.Paused or TaskState.Failed or TaskState.Cancelled;
+
+        /// <summary>是否可暂停（仅下载中）</summary>
+        public bool CanPause => State == TaskState.Running;
+
+        /// <summary>是否可取消（仅下载中）</summary>
+        public bool CanCancel => State == TaskState.Running;
 
         /// <summary>是否可移除（运行中不可移除）</summary>
         public bool CanRemove => State != TaskState.Running;
+
+        /// <summary>主操作按钮文案（按状态区分语义）</summary>
+        public string PrimaryActionText => State switch
+        {
+            TaskState.Pending => "开始",
+            TaskState.Failed => "重试",
+            _ => "继续",
+        };
+
+        /// <summary>是否可打开输出位置（历史任务来源缺失时不可用）</summary>
+        public bool CanOpenOutput => !string.IsNullOrWhiteSpace(Request?.OutputPath);
 
         /// <summary>是否有错误信息（错误行显隐）</summary>
         public bool HasError => !string.IsNullOrEmpty(Error);
@@ -243,16 +274,49 @@ namespace TileDownloader.Models
             _ => Request?.FormatId,
         };
 
+        /// <summary>详情行文案：层级范围 + 输出路径 + 完整块标记（无请求时为 null，UI 隐藏）</summary>
+        public string? DetailText
+        {
+            get
+            {
+                if (Request == null)
+                {
+                    return null;
+                }
+                var text = $"层级 z{Request.MinLevel}-z{Request.MaxLevel} · {Request.OutputPath}";
+                return Request.FullBlock ? $"{text} · 完整块" : text;
+            }
+        }
+
         /// <summary>各层级进度明细</summary>
         public ObservableCollection<LevelProgress> Levels { get; } = new();
 
         /// <summary>任务持久化记录 Id（新任务在 Create 后回填）</summary>
         public long RecordId { get; set; }
 
-        /// <summary>下载请求快照（用于继续下载时重建请求；运行时字段，不持久化到数据库）</summary>
-        public TileDownloadRequest? Request { get; set; }
+        private TileDownloadRequest? _request;
 
-        /// <summary>运行时取消源（继续/取消按钮使用）</summary>
+        /// <summary>下载请求快照（用于继续下载时重建请求；运行时字段，不持久化到数据库）</summary>
+        public TileDownloadRequest? Request
+        {
+            get => _request;
+            set
+            {
+                if (SetProperty(ref _request, value))
+                {
+                    OnPropertyChanged(nameof(SourceLabel));
+                    OnPropertyChanged(nameof(FormatLabel));
+                    OnPropertyChanged(nameof(DetailText));
+                    OnPropertyChanged(nameof(CanContinue));
+                    OnPropertyChanged(nameof(CanOpenOutput));
+                }
+            }
+        }
+
+        /// <summary>用户是否点了暂停（决定中断后落为「已暂停」而非「已中断」）</summary>
+        public bool PauseRequested { get; set; }
+
+        /// <summary>运行时取消源（继续/暂停/取消按钮使用）</summary>
         public System.Threading.CancellationTokenSource? Cts { get; set; }
     }
 }

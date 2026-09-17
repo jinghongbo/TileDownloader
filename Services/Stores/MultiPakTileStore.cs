@@ -20,15 +20,19 @@ namespace TileDownloader.Services
     /// - 每一个 .pak 文件都是独立的 SQLite 数据库，均包含：
     ///   - infos 表（PakInfo 实体：范围、层级、来源、检查点）
     ///   - blocks 表（PakBlock 实体：z, x, y, tile）
-    /// 续传按文件与瓦片粒度：初始化时对已存在的分块文件预查瓦片，秒级命中已下载数据
+    /// 续传按文件与瓦片粒度：初始化时只按「任务范围 ∩ 分块」预加载已存在瓦片到分块位图，
+    /// 运行期存在性判定走内存（32KB/分块），仅未登记分块/确认矩形外才回源查库
     /// </summary>
     public class MultiPakTileStore : ITileStore
     {
         /// <summary>分块边长（每分块 512×512 瓦片）</summary>
-        private const int BlockSize = 512;
+        private const int BlockSize = TileUrlBuilder.BlockSize;
 
         /// <summary>低于该层级的分块统一合并进 blocks.pak（低层级瓦片少，避免碎片文件）</summary>
-        private const int SingleFileMaxLevel = 9;
+        private const int SingleFileMaxLevel = TileUrlBuilder.PakSingleFileMaxLevel;
+
+        /// <summary>单次落盘事务的最大瓦片数</summary>
+        private const int WriteBatchSize = 1000;
 
         public string FormatId => "MultiPak";
         public string DisplayName => "多文件 pak";
@@ -36,7 +40,7 @@ namespace TileDownloader.Services
 
         private TileTaskOptions? _options;
         private string _dir = string.Empty;
-        private Channel<(string filename, string tableName, PakBlock block)>? _tileChannel;
+        private Channel<(int z, int tx, int ty, PakBlock block)>? _tileChannel;
         private Task? _writerTask;
 
         /// <summary>分块库连接缓存（文件名 → IFreeSql，懒打开；IFreeSql 线程安全，可并发使用）</summary>
@@ -45,11 +49,8 @@ namespace TileDownloader.Services
         /// <summary>分块库创建锁：保证每个分块文件只被创建/初始化一次</summary>
         private readonly object _blockDbLock = new();
 
-        /// <summary>瓦片存在缓存（"z_x_y" → 1/0）：引擎查询或写入过的瓦片都登记于此</summary>
-        private readonly ConcurrentDictionary<string, byte> _exists = new();
-
-        /// <summary>分块物理文件状态缓存（文件名 → 1 存在/0 确认不存在），避免反复访问磁盘</summary>
-        private readonly ConcurrentDictionary<string, byte> _existingFiles = new();
+        /// <summary>分块缓存：(z, tx, ty) → 已确认矩形 + 存在性位图</summary>
+        private readonly ConcurrentDictionary<(int z, int tx, int ty), PakBlockCache> _blocks = new();
 
         // 检查点：最后保存的瓦片位置（int 赋值原子，仅作近似记录，无需加锁）
         private int _curLevel;
@@ -66,44 +67,60 @@ namespace TileDownloader.Services
             }
             Directory.CreateDirectory(_dir);
 
-            // 预先扫描目录中涉及的 blocks*.pak 文件，加载已有瓦片实现快速断点续传
+            // 枚举任务涉及分块：登记「已确认矩形」；已存在的分块文件预加载矩形内瓦片，不存在的文件直接判定为空
+            var pending = new List<(int z, string tableName, string filename, PakBlockCache cache)>();
             for (var z = options.MinLevel; z <= options.MaxLevel; z++)
             {
-                var (fc, lc) = TileUrlBuilder.ColRange(options.MinX, options.MaxX, z);
-                var (fr, lr) = TileUrlBuilder.RowRange(options.MinY, options.MaxY, z);
+                var (fc, lc) = TileUrlBuilder.ColRange(options.MinX, options.MaxX, z, options.FullBlock);
+                var (fr, lr) = TileUrlBuilder.RowRange(options.MinY, options.MaxY, z, options.FullBlock);
 
                 for (var tx = fc / BlockSize; tx <= lc / BlockSize; tx++)
                 {
                     for (var ty = fr / BlockSize; ty <= lr / BlockSize; ty++)
                     {
+                        var blockX = tx * BlockSize;
+                        var blockY = ty * BlockSize;
+                        var cache = new PakBlockCache(
+                            Math.Max(fc, blockX), Math.Min(lc, blockX + BlockSize - 1),
+                            Math.Max(fr, blockY), Math.Min(lr, blockY + BlockSize - 1));
+                        _blocks[(z, tx, ty)] = cache;
+
                         var tableName = BlockTableName(z, tx, ty);
                         var filename = $"{tableName}.pak";
-                        var fullPath = Path.Combine(_dir, filename);
-                        if (File.Exists(fullPath))
+                        if (File.Exists(Path.Combine(_dir, filename)))
                         {
-                            _existingFiles[filename] = 1;
-                            try
-                            {
-                                var blockDb = GetBlockDb(filename);
-                                var existingTiles = await blockDb.Select<PakBlock>()
-                                    .AsTable((_, _) => tableName)
-                                    .Where(b => b.Z == z)
-                                    .ToListAsync(b => new { b.X, b.Y }, ct);
-                                foreach (var t in existingTiles)
-                                {
-                                    _exists.TryAdd(TileKey(z, t.X, t.Y), 1);
-                                }
-                            }
-                            catch
-                            {
-                            }
+                            pending.Add((z, tableName, filename, cache));
                         }
                     }
                 }
             }
 
+            // 预加载已存在分块的存在性：只取矩形内的主键两列，写入分块位图
+            foreach (var (z, tableName, filename, cache) in pending)
+            {
+                var x0 = cache.X0;
+                var x1 = cache.X1;
+                var y0 = cache.Y0;
+                var y1 = cache.Y1;
+                try
+                {
+                    var blockDb = GetBlockDb(filename);
+                    var rows = await blockDb.Select<PakBlock>()
+                        .AsTable((_, _) => tableName)
+                        .Where(b => b.Z == z && b.X >= x0 && b.X <= x1 && b.Y >= y0 && b.Y <= y1)
+                        .ToListAsync(b => new { b.X, b.Y }, ct);
+                    foreach (var t in rows)
+                    {
+                        cache.Set(t.X, t.Y);
+                    }
+                }
+                catch
+                {
+                }
+            }
+
             // 启动批量落盘通道，避免多线程 SQLite 分块文件写锁争用
-            _tileChannel = Channel.CreateBounded<(string filename, string tableName, PakBlock block)>(new BoundedChannelOptions(2000)
+            _tileChannel = Channel.CreateBounded<(int z, int tx, int ty, PakBlock block)>(new BoundedChannelOptions(2000)
             {
                 SingleReader = true,
                 SingleWriter = false,
@@ -114,111 +131,134 @@ namespace TileDownloader.Services
 
         public async Task<bool> TileExistsAsync(int z, int x, int y, CancellationToken ct)
         {
-            var key = TileKey(z, x, y);
-            if (_exists.TryGetValue(key, out var flag))
+            if (_blocks.TryGetValue((z, x / BlockSize, y / BlockSize), out var cache))
             {
-                return flag == 1;
+                if (cache.Test(x, y))
+                {
+                    return true;
+                }
+                if (cache.InRange(x, y))
+                {
+                    // 已确认矩形内未置位即确认不存在（分块文件不存在时矩形同样覆盖整个分块）
+                    return false;
+                }
             }
 
+            // 未登记分块 / 确认矩形外（引擎按枚举范围查询，正常不会走到）：回源查库兜底
             var tx = x / BlockSize;
             var ty = y / BlockSize;
             var tableName = BlockTableName(z, tx, ty);
             var filename = $"{tableName}.pak";
 
-            // 分块物理文件确认不存在：瓦片必然不存在，避免打开不存在的文件时意外建库
-            if (_existingFiles.TryGetValue(filename, out var fileFlag))
+            // 分块物理文件不存在：瓦片必然不存在，避免打开不存在的文件时意外建库
+            if (!File.Exists(Path.Combine(_dir, filename)))
             {
-                if (fileFlag == 0)
-                {
-                    _exists[key] = 0;
-                    return false;
-                }
-            }
-            else if (File.Exists(Path.Combine(_dir, filename)))
-            {
-                _existingFiles[filename] = 1;
-            }
-            else
-            {
-                _existingFiles[filename] = 0;
-                _exists[key] = 0;
                 return false;
             }
 
-            // 打开该分块库查一次并加入缓存
             var db = GetBlockDb(filename);
-            var exists = await db.Select<PakBlock>()
+            return await db.Select<PakBlock>()
                 .AsTable((_, _) => tableName)
                 .Where(b => b.Z == z && b.X == x && b.Y == y)
                 .AnyAsync(ct);
-            _exists[key] = exists ? (byte)1 : (byte)0;
-            return exists;
         }
 
         public async Task SaveTileAsync(int z, int x, int y, byte[] data, CancellationToken ct)
         {
             var tx = x / BlockSize;
             var ty = y / BlockSize;
-            var tableName = BlockTableName(z, tx, ty);
-            var filename = $"{tableName}.pak";
-            _existingFiles[filename] = 1;
-            _exists[TileKey(z, x, y)] = 1;
+            if (_blocks.TryGetValue((z, tx, ty), out var cache))
+            {
+                cache.Set(x, y);
+            }
             _curLevel = z;
             _curX = x;
             _curY = y;
 
             if (_tileChannel != null)
             {
-                await _tileChannel.Writer.WriteAsync((filename, tableName, new PakBlock { Z = z, X = x, Y = y, Tile = data }), ct);
+                await _tileChannel.Writer.WriteAsync((z, tx, ty, new PakBlock { Z = z, X = x, Y = y, Tile = data }), ct);
             }
         }
 
         private async Task ProcessTileWriterLoopAsync()
         {
-            if (_tileChannel == null)
+            var channel = _tileChannel;
+            var onWriteFailed = _options?.OnTileWriteFailed;
+            if (channel == null)
             {
                 return;
             }
 
-            var reader = _tileChannel.Reader;
-            var batch = new List<(string filename, string tableName, PakBlock block)>(100);
+            var reader = channel.Reader;
+            var batch = new List<(int z, int tx, int ty, PakBlock block)>(WriteBatchSize);
 
             while (await reader.WaitToReadAsync())
             {
-                while (batch.Count < 100 && reader.TryRead(out var item))
+                while (batch.Count < WriteBatchSize && reader.TryRead(out var item))
                 {
                     batch.Add(item);
                 }
 
-                if (batch.Count > 0)
+                if (batch.Count == 0)
                 {
-                    foreach (var group in batch.GroupBy(b => (b.filename, b.tableName)))
+                    continue;
+                }
+
+                foreach (var group in batch.GroupBy(b => (b.z, b.tx, b.ty)))
+                {
+                    var tableName = BlockTableName(group.Key.z, group.Key.tx, group.Key.ty);
+                    var written = false;
+                    try
                     {
-                        try
+                        var db = GetBlockDb($"{tableName}.pak");
+                        written = await TryWriteBatchAsync(db, tableName, group.Select(g => g.block));
+                    }
+                    catch
+                    {
+                    }
+
+                    if (written)
+                    {
+                        continue;
+                    }
+
+                    // 落盘最终失败：撤销存在性标记，避免续传时静默漏掉这些瓦片；同时上报错误提示用户
+                    if (_blocks.TryGetValue(group.Key, out var cache))
+                    {
+                        foreach (var item in group)
                         {
-                            var db = GetBlockDb(group.Key.filename);
-                            await db.InsertOrUpdate<PakBlock>()
-                                .AsTable(_ => group.Key.tableName)
-                                .SetSource(group.Select(g => g.block))
-                                .ExecuteAffrowsAsync();
-                        }
-                        catch
-                        {
-                            try
-                            {
-                                await Task.Delay(50);
-                                var db = GetBlockDb(group.Key.filename);
-                                await db.InsertOrUpdate<PakBlock>()
-                                    .AsTable(_ => group.Key.tableName)
-                                    .SetSource(group.Select(g => g.block))
-                                    .ExecuteAffrowsAsync();
-                            }
-                            catch
-                            {
-                            }
+                            cache.Clear(item.block.X, item.block.Y);
                         }
                     }
-                    batch.Clear();
+                    var first = group.First().block;
+                    onWriteFailed?.Invoke(first.Z, first.X, first.Y,
+                        $"写入 {tableName}.pak 失败（本批 {group.Count()} 个瓦片），将在续传时重新下载");
+                }
+                batch.Clear();
+            }
+        }
+
+        /// <summary>落盘一批瓦片（锁冲突时重试一次），返回是否成功</summary>
+        private static async Task<bool> TryWriteBatchAsync(IFreeSql db, string tableName, IEnumerable<PakBlock> blocks)
+        {
+            for (var attempt = 0; ; attempt++)
+            {
+                try
+                {
+                    await db.InsertOrUpdate<PakBlock>()
+                        .AsTable(_ => tableName)
+                        .SetSource(blocks)
+                        .ExecuteAffrowsAsync();
+                    return true;
+                }
+                catch
+                {
+                    if (attempt >= 1)
+                    {
+                        return false;
+                    }
+                    await Task.Delay(50);
                 }
             }
         }
@@ -278,11 +318,12 @@ namespace TileDownloader.Services
         /// journal mode=WAL + busy_timeout：同一分块文件会被多个线程（读取线程与落盘线程）同时打开，
         /// 默认回滚日志模式下读写会相互阻塞，且 SQLite 在锁冲突时可能不触发 busy handler 而直接返回
         /// database is locked；WAL 下读不阻塞写、写不阻塞读，busy_timeout 保证冲突时等待而不是立即失败。
+        /// synchronous/cache_size 面向批量落盘吞吐。
         /// </remarks>
         private static IFreeSql BuildSqlite(string file, int poolSize)
         {
             return new FreeSqlBuilder()
-                .UseConnectionString(DataType.Sqlite, $"data source={file};poolsize={poolSize};journal mode=WAL;busy_timeout=15000")
+                .UseConnectionString(DataType.Sqlite, $"data source={file};poolsize={poolSize};journal mode=WAL;busy_timeout=15000;synchronous=NORMAL;cache_size=-32000")
                 .UseAutoSyncStructure(false)
                 .Build();
         }
@@ -354,7 +395,5 @@ namespace TileDownloader.Services
         {
             return $"{BlockTableName(z, tx, ty)}.pak";
         }
-
-        private static string TileKey(int z, int x, int y) => $"{z}_{x}_{y}";
     }
 }

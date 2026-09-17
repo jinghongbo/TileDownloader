@@ -8,11 +8,8 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Security;
 using System.Net.Sockets;
-using System.Text;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using System.Threading;
-using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace TileDownloader.Services
@@ -20,7 +17,7 @@ namespace TileDownloader.Services
     /// <summary>
     /// Google Hosts 探测服务：
     /// 拉取 Google 官方发布的 IP 段（goog.json 扣除 cloud.json）并结合 mt0–mt3 的 DNS 解析结果，
-    /// 直连探测能真正下载到 Google 瓦片图片的最快 IP，
+    /// 直连逐个 IP 实际下载 Google 瓦片图片，找出多个可用 IP，
     /// 供用户写入本机 hosts（mt0-3.google.com）以加速卫星地图下载。
     /// </summary>
     public class GoogleHostsService
@@ -56,29 +53,21 @@ namespace TileDownloader.Services
         private const string ProbeUserAgent =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
 
-        /// <summary>TCP 快筛并发数（仅连接 443 端口，不做 TLS 握手）</summary>
-        private const int TcpScanConcurrency = 2048;
+        /// <summary>直连取瓦片的探测并发数。
+        /// 实测：TCP 预筛式的数千并发会漏掉真正可用的 IP，改为直接取瓦片后按此并发即可稳定命中</summary>
+        private const int ProbeConcurrency = 512;
 
-        /// <summary>TCP 快筛单 IP 超时（毫秒）</summary>
-        private const int TcpScanTimeoutMs = 1500;
+        /// <summary>单次瓦片请求超时（秒）：短超时让大量无效 IP 快速失败，整体扫描才跑得完</summary>
+        private const int ProbeTimeoutSeconds = 3;
 
-        /// <summary>瓦片验证并发数</summary>
-        private const int FullProbeConcurrency = 32;
+        /// <summary>目标可用 IP 数量：凑够这么多（且通过稳定性复测）就结束扫描，供 mt0–mt3 分别使用</summary>
+        private const int TargetUsableIps = 4;
 
-        /// <summary>单次瓦片请求超时（秒）</summary>
-        private const int ProbeTimeoutSeconds = 6;
+        /// <summary>命中后最多再复测的候选数（按延迟从快到慢），避免无效候选拖长收尾</summary>
+        private const int MaxVerifyCandidates = 24;
 
         /// <summary>单次 DoH 查询超时（秒）</summary>
         private const int DohTimeoutSeconds = 5;
-
-        /// <summary>满意延迟阈值（毫秒）：命中该阈值内的可访问 IP 即提前结束扫描</summary>
-        private const int SatisfactoryLatencyMs = 1000;
-
-        /// <summary>单个 /24 网段最多投递验证的 IP 数</summary>
-        private const int MaxProbesPerSubnet = 3;
-
-        /// <summary>整轮扫描最多投递验证的 IP 数（安全上限）</summary>
-        private const int MaxFullProbes = 500;
 
         /// <summary>Google 官方全部 IP 段（含 GCP）</summary>
         private const string GoogRangesUrl = "https://www.gstatic.com/ipranges/goog.json";
@@ -340,6 +329,17 @@ namespace TileDownloader.Services
             var size = prefix >= 32 ? 1u : 1u << (32 - prefix);
             var network = addr & (uint.MaxValue << (32 - prefix));
 
+            if (prefix >= 31)
+            {
+                // /31、/32 没有网络号/广播地址可跳过：按区间全量枚举
+                // （若沿用下面跳过首尾的写法，/32 会一个候选都枚举不出来）
+                for (var offset = 0u; offset < size; offset++)
+                {
+                    yield return ToIp(network | offset);
+                }
+                yield break;
+            }
+
             if (prefix >= 24)
             {
                 // 段很小（≤256 个地址），全量枚举
@@ -361,7 +361,8 @@ namespace TileDownloader.Services
             }
         }
 
-        /// <summary>全量探测：边 TCP 快筛边瓦片验证，一旦命中满意 IP（延迟 ≤ 阈值）即提前结束扫描。
+        /// <summary>全量探测：直接用 HttpClient 逐 IP 取一张瓦片（短超时），命中后立刻把该 IP 所在 /24 整段
+        /// 也探一遍（可用 IP 往往成片出现），凑够 <see cref="TargetUsableIps"/> 个并通过稳定性复测即结束。
         /// 扫描进度通过 scanProgress 上报（Percent 为 0-100 整体进度）</summary>
         public async Task<IReadOnlyList<GoogleHostProbe>> ProbeAsync(
             IEnumerable<string> cidrs, IProgress<string>? progress, CancellationToken ct,
@@ -370,123 +371,136 @@ namespace TileDownloader.Services
             var ips = cidrs.SelectMany(EnumerateCandidates)
                 .Distinct(StringComparer.Ordinal).ToList();
             var total = ips.Count;
-            progress?.Report($"全量扫描 {total} 个 IP：边扫边验证，命中 ≤{SatisfactoryLatencyMs}ms 即停 …");
-            ThreadPool.SetMinThreads(TcpScanConcurrency + FullProbeConcurrency, TcpScanConcurrency);
+            progress?.Report($"直连取瓦片探测 {total} 个 IP（并发 {ProbeConcurrency}，单次超时 {ProbeTimeoutSeconds}s）…");
+            ThreadPool.SetMinThreads(ProbeConcurrency * 2, ProbeConcurrency);
 
-            // 提前结束用（与用户取消区分）：命中满意 IP 时取消扫描，但保留已得结果
-            using var scanCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            var channel = Channel.CreateBounded<string>(new BoundedChannelOptions(FullProbeConcurrency * 4)
-            {
-                FullMode = BoundedChannelFullMode.Wait,
-            });
-
-            var found = new ConcurrentBag<GoogleHostProbe>();
-            var satisfied = 0;
-
-            // ===== 验证工人：消费 TCP 可达 IP，做瓦片下载验证 =====
-            var verifiers = Enumerable.Range(0, FullProbeConcurrency)
-                .Select(_ => Task.Run(async () =>
-                {
-                    try
-                    {
-                        await foreach (var ip in channel.Reader.ReadAllAsync(scanCts.Token))
-                        {
-                            var r = await ProbeOneAsync(ip, ct);
-                            if (!r.Accessible)
-                            {
-                                continue;
-                            }
-                            found.Add(r);
-                            if (r.Milliseconds <= SatisfactoryLatencyMs
-                                && Interlocked.Exchange(ref satisfied, 1) == 0)
-                            {
-                                progress?.Report($"命中满意 IP：{r.Ip}（{r.Milliseconds}ms），提前结束扫描");
-                                scanCts.Cancel();
-                            }
-                        }
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        // 提前结束或用户取消
-                    }
-                }))
-                .ToList();
-
-            // ===== 扫描工人：TCP 快筛，可达即投递验证（单 /24 网段限流，避免成片假可达挤占名额）=====
-            var subnetCount = new ConcurrentDictionary<int, int>();
-            var next = -1;
+            var pending = new ConcurrentQueue<string>(ips);
+            // 命中后扩展的同段 IP 插队优先探测：否则会被排在数万个候选之后，凑不齐目标数量
+            var priority = new ConcurrentQueue<string>();
+            var probed = new ConcurrentDictionary<string, byte>(StringComparer.Ordinal);
+            var expanded = new ConcurrentDictionary<int, byte>();
+            var found = new ConcurrentDictionary<string, long>(StringComparer.Ordinal);
             var scanned = 0;
-            var enqueued = 0;
-            var workers = Enumerable.Range(0, Math.Min(TcpScanConcurrency, total))
+            var enough = 0;
+
+            var workers = Enumerable.Range(0, Math.Min(ProbeConcurrency, Math.Max(total, 1)))
                 .Select(_ => Task.Run(async () =>
                 {
-                    while (!scanCts.IsCancellationRequested)
+                    while (Volatile.Read(ref enough) == 0 && !ct.IsCancellationRequested)
                     {
-                        var idx = Interlocked.Increment(ref next);
-                        if (idx >= total)
+                        if (!TryTakeNext(priority, pending, probed, out var ip))
                         {
+                            // 候选与扩展队列都空了：本轮扫描结束
                             return;
                         }
-                        var ip = ips[idx];
-                        if (await TcpConnectOkAsync(ip, scanCts.Token))
-                        {
-                            var key = SubnetKey(ip);
-                            if (subnetCount.AddOrUpdate(key, 1, (_, c) => c + 1) <= MaxProbesPerSubnet
-                                && Interlocked.Increment(ref enqueued) <= MaxFullProbes)
-                            {
-                                await channel.Writer.WriteAsync(ip, scanCts.Token);
-                            }
-                        }
+
+                        var ms = await ProbeTileLatencyAsync(ip, ct);
                         var d = Interlocked.Increment(ref scanned);
                         if (d % 256 == 0 || d == total)
                         {
-                            scanProgress?.Report(new GoogleHostScanProgress(d * 100.0 / total, d, total, found.Count));
+                            scanProgress?.Report(new GoogleHostScanProgress(
+                                Math.Min(d * 100.0 / total, 100), d, total, found.Count));
+                        }
+                        if (ms < 0)
+                        {
+                            continue;
+                        }
+
+                        found[ip] = ms;
+                        progress?.Report($"命中 {ip}（{ms}ms），继续探测同段 …");
+
+                        // 命中说明该 /24 大概率可用：整段补探一次，快速凑够多个 IP
+                        if (expanded.TryAdd(SubnetKey(ip), 0))
+                        {
+                            foreach (var peer in EnumerateSubnet24(ip))
+                            {
+                                if (!probed.ContainsKey(peer))
+                                {
+                                    priority.Enqueue(peer);
+                                }
+                            }
+                        }
+
+                        if (found.Count >= TargetUsableIps && Interlocked.Exchange(ref enough, 1) == 0)
+                        {
+                            progress?.Report($"已找到 {found.Count} 个可下载 IP，结束扫描");
                         }
                     }
                 }))
                 .ToList();
 
-            try
-            {
-                await Task.WhenAll(workers);
-            }
-            catch (OperationCanceledException)
-            {
-                // 提前结束：工人可能正阻塞在写队列时被取消
-            }
-            finally
-            {
-                channel.Writer.TryComplete();
-            }
-            await Task.WhenAll(verifiers);
+            await Task.WhenAll(workers);
             ct.ThrowIfCancellationRequested();
 
-            // 只有真正下到图片的 IP 才算可用
-            return found.OrderBy(r => r.Milliseconds).ToList();
+            if (found.Count == 0)
+            {
+                return Array.Empty<GoogleHostProbe>();
+            }
+
+            // 逐个做稳定性复测（四域名 + 多层级瓦片），按延迟从快到慢，凑够目标数量即可
+            var verified = new List<GoogleHostProbe>();
+            var tried = 0;
+            foreach (var candidate in found.OrderBy(f => f.Value))
+            {
+                if (verified.Count >= TargetUsableIps || tried >= MaxVerifyCandidates)
+                {
+                    break;
+                }
+                tried++;
+                progress?.Report($"复测 {candidate.Key} 的稳定性（{candidate.Value}ms）…");
+                if (await VerifyStableAsync(candidate.Key, ct))
+                {
+                    verified.Add(new GoogleHostProbe(candidate.Key, candidate.Value, true, null));
+                }
+            }
+            return verified;
         }
 
-        /// <summary>/24 网段键（用于限制同段验证数量）</summary>
+        /// <summary>取下一个待探测 IP：优先取命中后扩展进队的同段 IP，其次才是正常候选；
+        /// 都为空（或已探测过）时返回 false 表示没有更多可探测目标</summary>
+        private static bool TryTakeNext(
+            ConcurrentQueue<string> priority, ConcurrentQueue<string> pending,
+            ConcurrentDictionary<string, byte> probed, out string ip)
+        {
+            while (priority.TryDequeue(out var candidate))
+            {
+                if (probed.TryAdd(candidate, 0))
+                {
+                    ip = candidate;
+                    return true;
+                }
+            }
+            while (pending.TryDequeue(out var candidate))
+            {
+                if (probed.TryAdd(candidate, 0))
+                {
+                    ip = candidate;
+                    return true;
+                }
+            }
+            ip = string.Empty;
+            return false;
+        }
+
+        /// <summary>列出某 IP 所在 /24 内的其他地址（跳过网络号与广播地址）</summary>
+        private static IEnumerable<string> EnumerateSubnet24(string ip)
+        {
+            var b = IPAddress.Parse(ip).GetAddressBytes();
+            for (var host = 1; host <= 254; host++)
+            {
+                if (host == b[3])
+                {
+                    continue;
+                }
+                yield return $"{b[0]}.{b[1]}.{b[2]}.{host}";
+            }
+        }
+
+        /// <summary>/24 网段键（用于判断某段是否已补探过）</summary>
         private static int SubnetKey(string ip)
         {
             var b = IPAddress.Parse(ip).GetAddressBytes();
             return (b[0] << 16) | (b[1] << 8) | b[2];
-        }
-
-        /// <summary>TCP 快筛：仅连接 443 端口（不 TLS 握手），超时或拒绝均视为不可达</summary>
-        private static async Task<bool> TcpConnectOkAsync(string ip, CancellationToken ct)
-        {
-            try
-            {
-                using var socket = new Socket(SocketType.Stream, ProtocolType.Tcp) { NoDelay = true };
-                using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                timeoutCts.CancelAfter(TcpScanTimeoutMs);
-                await socket.ConnectAsync(IPAddress.Parse(ip), 443, timeoutCts.Token);
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
         }
 
         /// <summary>用指定 IP + 域名直连取一张瓦片（忽略证书错误），返回是否真正拿到图片</summary>
@@ -553,24 +567,14 @@ namespace TileDownloader.Services
             return true;
         }
 
-        /// <summary>探测单个 IP：依次用 mt0–mt3 作为 SNI/Host 直连取瓦片（忽略证书错误），
-        /// 任一域名能真正下到图片即算可用</summary>
-        private static async Task<GoogleHostProbe> ProbeOneAsync(string ip, CancellationToken ct)
+        /// <summary>探测单个 IP：用 mt0.google.com 作为 SNI/Host 直连取一张瓦片（忽略证书错误），
+        /// 拿到真图片返回耗时（毫秒），否则返回 -1</summary>
+        private static async Task<long> ProbeTileLatencyAsync(string ip, CancellationToken ct)
         {
             var sw = Stopwatch.StartNew();
-            var lastError = "未尝试";
-            foreach (var host in ProbeHosts)
-            {
-                var (ok, error) = await FetchTileAsync(ip, host, ProbePath, ct);
-                if (ok)
-                {
-                    sw.Stop();
-                    return new GoogleHostProbe(ip, sw.ElapsedMilliseconds, true, null);
-                }
-                lastError = error;
-            }
+            var (ok, _) = await FetchTileAsync(ip, ProbeHosts[0], ProbePath, ct);
             sw.Stop();
-            return new GoogleHostProbe(ip, sw.ElapsedMilliseconds, false, lastError);
+            return ok ? sw.ElapsedMilliseconds : -1;
         }
 
         /// <summary>按文件头判断是否为图片（JPEG/PNG/GIF/WebP/BMP）</summary>
@@ -632,15 +636,15 @@ namespace TileDownloader.Services
             }
         }
 
-        /// <summary>扫描 + 稳定性复测，返回最快且可靠的 IP（无则 null）；
+        /// <summary>扫描 + 稳定性复测，返回可用 IP 列表（最快在前，最多 <see cref="TargetUsableIps"/> 个；无则空）；
         /// 候选来自 Google 官方 IP 段与 mt0–3 的 DNS 解析结果，扫描进度经 scanProgress 上报</summary>
-        public async Task<GoogleHostProbe?> FindBestAsync(
+        public async Task<IReadOnlyList<GoogleHostProbe>> FindUsableAsync(
             IProgress<string>? progress, CancellationToken ct,
             IProgress<GoogleHostScanProgress>? scanProgress = null)
         {
             var cidrs = (await QueryCidrsAsync(progress, ct)).ToList();
 
-            // DoH 解析 mt0–3 的真实服务 IP，排在扫描最前，命中即可提前结束
+            // DoH 解析 mt0–3 的真实服务 IP，排在扫描最前
             var mtIps = await ResolveMtIpsAsync(progress, ct);
             cidrs.InsertRange(0, mtIps.Select(ip => $"{ip}/32"));
 
@@ -648,28 +652,24 @@ namespace TileDownloader.Services
             if (ok.Count == 0)
             {
                 progress?.Report("未找到能下载瓦片图片的 IP");
-                return null;
-            }
-            // 逐个对候选做稳定性复测：四域名 + 多层级瓦片都能出图才采用
-            foreach (var candidate in ok)
-            {
-                progress?.Report($"复测 {candidate.Ip} 的稳定性（{candidate.Milliseconds}ms）…");
-                if (await VerifyStableAsync(candidate.Ip, ct))
-                {
-                    progress?.Report($"最快 IP：{candidate.Ip}（{candidate.Milliseconds}ms，已复测），共 {ok.Count} 个可下载");
-                    return candidate;
-                }
-                progress?.Report($"{candidate.Ip} 复测未通过，尝试下一个 …");
+                return Array.Empty<GoogleHostProbe>();
             }
 
-            progress?.Report($"找到 {ok.Count} 个可下载 IP，但稳定性复测均未通过");
-            return null;
+            progress?.Report($"可用 IP 共 {ok.Count} 个：" +
+                string.Join("、", ok.Select(p => $"{p.Ip}（{p.Milliseconds}ms）")));
+            return ok;
         }
 
-        /// <summary>生成写入 hosts 的条目（mt0–mt3）</summary>
-        public static string BuildHostsEntries(string ip) =>
-            string.Join("\n", new[] { "mt0", "mt1", "mt2", "mt3" }
-                .Select(s => $"{ip} {s}.google.com"));
+        /// <summary>生成写入 hosts 的条目：按延迟顺序把 IP 分给 mt0–mt3（不足 4 个时用最快的补齐）</summary>
+        public static string BuildHostsEntries(IReadOnlyList<string> ips)
+        {
+            if (ips.Count == 0)
+            {
+                return string.Empty;
+            }
+            return string.Join("\n", ProbeHosts.Select(
+                (host, i) => $"{ips[Math.Min(i, ips.Count - 1)]} {host}"));
+        }
     }
 
     /// <summary>Google IP 探测结果（Accessible=true 表示已实际下载到瓦片图片）</summary>

@@ -13,12 +13,16 @@ namespace TileDownloader.Services
     /// <summary>
     /// 单文件 pak 存储：
     /// 单一 SQLite 文件（OutputPath），含 infos 表 + blocks 主表（z&lt;10）+ blocks_{z}_{tx}_{ty} 分表（z&gt;=10），
-    /// 分表规则沿用 PakBlock.GetTable。续传按瓦片粒度：初始化时预加载任务涉及分表的全部瓦片主键
+    /// 分表规则沿用 PakBlock.GetTable。续传按瓦片粒度：初始化时只按「任务范围 ∩ 分块」预加载涉及瓦片到分块位图，
+    /// 运行期存在性判定走内存（32KB/分块），仅未登记分块/确认矩形外才回源查库
     /// </summary>
     public class PakTileStore : ITileStore
     {
         /// <summary>分块边长（与 PakBlock.GetTable 的 512 分块规则一致）</summary>
-        private const int BlockSize = 512;
+        private const int BlockSize = TileUrlBuilder.BlockSize;
+
+        /// <summary>单次落盘事务的最大瓦片数</summary>
+        private const int WriteBatchSize = 1000;
 
         public string FormatId => "Pak";
         public string DisplayName => "单文件 pak";
@@ -26,11 +30,11 @@ namespace TileDownloader.Services
 
         private TileTaskOptions? _options;
         private IFreeSql? _db;
-        private Channel<(string table, PakBlock block)>? _tileChannel;
+        private Channel<(int z, int tx, int ty, PakBlock block)>? _tileChannel;
         private Task? _writerTask;
 
-        /// <summary>瓦片存在缓存（"z_x_y" → 1），初始化时按涉及分表全量预加载</summary>
-        private readonly ConcurrentDictionary<string, byte> _exists = new();
+        /// <summary>分块缓存：(z, tx, ty) → 已确认矩形 + 存在性位图</summary>
+        private readonly ConcurrentDictionary<(int z, int tx, int ty), PakBlockCache> _blocks = new();
 
         // 检查点：最后保存的瓦片位置（近似记录）
         private int _curLevel;
@@ -41,7 +45,7 @@ namespace TileDownloader.Services
         {
             _options = options;
             _db = new FreeSqlBuilder()
-                .UseConnectionString(DataType.Sqlite, $"data source={options.OutputPath}")
+                .UseConnectionString(DataType.Sqlite, BuildConnectionString(options.OutputPath))
                 .UseAutoSyncStructure(true)
                 .Build();
 
@@ -62,42 +66,60 @@ namespace TileDownloader.Services
                 CurY = 0,
             }).ExecuteAffrowsAsync(ct);
 
-            // 枚举任务涉及分表。分表（blocks_{z}_{tx}_{ty}）不会由 AutoSyncStructure 自动创建，需手动确保存在
+            // 枚举任务涉及分表并登记「已确认矩形」（矩形外不预加载，也无需查库）
             var tables = new HashSet<string>();
+            var pending = new List<(int z, string table, PakBlockCache cache)>();
             for (var z = options.MinLevel; z <= options.MaxLevel; z++)
             {
-                var (fc, lc) = TileUrlBuilder.ColRange(options.MinX, options.MaxX, z);
-                var (fr, lr) = TileUrlBuilder.RowRange(options.MinY, options.MaxY, z);
+                var (fc, lc) = TileUrlBuilder.ColRange(options.MinX, options.MaxX, z, options.FullBlock);
+                var (fr, lr) = TileUrlBuilder.RowRange(options.MinY, options.MaxY, z, options.FullBlock);
                 for (var tx = fc / BlockSize; tx <= lc / BlockSize; tx++)
                 {
                     for (var ty = fr / BlockSize; ty <= lr / BlockSize; ty++)
                     {
-                        tables.Add(PakBlock.GetTable(z, tx * BlockSize, ty * BlockSize));
+                        var blockX = tx * BlockSize;
+                        var blockY = ty * BlockSize;
+                        var cache = new PakBlockCache(
+                            Math.Max(fc, blockX), Math.Min(lc, blockX + BlockSize - 1),
+                            Math.Max(fr, blockY), Math.Min(lr, blockY + BlockSize - 1));
+                        var table = PakBlock.GetTable(z, blockX, blockY);
+                        tables.Add(table);
+                        _blocks[(z, tx, ty)] = cache;
+                        pending.Add((z, table, cache));
                     }
                 }
             }
-            foreach (var table in tables)
+
+            // 建表合并为单条多语句命令：一次往返 + 单事务，避免逐表隐式事务反复刷盘。
+            // 表名由 PakBlock.GetTable 内部生成，无注入风险；结构与 FreeSql 为 PakBlock 建的 blocks 主表一致
+            if (tables.Count > 0)
             {
-                // 表名由 PakBlock.GetTable 内部生成，无注入风险；结构与 FreeSql 为 PakBlock 建的 blocks 主表一致
-                await _db.Ado.ExecuteNonQueryAsync(
-                    $"CREATE TABLE IF NOT EXISTS {table} (z INTEGER NOT NULL, x INTEGER NOT NULL, y INTEGER NOT NULL, tile BLOB, PRIMARY KEY (z, x, y))");
+                var ddl = string.Join("\n", tables.Select(t =>
+                    $"CREATE TABLE IF NOT EXISTS {t} (z INTEGER NOT NULL, x INTEGER NOT NULL, y INTEGER NOT NULL, tile BLOB, PRIMARY KEY (z, x, y));"));
+                await _db.Ado.ExecuteNonQueryAsync(ddl);
             }
 
-            // 预加载存在性缓存：只查主键三列、不拉取 tile blob，控制内存量级
-            foreach (var table in tables)
+            // 预加载存在性：只取任务范围内的主键两列（不拉 tile blob），写入分块位图
+            foreach (var (z, table, cache) in pending)
             {
+                var x0 = cache.X0;
+                var x1 = cache.X1;
+                var y0 = cache.Y0;
+                var y1 = cache.Y1;
+
                 // 注意：ISelect.AsTable 签名为 Func<Type, string, string>（实体类型/原表名 → 目标表名），
                 // 与 IInsertOrUpdate.AsTable 的 Func<string, string> 不同
                 var rows = await _db.Select<PakBlock>().AsTable((_, _) => table)
-                    .ToListAsync(a => new { a.Z, a.X, a.Y }, ct);
+                    .Where(b => b.Z == z && b.X >= x0 && b.X <= x1 && b.Y >= y0 && b.Y <= y1)
+                    .ToListAsync(b => new { b.X, b.Y }, ct);
                 foreach (var row in rows)
                 {
-                    _exists.TryAdd(TileKey(row.Z, row.X, row.Y), 1);
+                    cache.Set(row.X, row.Y);
                 }
             }
 
             // 启动批量落盘通道，避免多线程 SQLite 分表写锁冲突
-            _tileChannel = Channel.CreateBounded<(string table, PakBlock block)>(new BoundedChannelOptions(2000)
+            _tileChannel = Channel.CreateBounded<(int z, int tx, int ty, PakBlock block)>(new BoundedChannelOptions(2000)
             {
                 SingleReader = true,
                 SingleWriter = false,
@@ -106,68 +128,120 @@ namespace TileDownloader.Services
             _writerTask = Task.Run(ProcessTileWriterLoopAsync);
         }
 
-        public Task<bool> TileExistsAsync(int z, int x, int y, CancellationToken ct)
+        public async Task<bool> TileExistsAsync(int z, int x, int y, CancellationToken ct)
         {
-            // 引擎只查询任务范围内的瓦片（初始化已按范围预加载），直接查缓存
-            return Task.FromResult(_exists.ContainsKey(TileKey(z, x, y)));
+            if (_blocks.TryGetValue((z, x / BlockSize, y / BlockSize), out var cache))
+            {
+                if (cache.Test(x, y))
+                {
+                    return true;
+                }
+                if (cache.InRange(x, y))
+                {
+                    // 已确认矩形内未置位即确认不存在（初始化已按同一枚举范围预加载）
+                    return false;
+                }
+            }
+
+            // 未登记分块 / 确认矩形外（引擎按枚举范围查询，正常不会走到）：回源查库兜底
+            var db = _db;
+            if (db == null)
+            {
+                return false;
+            }
+            var table = PakBlock.GetTable(z, x, y);
+            return await db.Select<PakBlock>()
+                .AsTable((_, _) => table)
+                .Where(b => b.Z == z && b.X == x && b.Y == y)
+                .AnyAsync(ct);
         }
 
         public async Task SaveTileAsync(int z, int x, int y, byte[] data, CancellationToken ct)
         {
-            var table = PakBlock.GetTable(z, x, y);
-            _exists[TileKey(z, x, y)] = 1;
+            var tx = x / BlockSize;
+            var ty = y / BlockSize;
+            if (_blocks.TryGetValue((z, tx, ty), out var cache))
+            {
+                cache.Set(x, y);
+            }
             _curLevel = z;
             _curX = x;
             _curY = y;
 
             if (_tileChannel != null)
             {
-                await _tileChannel.Writer.WriteAsync((table, new PakBlock { Z = z, X = x, Y = y, Tile = data }), ct);
+                await _tileChannel.Writer.WriteAsync((z, tx, ty, new PakBlock { Z = z, X = x, Y = y, Tile = data }), ct);
             }
         }
 
         private async Task ProcessTileWriterLoopAsync()
         {
-            if (_tileChannel == null || _db == null)
+            var db = _db;
+            var channel = _tileChannel;
+            var onWriteFailed = _options?.OnTileWriteFailed;
+            if (db == null || channel == null)
             {
                 return;
             }
 
-            var reader = _tileChannel.Reader;
-            var batch = new List<(string table, PakBlock block)>(100);
+            var reader = channel.Reader;
+            var batch = new List<(int z, int tx, int ty, PakBlock block)>(WriteBatchSize);
 
             while (await reader.WaitToReadAsync())
             {
-                while (batch.Count < 100 && reader.TryRead(out var item))
+                while (batch.Count < WriteBatchSize && reader.TryRead(out var item))
                 {
                     batch.Add(item);
                 }
 
-                if (batch.Count > 0)
+                if (batch.Count == 0)
                 {
-                    foreach (var group in batch.GroupBy(b => b.table))
+                    continue;
+                }
+
+                foreach (var group in batch.GroupBy(b => (b.z, b.tx, b.ty)))
+                {
+                    var table = PakBlock.GetTable(group.Key.z, group.Key.tx * BlockSize, group.Key.ty * BlockSize);
+                    if (await TryWriteBatchAsync(db, table, group.Select(g => g.block)))
                     {
-                        try
+                        continue;
+                    }
+
+                    // 落盘最终失败：撤销存在性标记，避免续传时静默漏掉这些瓦片；同时上报错误提示用户
+                    if (_blocks.TryGetValue(group.Key, out var cache))
+                    {
+                        foreach (var item in group)
                         {
-                            await _db.InsertOrUpdate<PakBlock>().AsTable(_ => group.Key)
-                                .SetSource(group.Select(g => g.block))
-                                .ExecuteAffrowsAsync();
-                        }
-                        catch
-                        {
-                            try
-                            {
-                                await Task.Delay(50);
-                                await _db.InsertOrUpdate<PakBlock>().AsTable(_ => group.Key)
-                                    .SetSource(group.Select(g => g.block))
-                                    .ExecuteAffrowsAsync();
-                            }
-                            catch
-                            {
-                            }
+                            cache.Clear(item.block.X, item.block.Y);
                         }
                     }
-                    batch.Clear();
+                    var first = group.First().block;
+                    onWriteFailed?.Invoke(first.Z, first.X, first.Y,
+                        $"写入 {table} 失败（本批 {group.Count()} 个瓦片），将在续传时重新下载");
+                }
+                batch.Clear();
+            }
+        }
+
+        /// <summary>落盘一批瓦片（锁冲突时重试一次），返回是否成功</summary>
+        private static async Task<bool> TryWriteBatchAsync(IFreeSql db, string table, IEnumerable<PakBlock> blocks)
+        {
+            for (var attempt = 0; ; attempt++)
+            {
+                try
+                {
+                    await db.InsertOrUpdate<PakBlock>().AsTable(_ => table)
+                        .SetSource(blocks)
+                        .ExecuteAffrowsAsync();
+                    return true;
+                }
+                catch
+                {
+                    if (attempt >= 1)
+                    {
+                        return false;
+                    }
+                    await Task.Delay(50);
                 }
             }
         }
@@ -206,6 +280,11 @@ namespace TileDownloader.Services
             _db = null;
         }
 
-        private static string TileKey(int z, int x, int y) => $"{z}_{x}_{y}";
+        /// <summary>
+        /// 连接串：WAL 下读不阻塞写、busy_timeout 让锁冲突等待而非直接失败（读取与落盘共用同一文件）；
+        /// synchronous/cache_size 面向批量落盘吞吐
+        /// </summary>
+        private static string BuildConnectionString(string path) =>
+            $"data source={path};poolsize=3;journal mode=WAL;busy_timeout=15000;synchronous=NORMAL;cache_size=-32000";
     }
 }

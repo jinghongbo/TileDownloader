@@ -92,7 +92,7 @@
                     <StackPanel>
                         <ui:TextBlock FontTypography="BodyStrong" Text="Google Hosts 加速" />
                         <TextBlock Style="{StaticResource SettingHint}" Margin="0,4,0,12"
-                                   Text="查询 _spf.google.com 的 SPF 记录获取 Google IPv4 段，全量扫描（TCP 快筛 + 瓦片验证）找出最快 IP，写入本机 hosts 替换 mt0-3.google.com 以加速卫星地图下载。全量扫描约 10 万个 IP，通常需要 1-3 分钟" />
+                                   Text="拉取 Google 官方 IP 段（goog.json 扣除 GCP 段）并结合 mt0-3 的 DNS 解析结果，直连逐个取瓦片找出能真正下到图的最快 IP，写入本机 hosts 替换 mt0-3.google.com 以加速卫星地图下载。命中满意延迟即结束；需要本机可直连 Google（不走代理）" />
 
                         <Grid Margin="0,0,0,8">
                             <Grid.ColumnDefinitions>

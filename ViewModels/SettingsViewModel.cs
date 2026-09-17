@@ -152,7 +152,7 @@ namespace TileDownloader.ViewModels
                 var scanProgress = new Progress<GoogleHostScanProgress>(p =>
                 {
                     GoogleHostsProgressPercent = p.Percent;
-                    GoogleHostsProgressText = $"已探测 {p.Done}/{p.Total}，可达 {p.Reachable}";
+                    GoogleHostsProgressText = $"已扫描 {p.Done}/{p.Total}，命中 {p.Reachable}";
                 });
                 var best = await _googleHostsService.FindBestAsync(progress, ct, scanProgress);
 
@@ -167,7 +167,7 @@ namespace TileDownloader.ViewModels
                 {
                     BestGoogleIp = null;
                     BestGoogleIpMs = 0;
-                    GoogleHostsMessage = "未找到可访问的 Google IP，请检查网络连通性（探测始终直连，不走代理）";
+                    GoogleHostsMessage = "未找到能下载瓦片图片的 Google IP，请检查网络连通性（探测始终直连，不走代理）";
                 }
             }
             catch (OperationCanceledException)

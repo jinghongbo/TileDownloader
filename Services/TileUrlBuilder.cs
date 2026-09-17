@@ -89,6 +89,7 @@ namespace TileDownloader.Services
         /// <summary>
         /// 按来源配置创建 HttpClient（UA/Referer/Cookies），同一来源复用。
         /// useProxy=true 跟随系统代理（默认），false 直连（配合 Google Hosts 加速）。
+        /// 忽略 HTTPS 证书错误：hosts 把域名指向 IP 时证书常不匹配，只要能取到瓦片即可。
         /// </summary>
         public static HttpClient CreateClient(DownloadSource source, bool useProxy = true)
         {
@@ -96,6 +97,7 @@ namespace TileDownloader.Services
             {
                 AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate,
                 UseProxy = useProxy,
+                ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
             };
             if (!string.IsNullOrWhiteSpace(source.Cookies))
             {

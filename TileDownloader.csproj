@@ -9,7 +9,7 @@
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
 
     <!--  程序集元数据：项目仓库与版权信息（写入 exe 文件属性）  -->
-    <Version>1.0.2</Version>
+    <Version>1.0.3</Version>
     <Authors>jinghongbo</Authors>
     <Product>通用瓦片地图下载工具</Product>
     <Description>批量下载 XYZ 瓦片地图 · 支持多文件 pak / 单文件 pak / MBTiles / 瓦片目录输出</Description>

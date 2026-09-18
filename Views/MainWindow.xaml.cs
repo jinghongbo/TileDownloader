@@ -24,6 +24,15 @@ namespace TileDownloader.Views
         {
             InitializeComponent();
             DataContext = viewModel;
+
+            try
+            {
+                Icon = new System.Windows.Media.Imaging.BitmapImage(new Uri("pack://application:,,,/Resources/logo.ico"));
+            }
+            catch
+            {
+            }
+
             _snackbarService = snackbarService;
             _contentDialogService = contentDialogService;
             _navigationService = navigationService;
@@ -42,6 +51,11 @@ namespace TileDownloader.Views
 
             // 默认打开"新建下载"页
             NavView.Navigate("NewDownload");
+        }
+
+        public bool NavigateTo(string tag)
+        {
+            return NavView.Navigate(tag);
         }
     }
 }

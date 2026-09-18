@@ -58,17 +58,43 @@ namespace TileDownloader.Controls
         /// <summary>视野变化后延迟多久才重启瓦片请求（合并连续平移/缩放，避免请求风暴）</summary>
         private static readonly TimeSpan ViewDirtyDebounce = TimeSpan.FromMilliseconds(80);
 
-        // ---------- 静态绘制资源（全部 Freeze） ----------
+        // ---------- 静态绘制资源（全部 Freeze，深浅主题自适应） ----------
 
         private static readonly SolidColorBrush TransparentBrush = MakeBrush(Color.FromArgb(0, 0, 0, 0));
-        private static readonly SolidColorBrush MapBackgroundBrush = MakeBrush(Color.FromRgb(0x1E, 0x1E, 0x24));
-        private static readonly SolidColorBrush SelectionFillBrush = MakeBrush(Color.FromArgb(0x33, 0x4C, 0xC2, 0xFF));
-        private static readonly Pen SelectionPen = MakePen(Color.FromArgb(0xFF, 0x4C, 0xC2, 0xFF), 1.5);
-        private static readonly SolidColorBrush OverlayBackBrush = MakeBrush(Color.FromArgb(0xB0, 0x00, 0x00, 0x00));
-        private static readonly SolidColorBrush OverlayTextBrush = MakeBrush(Colors.White);
+
+        // 深色主题画笔
+        private static readonly SolidColorBrush DarkMapBackgroundBrush = MakeBrush(Color.FromRgb(0x18, 0x19, 0x20));
+        private static readonly SolidColorBrush DarkSelectionFillBrush = MakeBrush(Color.FromArgb(0x35, 0x4C, 0xC2, 0xFF));
+        private static readonly Pen DarkSelectionPen = MakePen(Color.FromArgb(0xFF, 0x4C, 0xC2, 0xFF), 1.5);
+        private static readonly SolidColorBrush DarkOverlayBackBrush = MakeBrush(Color.FromArgb(0xD0, 0x1E, 0x1E, 0x26));
+        private static readonly Pen DarkOverlayBorderPen = MakePen(Color.FromArgb(0x33, 0xFF, 0xFF, 0xFF), 1.0);
+        private static readonly SolidColorBrush DarkOverlayTextBrush = MakeBrush(Color.FromRgb(0xEE, 0xEE, 0xF0));
+        private static readonly Pen DarkTileGridPen = MakePen(Color.FromArgb(0x18, 0xFF, 0xFF, 0xFF), 1.0);
+
+        // 浅色主题画笔
+        private static readonly SolidColorBrush LightMapBackgroundBrush = MakeBrush(Color.FromRgb(0xF0, 0xF2, 0xF5));
+        private static readonly SolidColorBrush LightSelectionFillBrush = MakeBrush(Color.FromArgb(0x2E, 0x00, 0x78, 0xD4));
+        private static readonly Pen LightSelectionPen = MakePen(Color.FromArgb(0xFF, 0x00, 0x78, 0xD4), 1.5);
+        private static readonly SolidColorBrush LightOverlayBackBrush = MakeBrush(Color.FromArgb(0xE8, 0xFF, 0xFF, 0xFF));
+        private static readonly Pen LightOverlayBorderPen = MakePen(Color.FromArgb(0x20, 0x00, 0x00, 0x00), 1.0);
+        private static readonly SolidColorBrush LightOverlayTextBrush = MakeBrush(Color.FromRgb(0x1A, 0x1A, 0x1A));
+        private static readonly Pen LightTileGridPen = MakePen(Color.FromArgb(0x15, 0x00, 0x00, 0x00), 1.0);
+
         private static readonly Typeface OverlayTypeface =
             new Typeface(new FontFamily("Microsoft YaHei UI"), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
         private const double OverlayFontSize = 12.0;
+
+        private static bool IsDarkMode()
+        {
+            try
+            {
+                return Wpf.Ui.Appearance.ApplicationThemeManager.GetAppTheme() == Wpf.Ui.Appearance.ApplicationTheme.Dark;
+            }
+            catch
+            {
+                return true;
+            }
+        }
 
         private static SolidColorBrush MakeBrush(Color color)
         {
@@ -217,6 +243,18 @@ namespace TileDownloader.Controls
             Cursor = Cursors.Cross;
             // 祖先回退放大绘制时使用较低质量插值，换取流畅度
             RenderOptions.SetBitmapScalingMode(this, BitmapScalingMode.LowQuality);
+
+            // 监听主题切换，即时刷新画布与浮层
+            try
+            {
+                Wpf.Ui.Appearance.ApplicationThemeManager.Changed += (_, _) =>
+                {
+                    Dispatcher.InvokeAsync(InvalidateVisual);
+                };
+            }
+            catch
+            {
+            }
 
             _viewDirtyTimer = new DispatcherTimer { Interval = ViewDirtyDebounce };
             _viewDirtyTimer.Tick += (_, _) =>
@@ -623,23 +661,24 @@ namespace TileDownloader.Controls
                 return;
             }
 
+            var isDark = IsDarkMode();
             var view = new Rect(0, 0, width, height);
-            // 透明底保证命中测试可用；深色底在瓦片未加载时兜底
+            // 透明底保证命中测试可用；自适应底色在瓦片未加载时提供优雅视觉
             dc.DrawRectangle(TransparentBrush, null, view);
-            dc.DrawRectangle(MapBackgroundBrush, null, view);
+            dc.DrawRectangle(isDark ? DarkMapBackgroundBrush : LightMapBackgroundBrush, null, view);
 
             var z = Zoom;
-            DrawTiles(dc, width, height, z);
-            DrawSelectedRange(dc, width, height, z);
+            DrawTiles(dc, width, height, z, isDark);
+            DrawSelectedRange(dc, width, height, z, isDark);
             if (_isSelecting)
             {
-                DrawDragSelection(dc);
+                DrawDragSelection(dc, isDark);
             }
 
-            DrawOverlay(dc, width, height);
+            DrawOverlay(dc, width, height, isDark);
         }
 
-        private void DrawTiles(DrawingContext dc, double width, double height, int z)
+        private void DrawTiles(DrawingContext dc, double width, double height, int z, bool isDark)
         {
             var viewLeft = LonToWorldX(CenterLon, z) - width / 2.0;
             var viewTop = LatToWorldY(CenterLat, z) - height / 2.0;
@@ -658,13 +697,17 @@ namespace TileDownloader.Controls
                         continue;
                     }
 
-                    DrawAncestorFallback(dc, dest, z, tx, ty);
+                    if (!DrawAncestorFallback(dc, dest, z, tx, ty))
+                    {
+                        // 瓦片与祖先均未就绪时绘制微光网格，提供精准地理定位参考
+                        dc.DrawRectangle(null, isDark ? DarkTileGridPen : LightTileGridPen, dest);
+                    }
                 }
             }
         }
 
         /// <summary>当前级瓦片未就绪时，向上查找已就绪的祖先瓦片，裁出对应子区域放大绘制</summary>
-        private void DrawAncestorFallback(DrawingContext dc, Rect dest, int z, int x, int y)
+        private bool DrawAncestorFallback(DrawingContext dc, Rect dest, int z, int x, int y)
         {
             for (var s = 1; s <= MaxAncestorFallback && z - s >= 0; s++)
             {
@@ -690,12 +733,14 @@ namespace TileDownloader.Controls
                 // 用 CroppedBitmap 从祖先位图裁出子区域再放大绘制（DrawImage 无 sourceRect 重载）
                 var crop = new CroppedBitmap(image, new Int32Rect(offX * sub, offY * sub, sub, sub));
                 dc.DrawImage(crop, dest);
-                return;
+                return true;
             }
+
+            return false;
         }
 
         /// <summary>绘制 SelectedRange 对应的选区矩形（外部赋值也会在此反向渲染）</summary>
-        private void DrawSelectedRange(DrawingContext dc, double width, double height, int z)
+        private void DrawSelectedRange(DrawingContext dc, double width, double height, int z, bool isDark)
         {
             var env = SelectedRange;
             if (env == null || env.IsNull)
@@ -714,18 +759,22 @@ namespace TileDownloader.Controls
             var rect = new Rect(
                 Math.Min(x1, x2), Math.Min(y1, y2),
                 Math.Abs(x2 - x1), Math.Abs(y2 - y1));
-            dc.DrawRectangle(SelectionFillBrush, SelectionPen, rect);
+            var fillBrush = isDark ? DarkSelectionFillBrush : LightSelectionFillBrush;
+            var pen = isDark ? DarkSelectionPen : LightSelectionPen;
+            dc.DrawRectangle(fillBrush, pen, rect);
         }
 
         /// <summary>绘制拖拽中的临时框选矩形（屏幕坐标）</summary>
-        private void DrawDragSelection(DrawingContext dc)
+        private void DrawDragSelection(DrawingContext dc, bool isDark)
         {
             var rect = new Rect(_dragStart, _dragCurrent);
-            dc.DrawRectangle(SelectionFillBrush, SelectionPen, rect);
+            var fillBrush = isDark ? DarkSelectionFillBrush : LightSelectionFillBrush;
+            var pen = isDark ? DarkSelectionPen : LightSelectionPen;
+            dc.DrawRectangle(fillBrush, pen, rect);
         }
 
         /// <summary>左下角信息浮层：中心经纬度 / 层级 / 选区 / 操作提示</summary>
-        private void DrawOverlay(DrawingContext dc, double width, double height)
+        private void DrawOverlay(DrawingContext dc, double width, double height, bool isDark)
         {
             var pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
 
@@ -741,6 +790,10 @@ namespace TileDownloader.Controls
             const double padY = 7.0;
             const double gap = 3.0;
 
+            var textBrush = isDark ? DarkOverlayTextBrush : LightOverlayTextBrush;
+            var backBrush = isDark ? DarkOverlayBackBrush : LightOverlayBackBrush;
+            var borderPen = isDark ? DarkOverlayBorderPen : LightOverlayBorderPen;
+
             var formatted = new List<FormattedText>(lines.Length);
             double lineHeight = 0;
             double maxLineWidth = 0;
@@ -752,7 +805,7 @@ namespace TileDownloader.Controls
                     FlowDirection.LeftToRight,
                     OverlayTypeface,
                     OverlayFontSize,
-                    OverlayTextBrush,
+                    textBrush,
                     pixelsPerDip);
                 formatted.Add(ft);
                 lineHeight = Math.Max(lineHeight, ft.Height);
@@ -762,7 +815,7 @@ namespace TileDownloader.Controls
             var boxWidth = maxLineWidth + padX * 2;
             var boxHeight = formatted.Count * lineHeight + (formatted.Count - 1) * gap + padY * 2;
             var box = new Rect(8, height - boxHeight - 8, boxWidth, boxHeight);
-            dc.DrawRoundedRectangle(OverlayBackBrush, null, box, 6, 6);
+            dc.DrawRoundedRectangle(backBrush, borderPen, box, 6, 6);
 
             var textY = box.Top + padY;
             foreach (var ft in formatted)

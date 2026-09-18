@@ -16,7 +16,22 @@
             <cvt:BoolToVisibilityConverter x:Key="InverseBoolToVis" Inverse="True" />
             <cvt:EnvelopeConverter x:Key="EnvelopeCvt" />
 
-            <!-- 全局 TextBlock 前景色绑定，确保深色模式下所有文本默认使用白色/主文本色，绝不退化为系统默认黑色 -->
+            <!--  自适应语义主题画笔：深浅双模式即时响应  -->
+            <SolidColorBrush x:Key="ThemeFloatingBarBackgroundBrush" Color="#D01E1E26" />
+            <SolidColorBrush x:Key="ThemeFloatingBarBorderBrush" Color="#33FFFFFF" />
+            <SolidColorBrush x:Key="ThemeSuccessBrush" Color="#4CD964" />
+            <SolidColorBrush x:Key="ThemeSuccessBackgroundBrush" Color="#254CD964" />
+            <SolidColorBrush x:Key="ThemeDangerBrush" Color="#FF7581" />
+            <SolidColorBrush x:Key="ThemeDangerBackgroundBrush" Color="#28FF7581" />
+            <SolidColorBrush x:Key="ThemeWarningBrush" Color="#FFB800" />
+            <SolidColorBrush x:Key="ThemeWarningBackgroundBrush" Color="#25FFB800" />
+            <SolidColorBrush x:Key="ThemeRunningBrush" Color="#4CC2FF" />
+            <SolidColorBrush x:Key="ThemeRunningBackgroundBrush" Color="#204CC2FF" />
+            <SolidColorBrush x:Key="ThemeTagBackgroundBrush" Color="#18FFFFFF" />
+            <SolidColorBrush x:Key="ThemeMapBackgroundBrush" Color="#181920" />
+            <SolidColorBrush x:Key="ThemeStepBadgeBrush" Color="#0078D4" />
+
+            <!-- 全局 TextBlock 前景色绑定，确保深浅模式下文本动态跟随主题主文本色 -->
             <Style TargetType="TextBlock">
                 <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
             </Style>

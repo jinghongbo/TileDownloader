@@ -256,7 +256,7 @@ namespace TileDownloader.ViewModels
         public Uri RepositoryUri { get; } = new("https://github.com/jinghongbo/TileDownloader");
 
         /// <summary>项目仓库地址展示文本（省略协议前缀）</summary>
-        public string RepositoryText => "github.com/jinghongbo/TileDownloader";
+        public string RepositoryText => "https://github.com/jinghongbo/TileDownloader";
 
         /// <summary>版权信息</summary>
         public string AppCopyright => "© 2026 jinghongbo";

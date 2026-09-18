@@ -361,6 +361,17 @@ namespace TileDownloader.Services
             }
         }
 
+        /// <summary>Fisher-Yates 随机打乱算法</summary>
+        private static void Shuffle<T>(IList<T> list)
+        {
+            var rng = Random.Shared;
+            for (var i = list.Count - 1; i > 0; i--)
+            {
+                var j = rng.Next(i + 1);
+                (list[i], list[j]) = (list[j], list[i]);
+            }
+        }
+
         /// <summary>全量探测：直接用 HttpClient 逐 IP 取一张瓦片（短超时），命中后立刻把该 IP 所在 /24 整段
         /// 也探一遍（可用 IP 往往成片出现），凑够 <see cref="TargetUsableIps"/> 个并通过稳定性复测即结束。
         /// 扫描进度通过 scanProgress 上报（Percent 为 0-100 整体进度）</summary>
@@ -370,8 +381,10 @@ namespace TileDownloader.Services
         {
             var ips = cidrs.SelectMany(EnumerateCandidates)
                 .Distinct(StringComparer.Ordinal).ToList();
+            Shuffle(ips); // 随机打乱候选 IP 顺序，避免顺序扫描被死段阻塞
+
             var total = ips.Count;
-            progress?.Report($"直连取瓦片探测 {total} 个 IP（并发 {ProbeConcurrency}，单次超时 {ProbeTimeoutSeconds}s）…");
+            progress?.Report($"已随机打乱并直连取瓦片探测 {total} 个 IP（并发 {ProbeConcurrency}，单次超时 {ProbeTimeoutSeconds}s）…");
             ThreadPool.SetMinThreads(ProbeConcurrency * 2, ProbeConcurrency);
 
             var pending = new ConcurrentQueue<string>(ips);
@@ -407,12 +420,14 @@ namespace TileDownloader.Services
                         }
 
                         found[ip] = ms;
-                        progress?.Report($"命中 {ip}（{ms}ms），继续探测同段 …");
+                        progress?.Report($"命中 {ip}（{ms}ms），打乱继续探测同段 …");
 
                         // 命中说明该 /24 大概率可用：整段补探一次，快速凑够多个 IP
                         if (expanded.TryAdd(SubnetKey(ip), 0))
                         {
-                            foreach (var peer in EnumerateSubnet24(ip))
+                            var peers = EnumerateSubnet24(ip).ToList();
+                            Shuffle(peers);
+                            foreach (var peer in peers)
                             {
                                 if (!probed.ContainsKey(peer))
                                 {

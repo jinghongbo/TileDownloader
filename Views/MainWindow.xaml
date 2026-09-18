@@ -4,14 +4,14 @@
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     xmlns:views="clr-namespace:TileDownloader.Views"
     x:Class="TileDownloader.Views.MainWindow"
-    Title="通用瓦片地图下载工具"
+    Title="瓦片地图下载工具"
     Height="800" Width="1280"
     MinHeight="640" MinWidth="960"
     WindowStartupLocation="CenterScreen"
     WindowState="Maximized"
     ExtendsContentIntoTitleBar="True"
     WindowBackdropType="Mica"
-    Icon="/Resources/logo.png"
+    Icon="pack://application:,,,/Resources/logo.ico"
     TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <Grid Background="{DynamicResource ApplicationBackgroundBrush}">
         <Grid.RowDefinitions>
@@ -19,11 +19,19 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!--  自绘标题栏（含最小化/最大化/关闭按钮）；ExtendsContentIntoTitleBar=True 时需显式提供  -->
-        <ui:TitleBar Grid.Row="0" Title="通用瓦片地图下载工具" />
+        <!--  自绘标题栏（带应用图标、标题与最小化/最大化/关闭按钮）  -->
+        <ui:TitleBar Grid.Row="0"
+                     Title="瓦片地图下载工具"
+                     Height="36">
+            <ui:TitleBar.Icon>
+                <ui:ImageIcon Source="pack://application:,,,/Resources/logo.png"
+                              Width="22"
+                              Height="22"
+                              Margin="4,0,8,0" />
+            </ui:TitleBar.Icon>
+        </ui:TitleBar>
 
-        <!--  WPF-UI 4.3 内建导航：TargetPageType 必填（OnClick 仅在此属性非空时触发导航），
-              页面实例由 SetServiceProvider 注入的容器提供  -->
+        <!--  WPF-UI 4.3 内建导航：TargetPageType 必填，页面实例由 SetServiceProvider 注入的容器提供  -->
         <ui:NavigationView x:Name="NavView"
                            Grid.Row="1"
                            PaneDisplayMode="Left"
@@ -45,6 +53,9 @@
                         <ui:SymbolIcon Symbol="ArrowDownload24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
+            </ui:NavigationView.MenuItems>
+
+            <ui:NavigationView.FooterMenuItems>
                 <ui:NavigationViewItem Content="设置"
                                        TargetPageTag="Settings"
                                        TargetPageType="views:SettingsPage">
@@ -52,7 +63,7 @@
                         <ui:SymbolIcon Symbol="Settings24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
-            </ui:NavigationView.MenuItems>
+            </ui:NavigationView.FooterMenuItems>
         </ui:NavigationView>
 
         <!--  Snackbar 提示宿主（覆盖于导航内容之上，靠右下角弹出）  -->

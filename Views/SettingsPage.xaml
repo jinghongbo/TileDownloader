@@ -32,10 +32,13 @@
                 <ui:TextBlock FontTypography="Title" Text="设置" />
                 <ui:TextBlock FontTypography="Body" Opacity="0.7" Margin="0,2,0,16" Text="下载引擎参数与外观偏好，修改后即时生效" />
 
-                <!--  下载  -->
+                <!--  下载引擎设置  -->
                 <ui:Card Style="{StaticResource SettingCard}">
                     <StackPanel>
-                        <ui:TextBlock FontTypography="Subtitle" Margin="0,0,0,8" Text="下载" />
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                            <ui:SymbolIcon Symbol="ArrowDownload24" Foreground="{DynamicResource ThemeRunningBrush}" Margin="0,0,10,0" FontSize="18" VerticalAlignment="Center" />
+                            <ui:TextBlock FontTypography="Subtitle" Text="下载引擎设置" VerticalAlignment="Center" />
+                        </StackPanel>
                         <Grid Margin="0,14,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -92,7 +95,10 @@
                 <!--  Google Hosts 加速  -->
                 <ui:Card Style="{StaticResource SettingCard}">
                     <StackPanel>
-                        <ui:TextBlock FontTypography="Subtitle" Margin="0,0,0,4" Text="Google Hosts 加速" />
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                            <ui:SymbolIcon Symbol="Globe24" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" Margin="0,0,10,0" FontSize="18" VerticalAlignment="Center" />
+                            <ui:TextBlock FontTypography="Subtitle" Text="Google Hosts 网络加速" VerticalAlignment="Center" />
+                        </StackPanel>
                         <TextBlock Style="{StaticResource SettingHint}" Margin="0,4,0,12"
                                    Text="拉取 Google 官方 IP 段（goog.json 扣除 GCP 段）并结合 mt0-3 的 DNS 解析结果，直连逐个 IP 实际取一张瓦片，命中后连同该 IP 所在 /24 整段一起探测，凑够 4 个通过稳定性复测的可用 IP 后结束。写入本机 hosts 时按延迟顺序分给 mt0-3，加速卫星地图下载；需要本机可直连 Google（不走代理）" />
 
@@ -109,6 +115,7 @@
                             <ui:Button Grid.Column="1"
                                         VerticalAlignment="Center"
                                         Content="查找可用 IP"
+                                        Icon="{ui:SymbolIcon GlobeSearch24}"
                                         Command="{Binding ProbeGoogleHostsCommand}"
                                         Appearance="Primary" />
                         </Grid>
@@ -128,10 +135,12 @@
 
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                             <ui:Button Content="复制 hosts 条目"
-                                        Command="{Binding CopyHostsCommand}"
-                                        Margin="0,0,8,0" />
+                                       Icon="{ui:SymbolIcon Copy24}"
+                                       Command="{Binding CopyHostsCommand}"
+                                       Margin="0,0,8,0" />
                             <ui:Button Content="打开 hosts 文件"
-                                        Command="{Binding OpenHostsCommand}" />
+                                       Icon="{ui:SymbolIcon DocumentEdit24}"
+                                       Command="{Binding OpenHostsCommand}" />
                         </StackPanel>
 
                         <TextBlock Style="{StaticResource SettingHint}"
@@ -145,19 +154,22 @@
                     </StackPanel>
                 </ui:Card>
 
-                <!--  外观  -->
+                <!--  外观与个性化  -->
                 <ui:Card Style="{StaticResource SettingCard}">
                     <StackPanel>
-                        <ui:TextBlock FontTypography="Subtitle" Margin="0,0,0,8" Text="外观" />
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                            <ui:SymbolIcon Symbol="DarkTheme24" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" Margin="0,0,10,0" FontSize="18" VerticalAlignment="Center" />
+                            <ui:TextBlock FontTypography="Subtitle" Text="外观与主题" VerticalAlignment="Center" />
+                        </StackPanel>
                         <Grid Margin="0,14,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <StackPanel>
-                                <ui:TextBlock Style="{StaticResource SettingTitle}" Text="主题" />
+                                <ui:TextBlock Style="{StaticResource SettingTitle}" Text="应用主题模式" />
                                 <TextBlock Style="{StaticResource SettingHint}" Margin="0,2,0,0"
-                                           Text="切换应用界面配色（深色 / 浅色 / 跟随系统）" />
+                                           Text="切换应用界面色彩风格（深色模式 / 浅色模式 / 跟随系统主题），即时生效" />
                             </StackPanel>
                             <ComboBox Grid.Column="1"
                                       Width="140"
@@ -169,33 +181,39 @@
                     </StackPanel>
                 </ui:Card>
 
-                <!--  关于  -->
+                <!--  关于软件与开源项目  -->
                 <ui:Card Style="{StaticResource SettingCard}">
                     <StackPanel>
-                        <ui:TextBlock FontTypography="Subtitle" Margin="0,0,0,8" Text="关于" />
-                        <Grid Margin="0,14,0,0">
+                        <!--  应用品牌形象横幅  -->
+                        <Grid Margin="0,0,0,16">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-                            <StackPanel>
-                                <ui:TextBlock Style="{StaticResource SettingTitle}" Text="通用瓦片地图下载工具" />
-                                <TextBlock Style="{StaticResource SettingHint}" Margin="0,2,0,0"
+                            <Border Width="56" Height="56" CornerRadius="12" ClipToBounds="True" Margin="0,0,16,0"
+                                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1">
+                                <Image Source="/Resources/logo.png" Stretch="Uniform" />
+                            </Border>
+                            <StackPanel VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <ui:TextBlock FontTypography="Subtitle" FontWeight="Bold" Text="瓦片地图下载工具" VerticalAlignment="Center" />
+                                    <Border Background="{DynamicResource ThemeStepBadgeBrush}" CornerRadius="4" Padding="6,2" Margin="10,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding AppVersion, Mode=OneWay}" FontSize="11" FontWeight="SemiBold" Foreground="White" />
+                                    </Border>
+                                </StackPanel>
+                                <TextBlock Style="{StaticResource SettingHint}" Margin="0,4,0,0"
                                            Text="批量下载 XYZ 瓦片地图 · 支持多文件 pak / 单文件 pak / MBTiles / 瓦片目录输出" />
                             </StackPanel>
-                            <ui:TextBlock Grid.Column="1"
-                                          FontTypography="Body"
-                                          Opacity="0.7"
-                                          VerticalAlignment="Center"
-                                          Text="{Binding AppVersion, Mode=OneWay}" />
                         </Grid>
 
+                        <Border Height="1" Background="{DynamicResource ControlStrokeColorDefaultBrush}" Margin="0,0,0,16" />
+
                         <!--  仓库与版权信息  -->
-                        <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,0">
                             <ui:SymbolIcon Symbol="Code24"
                                            VerticalAlignment="Center"
                                            Margin="0,0,8,0"
-                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                           Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" />
                             <ui:HyperlinkButton Content="{Binding RepositoryText, Mode=OneWay}"
                                                 NavigateUri="{Binding RepositoryUri, Mode=OneWay}"
                                                 ToolTip="在浏览器中打开项目仓库" />
@@ -205,8 +223,8 @@
                                        Text="{Binding AppCopyright, Mode=OneWay}" />
                         </StackPanel>
                         <TextBlock Style="{StaticResource SettingHint}"
-                                   Margin="24,4,0,0"
-                                   Text="反馈问题或提交建议请前往仓库 Issues" />
+                                   Margin="24,6,0,0"
+                                   Text="💡 如有疑问、功能建议或缺陷反馈，欢迎前往项目 GitHub 仓库提交 Issue" />
                     </StackPanel>
                 </ui:Card>
 

@@ -74,6 +74,15 @@ namespace TileDownloader.Models
     /// </summary>
     public partial class TaskItem : ObservableObject
     {
+        public TaskItem()
+        {
+            ThemeChanged += () =>
+            {
+                OnPropertyChanged(nameof(StateBrush));
+                OnPropertyChanged(nameof(StateBackgroundBrush));
+            };
+        }
+
         /// <summary>任务名称（默认取来源名+范围）</summary>
         public string Name { get; set; } = string.Empty;
 
@@ -202,11 +211,10 @@ namespace TileDownloader.Models
             _ => SymbolRegular.Timer24,
         };
 
-        private static readonly Brush RunningBrush = FreezeBrush(Color.FromRgb(0x60, 0xCD, 0xFF));
-        private static readonly Brush CompletedBrush = FreezeBrush(Color.FromRgb(0x6C, 0xCB, 0x7F));
-        private static readonly Brush FailedBrush = FreezeBrush(Color.FromRgb(0xFF, 0x99, 0xA4));
-        private static readonly Brush CancelledBrush = FreezeBrush(Color.FromRgb(0xFD, 0xB5, 0x6A));
-        private static readonly Brush PausedBrush = FreezeBrush(Color.FromRgb(0xE8, 0xC5, 0x6B));
+        private static readonly Brush FallbackRunningBrush = FreezeBrush(Color.FromRgb(0x4C, 0xC2, 0xFF));
+        private static readonly Brush FallbackCompletedBrush = FreezeBrush(Color.FromRgb(0x4C, 0xD9, 0x64));
+        private static readonly Brush FallbackFailedBrush = FreezeBrush(Color.FromRgb(0xFF, 0x75, 0x81));
+        private static readonly Brush FallbackWarningBrush = FreezeBrush(Color.FromRgb(0xFF, 0xB8, 0x00));
 
         private static Brush FreezeBrush(Color color)
         {
@@ -215,15 +223,71 @@ namespace TileDownloader.Models
             return brush;
         }
 
-        /// <summary>状态颜色（进行中蓝/完成绿/失败红/中断橙/暂停黄）</summary>
-        public Brush StateBrush => State switch
+        static TaskItem()
         {
-            TaskState.Completed => CompletedBrush,
-            TaskState.Failed => FailedBrush,
-            TaskState.Cancelled => CancelledBrush,
-            TaskState.Paused => PausedBrush,
-            _ => RunningBrush,
-        };
+            try
+            {
+                Wpf.Ui.Appearance.ApplicationThemeManager.Changed += (_, _) =>
+                {
+                    ThemeChanged?.Invoke();
+                };
+            }
+            catch
+            {
+            }
+        }
+
+        public static event Action? ThemeChanged;
+
+        /// <summary>状态前景色（深浅主题自适应高对比度）</summary>
+        public Brush StateBrush
+        {
+            get
+            {
+                var res = System.Windows.Application.Current?.Resources;
+                if (res != null)
+                {
+                    string key = State switch
+                    {
+                        TaskState.Completed => "ThemeSuccessBrush",
+                        TaskState.Failed => "ThemeDangerBrush",
+                        TaskState.Cancelled or TaskState.Paused => "ThemeWarningBrush",
+                        _ => "ThemeRunningBrush",
+                    };
+                    if (res[key] is Brush b) return b;
+                }
+
+                return State switch
+                {
+                    TaskState.Completed => FallbackCompletedBrush,
+                    TaskState.Failed => FallbackFailedBrush,
+                    TaskState.Cancelled or TaskState.Paused => FallbackWarningBrush,
+                    _ => FallbackRunningBrush,
+                };
+            }
+        }
+
+        /// <summary>状态胶囊背景色（半透明微透质感，深浅主题自适应）</summary>
+        public Brush StateBackgroundBrush
+        {
+            get
+            {
+                var res = System.Windows.Application.Current?.Resources;
+                if (res != null)
+                {
+                    string key = State switch
+                    {
+                        TaskState.Completed => "ThemeSuccessBackgroundBrush",
+                        TaskState.Failed => "ThemeDangerBackgroundBrush",
+                        TaskState.Cancelled or TaskState.Paused => "ThemeWarningBackgroundBrush",
+                        _ => "ThemeRunningBackgroundBrush",
+                    };
+                    if (res[key] is Brush b) return b;
+                }
+
+                return Brushes.Transparent;
+            }
+        }
 
         /// <summary>是否下载中（决定进度区/取消按钮显隐）</summary>
         public bool IsRunning => State == TaskState.Running;

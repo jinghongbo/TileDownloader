@@ -75,10 +75,10 @@ namespace TileDownloader.Controls
         private static readonly SolidColorBrush LightMapBackgroundBrush = MakeBrush(Color.FromRgb(0xF0, 0xF2, 0xF5));
         private static readonly SolidColorBrush LightSelectionFillBrush = MakeBrush(Color.FromArgb(0x2E, 0x00, 0x78, 0xD4));
         private static readonly Pen LightSelectionPen = MakePen(Color.FromArgb(0xFF, 0x00, 0x78, 0xD4), 1.5);
-        private static readonly SolidColorBrush LightOverlayBackBrush = MakeBrush(Color.FromArgb(0xE8, 0xFF, 0xFF, 0xFF));
-        private static readonly Pen LightOverlayBorderPen = MakePen(Color.FromArgb(0x20, 0x00, 0x00, 0x00), 1.0);
-        private static readonly SolidColorBrush LightOverlayTextBrush = MakeBrush(Color.FromRgb(0x1A, 0x1A, 0x1A));
-        private static readonly Pen LightTileGridPen = MakePen(Color.FromArgb(0x15, 0x00, 0x00, 0x00), 1.0);
+        private static readonly SolidColorBrush LightOverlayBackBrush = MakeBrush(Color.FromArgb(0xF2, 0xFF, 0xFF, 0xFF));
+        private static readonly Pen LightOverlayBorderPen = MakePen(Color.FromArgb(0x40, 0x00, 0x00, 0x00), 1.0);
+        private static readonly SolidColorBrush LightOverlayTextBrush = MakeBrush(Color.FromRgb(0x11, 0x18, 0x27));
+        private static readonly Pen LightTileGridPen = MakePen(Color.FromArgb(0x18, 0x00, 0x00, 0x00), 1.0);
 
         private static readonly Typeface OverlayTypeface =
             new Typeface(new FontFamily("Microsoft YaHei UI"), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);

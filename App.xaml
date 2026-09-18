@@ -30,6 +30,9 @@
             <SolidColorBrush x:Key="ThemeTagBackgroundBrush" Color="#18FFFFFF" />
             <SolidColorBrush x:Key="ThemeMapBackgroundBrush" Color="#181920" />
             <SolidColorBrush x:Key="ThemeStepBadgeBrush" Color="#0078D4" />
+            <SolidColorBrush x:Key="TextFillColorPrimaryBrush" Color="#FFFFFF" />
+            <SolidColorBrush x:Key="TextFillColorSecondaryBrush" Color="#D0FFFFFF" />
+            <SolidColorBrush x:Key="TextFillColorTertiaryBrush" Color="#A0FFFFFF" />
 
             <!-- 全局 TextBlock 前景色绑定，确保深浅模式下文本动态跟随主题主文本色 -->
             <Style TargetType="TextBlock">

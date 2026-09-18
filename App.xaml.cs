@@ -192,22 +192,30 @@ namespace TileDownloader
                 SetBrush("ThemeTagBackgroundBrush", System.Windows.Media.Color.FromArgb(0x18, 0xFF, 0xFF, 0xFF));
                 SetBrush("ThemeMapBackgroundBrush", System.Windows.Media.Color.FromRgb(0x18, 0x19, 0x20));
                 SetBrush("ThemeStepBadgeBrush", System.Windows.Media.Color.FromRgb(0x00, 0x78, 0xD4));
+                SetBrush("TextFillColorPrimaryBrush", System.Windows.Media.Color.FromRgb(0xFF, 0xFF, 0xFF));
+                SetBrush("TextFillColorSecondaryBrush", System.Windows.Media.Color.FromArgb(0xD0, 0xFF, 0xFF, 0xFF));
+                SetBrush("TextFillColorTertiaryBrush", System.Windows.Media.Color.FromArgb(0xA0, 0xFF, 0xFF, 0xFF));
             }
             else
             {
-                SetBrush("ThemeFloatingBarBackgroundBrush", System.Windows.Media.Color.FromArgb(0xE8, 0xFF, 0xFF, 0xFF));
-                SetBrush("ThemeFloatingBarBorderBrush", System.Windows.Media.Color.FromArgb(0x25, 0x00, 0x00, 0x00));
-                SetBrush("ThemeSuccessBrush", System.Windows.Media.Color.FromRgb(0x10, 0x7C, 0x41));
+                SetBrush("ThemeFloatingBarBackgroundBrush", System.Windows.Media.Color.FromArgb(0xF2, 0xFF, 0xFF, 0xFF));
+                SetBrush("ThemeFloatingBarBorderBrush", System.Windows.Media.Color.FromArgb(0x35, 0x00, 0x00, 0x00));
+                SetBrush("ThemeSuccessBrush", System.Windows.Media.Color.FromRgb(0x0E, 0x70, 0x3B));
                 SetBrush("ThemeSuccessBackgroundBrush", System.Windows.Media.Color.FromArgb(0x18, 0x10, 0x7C, 0x41));
-                SetBrush("ThemeDangerBrush", System.Windows.Media.Color.FromRgb(0xC4, 0x2B, 0x1C));
+                SetBrush("ThemeDangerBrush", System.Windows.Media.Color.FromRgb(0xB7, 0x23, 0x16));
                 SetBrush("ThemeDangerBackgroundBrush", System.Windows.Media.Color.FromArgb(0x15, 0xC4, 0x2B, 0x1C));
-                SetBrush("ThemeWarningBrush", System.Windows.Media.Color.FromRgb(0x9D, 0x5D, 0x00));
+                SetBrush("ThemeWarningBrush", System.Windows.Media.Color.FromRgb(0x8A, 0x51, 0x00));
                 SetBrush("ThemeWarningBackgroundBrush", System.Windows.Media.Color.FromArgb(0x15, 0x9D, 0x5D, 0x00));
-                SetBrush("ThemeRunningBrush", System.Windows.Media.Color.FromRgb(0x00, 0x67, 0xC0));
+                SetBrush("ThemeRunningBrush", System.Windows.Media.Color.FromRgb(0x00, 0x5A, 0x9E));
                 SetBrush("ThemeRunningBackgroundBrush", System.Windows.Media.Color.FromArgb(0x15, 0x00, 0x67, 0xC0));
-                SetBrush("ThemeTagBackgroundBrush", System.Windows.Media.Color.FromArgb(0x10, 0x00, 0x00, 0x00));
-                SetBrush("ThemeMapBackgroundBrush", System.Windows.Media.Color.FromRgb(0xF0, 0xF2, 0xF5));
-                SetBrush("ThemeStepBadgeBrush", System.Windows.Media.Color.FromRgb(0x00, 0x67, 0xC0));
+                SetBrush("ThemeTagBackgroundBrush", System.Windows.Media.Color.FromArgb(0x12, 0x00, 0x00, 0x00));
+                SetBrush("ThemeMapBackgroundBrush", System.Windows.Media.Color.FromRgb(0xEA, 0xED, 0xF1));
+                SetBrush("ThemeStepBadgeBrush", System.Windows.Media.Color.FromRgb(0x00, 0x5A, 0x9E));
+
+                // 浅色模式高对比度强化：确保各级文字深邃清晰，与浅灰底/白底具有极高区分度
+                SetBrush("TextFillColorPrimaryBrush", System.Windows.Media.Color.FromRgb(0x11, 0x18, 0x27));
+                SetBrush("TextFillColorSecondaryBrush", System.Windows.Media.Color.FromRgb(0x37, 0x41, 0x51));
+                SetBrush("TextFillColorTertiaryBrush", System.Windows.Media.Color.FromRgb(0x4B, 0x55, 0x63));
             }
         }
 

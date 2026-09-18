@@ -309,9 +309,10 @@
                                 Margin="0,6,0,0"
                                 Visibility="{Binding HasRange, Converter={StaticResource InverseBoolToVis}}">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <ui:SymbolIcon Symbol="Info24" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Margin="0,0,8,0" />
+                                <ui:SymbolIcon Symbol="Info24" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" Margin="0,0,8,0" />
                                 <TextBlock Text="请在上方选择行政区划或在地图框选"
-                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                           FontWeight="SemiBold"
                                            VerticalAlignment="Center" />
                             </StackPanel>
                         </Border>
@@ -421,6 +422,8 @@
                 <ui:Card Style="{StaticResource SideCard}">
                     <StackPanel>
                         <ui:Button Appearance="Primary"
+                                   Background="{DynamicResource ThemeStepBadgeBrush}"
+                                   Foreground="White"
                                    Content="{Binding StartDownloadButtonText, Mode=OneWay}"
                                    Icon="{ui:SymbolIcon ArrowDownload24}"
                                    MinHeight="46"

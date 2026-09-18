@@ -92,7 +92,7 @@
                     </StackPanel>
                 </ui:Card>
 
-                <!--  Google Hosts 加速  -->
+                <!--  Google Hosts 网络加速  -->
                 <ui:Card Style="{StaticResource SettingCard}">
                     <StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
@@ -100,27 +100,33 @@
                             <ui:TextBlock FontTypography="Subtitle" Text="Google Hosts 网络加速" VerticalAlignment="Center" />
                         </StackPanel>
                         <TextBlock Style="{StaticResource SettingHint}" Margin="0,4,0,12"
-                                   Text="拉取 Google 官方 IP 段（goog.json 扣除 GCP 段）并结合 mt0-3 的 DNS 解析结果，直连逐个 IP 实际取一张瓦片，命中后连同该 IP 所在 /24 整段一起探测，凑够 4 个通过稳定性复测的可用 IP 后结束。写入本机 hosts 时按延迟顺序分给 mt0-3，加速卫星地图下载；需要本机可直连 Google（不走代理）" />
+                                   Text="内置网络加速引擎：当不开启系统代理时，程序自动通过测速最优的 IP 直连请求 Google 卫星瓦片，无需修改本地 hosts 文件，安全且免管理员权限。" />
 
-                        <Grid Margin="0,0,0,8">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel>
-                                <ui:TextBlock Style="{StaticResource SettingTitle}" Text="可用 IP（至少 4 个）" />
-                                <TextBlock Style="{StaticResource SettingHint}" Margin="0,2,0,0"
-                                           Text="{Binding BestGoogleHostsText, Mode=OneWay}" />
-                            </StackPanel>
-                            <ui:Button Grid.Column="1"
-                                        VerticalAlignment="Center"
-                                        Content="查找可用 IP"
-                                        Icon="{ui:SymbolIcon GlobeSearch24}"
-                                        Command="{Binding ProbeGoogleHostsCommand}"
-                                        Appearance="Primary" />
-                        </Grid>
+                        <!--  当前加速状态与一键探测  -->
+                        <Border Margin="0,0,0,10" Padding="14,10" CornerRadius="6" Background="{DynamicResource SubtleFillColorSecondaryBrush}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal">
+                                        <ui:SymbolIcon Symbol="Flash24" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" Margin="0,0,6,0" FontSize="14" VerticalAlignment="Center" />
+                                        <TextBlock Text="当前直连加速节点" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                    <TextBlock Style="{StaticResource SettingHint}" Margin="0,4,0,0"
+                                               Text="{Binding FastestIpText, Mode=OneWay}" />
+                                </StackPanel>
+                                <ui:Button Grid.Column="1"
+                                           VerticalAlignment="Center"
+                                           Content="测速并应用最快 IP"
+                                           Icon="{ui:SymbolIcon GlobeSearch24}"
+                                           Command="{Binding ProbeGoogleHostsCommand}"
+                                           Appearance="Primary" />
+                            </Grid>
+                        </Border>
 
-                        <!--  全量扫描进度（仅探测中显示）  -->
+                        <!--  探测进度条（仅探测中显示）  -->
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,8"
                                     Visibility="{Binding IsProbingGoogleHosts, Converter={StaticResource BoolToVisConverter}}">
                             <ProgressBar Width="200" Height="6"
@@ -133,24 +139,36 @@
                                        Text="{Binding GoogleHostsProgressText, Mode=OneWay}" />
                         </StackPanel>
 
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                            <ui:Button Content="复制 hosts 条目"
-                                       Icon="{ui:SymbolIcon Copy24}"
-                                       Command="{Binding CopyHostsCommand}"
-                                       Margin="0,0,8,0" />
-                            <ui:Button Content="打开 hosts 文件"
-                                       Icon="{ui:SymbolIcon DocumentEdit24}"
-                                       Command="{Binding OpenHostsCommand}" />
-                        </StackPanel>
-
-                        <TextBlock Style="{StaticResource SettingHint}"
-                                   Text="{Binding GoogleHostsEntriesText, Mode=OneWay}"
-                                   FontFamily="Consolas"
-                                   Margin="0,0,0,8" />
-
+                        <!--  探测结果与状态提示  -->
                         <TextBlock Style="{StaticResource SettingHint}"
                                    Text="{Binding GoogleHostsMessage, Mode=OneWay}"
+                                   Margin="0,0,0,8"
                                    TextWrapping="Wrap" />
+
+                        <!--  折叠面板：可选联动系统 hosts 文件  -->
+                        <Expander IsExpanded="False"
+                                  HorizontalContentAlignment="Stretch"
+                                  Header="高级选项：导出条目至系统 hosts（供外部浏览器或第三方 GIS 软件使用）"
+                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                  Margin="0,4,0,0">
+                            <StackPanel Margin="12,10,12,6">
+                                <TextBlock Style="{StaticResource SettingHint}" Margin="0,0,0,8"
+                                           Text="本程序内部已全自动采用最快 IP 直连，无需配置系统 hosts。若您希望外部浏览器或其他 GIS 工具也能直连 Google 卫星地图，可将探测出的条目复制写入 hosts：" />
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                    <ui:Button Content="复制 hosts 条目"
+                                               Icon="{ui:SymbolIcon Copy24}"
+                                               Command="{Binding CopyHostsCommand}"
+                                               Margin="0,0,8,0" />
+                                    <ui:Button Content="打开 hosts 文件"
+                                               Icon="{ui:SymbolIcon DocumentEdit24}"
+                                               Command="{Binding OpenHostsCommand}" />
+                                </StackPanel>
+                                <TextBlock Style="{StaticResource SettingHint}"
+                                           Text="{Binding GoogleHostsEntriesText, Mode=OneWay}"
+                                           FontFamily="Consolas"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Expander>
                     </StackPanel>
                 </ui:Card>
 

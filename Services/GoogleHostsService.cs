@@ -40,6 +40,87 @@ namespace TileDownloader.Services
         };
         private const string ProbePath = "/vt/lyrs=s&hl=zh&x=0&y=0&z=0";
 
+        /// <summary>种子备用 Google IP（开箱可用，在用户测速前提供基础直连保障）</summary>
+        public static readonly string[] DefaultSeedIps =
+        {
+            "136.124.0.1", "136.124.0.29", "136.124.0.28"
+        };
+
+        private readonly object _lock = new();
+        private string? _currentBestIp;
+        private long _currentBestLatency = -1;
+        private List<string> _availableIps = new();
+
+        /// <summary>当前测速选定的最快 Google IP（直连下载优先使用）</summary>
+        public string? CurrentBestIp
+        {
+            get
+            {
+                lock (_lock)
+                {
+                    return _currentBestIp ?? (_availableIps.Count > 0 ? _availableIps[0] : DefaultSeedIps[0]);
+                }
+            }
+        }
+
+        /// <summary>当前最快 IP 的实测延迟（毫秒，-1 为未测速或默认初始值）</summary>
+        public long CurrentBestLatency
+        {
+            get
+            {
+                lock (_lock)
+                {
+                    return _currentBestLatency;
+                }
+            }
+        }
+
+        /// <summary>所有可用 IP 列表（延迟从快到慢）</summary>
+        public IReadOnlyList<string> AvailableIps
+        {
+            get
+            {
+                lock (_lock)
+                {
+                    return _availableIps.Count > 0 ? _availableIps.ToList() : DefaultSeedIps;
+                }
+            }
+        }
+
+        /// <summary>
+        /// 更新可用 IP 列表，自动将测速最快者设置为当前直连加速 IP
+        /// </summary>
+        public void SetAvailableIps(IEnumerable<GoogleHostProbe> probes)
+        {
+            lock (_lock)
+            {
+                var list = probes.Where(p => p.Accessible).OrderBy(p => p.Milliseconds).ToList();
+                _availableIps = list.Select(p => p.Ip).Distinct(StringComparer.Ordinal).ToList();
+                if (list.Count > 0)
+                {
+                    _currentBestIp = list[0].Ip;
+                    _currentBestLatency = list[0].Milliseconds;
+                }
+                else
+                {
+                    _currentBestIp = null;
+                    _currentBestLatency = -1;
+                }
+            }
+        }
+
+        /// <summary>
+        /// 判断目标域名是否为 Google 瓦片服务域名（支持 mt0-3, khm, google.com/google.cn 等）
+        /// </summary>
+        public static bool IsGoogleTileHost(string? host)
+        {
+            if (string.IsNullOrWhiteSpace(host)) return false;
+            return host.EndsWith(".google.com", StringComparison.OrdinalIgnoreCase) ||
+                   host.EndsWith(".google.cn", StringComparison.OrdinalIgnoreCase) ||
+                   host.EndsWith(".googleapis.com", StringComparison.OrdinalIgnoreCase) ||
+                   host.Equals("google.com", StringComparison.OrdinalIgnoreCase);
+        }
+
         /// <summary>稳定性复测用的瓦片（不同层级与图层）</summary>
         private static readonly string[] VerifyTilePaths =
         {

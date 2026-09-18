@@ -1,6 +1,8 @@
 using System;
 using System.Globalization;
 using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
 using TileDownloader.Models;
 
 namespace TileDownloader.Services
@@ -125,30 +127,131 @@ namespace TileDownloader.Services
 
         /// <summary>
         /// 按来源配置创建 HttpClient（UA/Referer/Cookies），同一来源复用。
-        /// useProxy=true 跟随系统代理（默认），false 直连（配合 Google Hosts 加速）。
-        /// 忽略 HTTPS 证书错误：hosts 把域名指向 IP 时证书常不匹配，只要能取到瓦片即可。
+        /// useProxy=true 跟随系统代理（默认）；false 直连加速（当目标为 Google 瓦片域名时，内建直接连向最快可用 IP，无需 hosts 文件）。
+        /// 忽略 HTTPS 证书错误：直连 IP 时只要能成功取到瓦片即可。
         /// </summary>
-        public static HttpClient CreateClient(DownloadSource source, bool useProxy = true)
+        public static HttpClient CreateClient(DownloadSource source, bool useProxy = true, GoogleHostsService? googleHostsService = null)
         {
-            var handler = new HttpClientHandler
+            HttpMessageHandler handler;
+
+            if (useProxy)
             {
-                AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate,
-                UseProxy = useProxy,
-                ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
-            };
-            if (!string.IsNullOrWhiteSpace(source.Cookies))
+                var h = new HttpClientHandler
+                {
+                    AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate,
+                    UseProxy = true,
+                    ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
+                };
+                if (!string.IsNullOrWhiteSpace(source.Cookies))
+                {
+                    try
+                    {
+                        var baseUri = new Uri(source.Url);
+                        h.CookieContainer = new System.Net.CookieContainer();
+                        h.CookieContainer.SetCookies(baseUri, source.Cookies.Replace(";", ","));
+                    }
+                    catch
+                    {
+                    }
+                }
+                handler = h;
+            }
+            else
             {
-                try
+                var sHandler = new SocketsHttpHandler
                 {
-                    var baseUri = new Uri(source.Url);
-                    handler.CookieContainer = new System.Net.CookieContainer();
-                    // Cookies 以分号分隔，CookieContainer 需要逗号分隔
-                    handler.CookieContainer.SetCookies(baseUri, source.Cookies.Replace(";", ","));
-                }
-                catch
+                    AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate,
+                    UseProxy = false,
+                    PooledConnectionLifetime = TimeSpan.FromMinutes(15),
+                    PooledConnectionIdleTimeout = TimeSpan.FromMinutes(2),
+                    EnableMultipleHttp2Connections = true,
+                    SslOptions = new System.Net.Security.SslClientAuthenticationOptions
+                    {
+                        RemoteCertificateValidationCallback = (_, _, _, _) => true,
+                    }
+                };
+
+                if (!string.IsNullOrWhiteSpace(source.Cookies))
                 {
-                    // Cookie 设置失败不阻塞下载
+                    try
+                    {
+                        var baseUri = new Uri(source.Url);
+                        sHandler.CookieContainer = new System.Net.CookieContainer();
+                        sHandler.CookieContainer.SetCookies(baseUri, source.Cookies.Replace(";", ","));
+                    }
+                    catch
+                    {
+                    }
                 }
+
+                // 自定义连接调度：对 Google 瓦片域名自动直连测速最快 IP，彻底告别系统 hosts 文件修改
+                sHandler.ConnectCallback = async (context, ct) =>
+                {
+                    var host = context.DnsEndPoint.Host;
+                    var port = context.DnsEndPoint.Port;
+
+                    if (GoogleHostsService.IsGoogleTileHost(host) && googleHostsService?.CurrentBestIp is { Length: > 0 } targetIp)
+                    {
+                        async Task<System.Net.Sockets.NetworkStream?> TryConnectIpAsync(string ip)
+                        {
+                            var sock = new System.Net.Sockets.Socket(System.Net.Sockets.SocketType.Stream, System.Net.Sockets.ProtocolType.Tcp)
+                            {
+                                NoDelay = true
+                            };
+                            try
+                            {
+                                using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                                timeoutCts.CancelAfter(TimeSpan.FromSeconds(2.5));
+                                await sock.ConnectAsync(System.Net.IPAddress.Parse(ip), port, timeoutCts.Token);
+                                return new System.Net.Sockets.NetworkStream(sock, ownsSocket: true);
+                            }
+                            catch
+                            {
+                                sock.Dispose();
+                                return null;
+                            }
+                        }
+
+                        // 优先直连当前最快 IP
+                        var stream = await TryConnectIpAsync(targetIp);
+                        if (stream != null)
+                        {
+                            return stream;
+                        }
+
+                        // 如果最快 IP 遇到故障，快速轮询备用可用 IP
+                        if (googleHostsService.AvailableIps.Count > 1)
+                        {
+                            foreach (var altIp in googleHostsService.AvailableIps)
+                            {
+                                if (altIp == targetIp) continue;
+                                stream = await TryConnectIpAsync(altIp);
+                                if (stream != null)
+                                {
+                                    return stream;
+                                }
+                            }
+                        }
+                    }
+
+                    // 常规域名或 Fallback 默认连接
+                    var defaultSocket = new System.Net.Sockets.Socket(System.Net.Sockets.SocketType.Stream, System.Net.Sockets.ProtocolType.Tcp)
+                    {
+                        NoDelay = true
+                    };
+                    try
+                    {
+                        await defaultSocket.ConnectAsync(host, port, ct);
+                        return new System.Net.Sockets.NetworkStream(defaultSocket, ownsSocket: true);
+                    }
+                    catch
+                    {
+                        defaultSocket.Dispose();
+                        throw;
+                    }
+                };
+
+                handler = sHandler;
             }
 
             var client = new HttpClient(handler, disposeHandler: true);

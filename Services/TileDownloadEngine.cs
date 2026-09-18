@@ -17,10 +17,12 @@ namespace TileDownloader.Services
     public class TileDownloadEngine : IDownloadEngine
     {
         private readonly TileStoreRegistry _storeRegistry;
+        private readonly GoogleHostsService _googleHostsService;
 
-        public TileDownloadEngine(TileStoreRegistry storeRegistry)
+        public TileDownloadEngine(TileStoreRegistry storeRegistry, GoogleHostsService googleHostsService)
         {
             _storeRegistry = storeRegistry;
+            _googleHostsService = googleHostsService;
         }
 
         public async Task RunAsync(TileDownloadRequest request, IDownloadProgress progress, CancellationToken ct)
@@ -46,8 +48,8 @@ namespace TileDownloader.Services
 
             try
             {
-                // 每个源复用一个 HttpClient（UA/Referer/Cookies）
-                using var client = TileUrlBuilder.CreateClient(source, request.UseProxy);
+                // 每个源复用一个 HttpClient（UA/Referer/Cookies），直连模式下自动路由最快 Google IP
+                using var client = TileUrlBuilder.CreateClient(source, request.UseProxy, _googleHostsService);
                 var subdomains = source.GetSubdomains();
 
                 var parallelOptions = new ParallelOptions

@@ -15,6 +15,11 @@ namespace TileDownloader.Services
         bool UseProxy { get; set; }
 
         /// <summary>
+        /// 清理并重建底层缓存的 HttpClient（如加速 IP 变更或代理设置变更后生效）
+        /// </summary>
+        void ResetClients();
+
+        /// <summary>
         /// 获取瓦片原始字节（png/jpg）。磁盘缓存命中直接读，否则网络获取并写盘。
         /// 失败/404 返回 null。
         /// </summary>

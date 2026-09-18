@@ -43,6 +43,7 @@ namespace TileDownloader.ViewModels
             _retry = saved.Retry;
             _useProxy = saved.UseProxy;
             _googleHosts = saved.BestGoogleHosts;
+            _googleHostsService.SetAvailableIps(_googleHosts);
             _selectedThemeMode = ThemeModes.FirstOrDefault(m => m.Label == saved.Theme) ?? ThemeModes[0];
 
             // 将代理设置同步到地图预览（下载侧在构造请求时读取本 VM）
@@ -112,7 +113,20 @@ namespace TileDownloader.ViewModels
         [NotifyPropertyChangedFor(nameof(BestGoogleHostsText))]
         [NotifyPropertyChangedFor(nameof(GoogleHostsEntriesText))]
         [NotifyPropertyChangedFor(nameof(CanApplyGoogleHosts))]
+        [NotifyPropertyChangedFor(nameof(FastestIpText))]
+        [NotifyPropertyChangedFor(nameof(HasDirectAccelerateIp))]
         private IReadOnlyList<GoogleHostProbe> _googleHosts = Array.Empty<GoogleHostProbe>();
+
+        /// <summary>当前生效的最快直连加速 IP 描述</summary>
+        public string FastestIpText =>
+            _googleHostsService.CurrentBestIp is { Length: > 0 } ip
+                ? (_googleHostsService.CurrentBestLatency > 0
+                    ? $"{ip}（实测 {_googleHostsService.CurrentBestLatency}ms）"
+                    : $"{ip}（内置种子节点）")
+                : "未检测（使用内置种子节点）";
+
+        /// <summary>是否已激活直连加速 IP</summary>
+        public bool HasDirectAccelerateIp => !string.IsNullOrEmpty(_googleHostsService.CurrentBestIp);
 
         /// <summary>是否正在探测</summary>
         [ObservableProperty]
@@ -172,9 +186,8 @@ namespace TileDownloader.ViewModels
                 GoogleHosts = found;
                 if (found.Count > 0)
                 {
-                    // IP 列表赋值已由 OnGoogleHostsChanged 触发落盘，此处无需再保存
-                    GoogleHostsMessage = $"完成：找到 {found.Count} 个可用 IP，最快 {found[0].Ip}（{found[0].Milliseconds}ms）\n" +
-                        "点击「复制 hosts 条目」后粘贴到 hosts 文件即可（mt0–mt3 各用一个 IP）";
+                    GoogleHostsMessage = $"完成：找到 {found.Count} 个可用 IP，已自动选定最快 {found[0].Ip}（{found[0].Milliseconds}ms）直连加速！\n" +
+                        "无需修改本地 hosts 文件，地图浏览与下载引擎即刻生效。";
                 }
                 else
                 {
@@ -335,6 +348,13 @@ namespace TileDownloader.ViewModels
             }
         }
 
-        partial void OnGoogleHostsChanged(IReadOnlyList<GoogleHostProbe> value) => SaveSettings();
+        partial void OnGoogleHostsChanged(IReadOnlyList<GoogleHostProbe> value)
+        {
+            _googleHostsService.SetAvailableIps(value);
+            _tileImageLoader.ResetClients();
+            OnPropertyChanged(nameof(FastestIpText));
+            OnPropertyChanged(nameof(HasDirectAccelerateIp));
+            SaveSettings();
+        }
     }
 }

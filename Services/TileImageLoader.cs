@@ -31,6 +31,7 @@ namespace TileDownloader.Services
         private readonly object _evictLock = new();
         private readonly ConcurrentDictionary<string, HttpClient> _clients = new(StringComparer.Ordinal);
         private readonly string _diskRoot;
+        private readonly GoogleHostsService _googleHostsService;
         private bool _useProxy = false;
 
         /// <summary>是否使用系统代理（默认直连；切换后清空缓存 client 重建）</summary>
@@ -45,16 +46,22 @@ namespace TileDownloader.Services
                 }
                 _useProxy = value;
                 // 重建按源缓存的 client，使新设置立即生效
-                foreach (var c in _clients.Values)
-                {
-                    try { c.Dispose(); } catch { }
-                }
-                _clients.Clear();
+                ResetClients();
             }
         }
 
-        public TileImageLoader()
+        public void ResetClients()
         {
+            foreach (var c in _clients.Values)
+            {
+                try { c.Dispose(); } catch { }
+            }
+            _clients.Clear();
+        }
+
+        public TileImageLoader(GoogleHostsService googleHostsService)
+        {
+            _googleHostsService = googleHostsService;
             var baseDir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "TileDownloader");
@@ -148,7 +155,7 @@ namespace TileDownloader.Services
                     Referer = referer,
                     Cookies = cookies,
                 };
-                return TileUrlBuilder.CreateClient(source, _useProxy);
+                return TileUrlBuilder.CreateClient(source, _useProxy, _googleHostsService);
             });
         }
 

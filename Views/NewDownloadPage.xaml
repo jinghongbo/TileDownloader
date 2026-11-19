@@ -468,16 +468,24 @@
                 <ui:Card Style="{StaticResource SideCard}">
                     <StackPanel>
                         <ui:Button Appearance="Primary"
-                                   Background="{DynamicResource ThemeStepBadgeBrush}"
-                                   Foreground="White"
-                                   Content="{Binding StartDownloadButtonText, Mode=OneWay}"
-                                   Icon="{ui:SymbolIcon ArrowDownload24}"
+                                   AutomationProperties.Name="{Binding StartDownloadButtonText}"
                                    MinHeight="46"
                                    FontSize="15"
                                    FontWeight="SemiBold"
                                    HorizontalAlignment="Stretch"
                                    HorizontalContentAlignment="Center"
-                                   Command="{Binding StartDownloadCommand}" />
+                                   Command="{Binding StartDownloadCommand}">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <ui:SymbolIcon Symbol="ArrowDownload24" Style="{StaticResource OnAccentIcon}" Margin="0,0,8,0" />
+                                <TextBlock Text="{Binding StartDownloadButtonText, Mode=OneWay}" Style="{StaticResource OnAccentText}" />
+                            </StackPanel>
+                        </ui:Button>
+                        <TextBlock Margin="0,8,0,0"
+                                   Text="{Binding Message}"
+                                   FontSize="12"
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVis}}" />
                         <ui:Button Content="取消下载"
                                    Icon="{ui:SymbolIcon Dismiss24}"
                                    MinHeight="38"

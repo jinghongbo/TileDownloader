@@ -34,6 +34,30 @@
             <SolidColorBrush x:Key="TextFillColorSecondaryBrush" Color="#D0FFFFFF" />
             <SolidColorBrush x:Key="TextFillColorTertiaryBrush" Color="#A0FFFFFF" />
 
+            <!--
+                强调色按钮（Primary）里的文字与图标。
+                全局 TextBlock 隐式样式会把文字压成主题正文色（浅色主题下是深灰），
+                深蓝按钮上就成了黑字；这里显式给白色，禁用时退回弱化色。
+            -->
+            <Style x:Key="OnAccentText" TargetType="TextBlock">
+                <Setter Property="Foreground" Value="White" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsEnabled, RelativeSource={RelativeSource AncestorType=Button}}" Value="False">
+                        <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+            <Style x:Key="OnAccentIcon" TargetType="ui:SymbolIcon">
+                <Setter Property="Foreground" Value="White" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsEnabled, RelativeSource={RelativeSource AncestorType=Button}}" Value="False">
+                        <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+
             <!-- 全局 TextBlock 前景色绑定，确保深浅模式下文本动态跟随主题主文本色 -->
             <Style TargetType="TextBlock">
                 <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />

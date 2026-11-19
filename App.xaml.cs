@@ -222,6 +222,29 @@ namespace TileDownloader
                 SetBrush("TextFillColorSecondaryBrush", System.Windows.Media.Color.FromRgb(0x37, 0x41, 0x51));
                 SetBrush("TextFillColorTertiaryBrush", System.Windows.Media.Color.FromRgb(0x4B, 0x55, 0x63));
             }
+
+            // 强调色固定为应用自己的蓝：系统强调色可能是绿色/橙色，跟着它走按钮就和主题两张皮。
+            // 步骤徽标再取同一个强调色画刷，保证按钮、徽标、选中态同色。
+            try
+            {
+                Wpf.Ui.Appearance.ApplicationAccentColorManager.Apply(
+                    isDark
+                        ? System.Windows.Media.Color.FromRgb(0x00, 0x78, 0xD4)
+                        : System.Windows.Media.Color.FromRgb(0x00, 0x5A, 0x9E),
+                    theme);
+
+                var accent = Wpf.Ui.Appearance.ApplicationAccentColorManager.SystemAccent;
+                if (Application.Current.TryFindResource("AccentFillColorDefaultBrush") is System.Windows.Media.SolidColorBrush accentBrush)
+                {
+                    accent = accentBrush.Color;
+                }
+
+                SetBrush("ThemeStepBadgeBrush", accent);
+            }
+            catch
+            {
+                // 取不到强调色时沿用主题预设的蓝色
+            }
         }
 
         // UI 线程未捕获异常处理事件（UI 主线程）

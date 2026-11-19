@@ -27,7 +27,9 @@ namespace TileDownloader.Views
 
             try
             {
-                Icon = new System.Windows.Media.Imaging.BitmapImage(new Uri("pack://application:,,,/Resources/logo.ico"));
+                // 用 512 的 PNG，不要用多帧 .ico：WPF 从 .ico 取 ImageSource 时只会拿到 16×16 那一帧，
+                // 生成任务栏 48×48 的 HICON 时又按原尺寸居中绘制，图标会缩成中间一个小点。
+                Icon = new System.Windows.Media.Imaging.BitmapImage(new Uri("pack://application:,,,/Resources/logo.png"));
             }
             catch
             {

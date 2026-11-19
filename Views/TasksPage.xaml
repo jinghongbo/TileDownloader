@@ -204,13 +204,17 @@
                                    Visibility="{Binding CanOpenOutput, Mode=OneWay, Converter={StaticResource BoolToVis}}"
                                    Command="{Binding DataContext.OpenOutputCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                    CommandParameter="{Binding}" />
-                        <ui:Button Content="{Binding PrimaryActionText, Mode=OneWay}"
-                                   Icon="{ui:SymbolIcon ArrowClockwise24}"
-                                   Appearance="Primary"
+                        <ui:Button Appearance="Primary"
+                                   AutomationProperties.Name="{Binding PrimaryActionText, Mode=OneWay}"
                                    Margin="0,0,8,0"
                                    Visibility="{Binding CanContinue, Mode=OneWay, Converter={StaticResource BoolToVis}}"
                                    Command="{Binding DataContext.ContinueCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                   CommandParameter="{Binding}" />
+                                   CommandParameter="{Binding}">
+                            <StackPanel Orientation="Horizontal">
+                                <ui:SymbolIcon Symbol="ArrowClockwise24" Style="{StaticResource OnAccentIcon}" Margin="0,0,6,0" />
+                                <TextBlock Text="{Binding PrimaryActionText, Mode=OneWay}" Style="{StaticResource OnAccentText}" />
+                            </StackPanel>
+                        </ui:Button>
                         <ui:Button Content="暂停"
                                    Icon="{ui:SymbolIcon Pause24}"
                                    Margin="0,0,8,0"

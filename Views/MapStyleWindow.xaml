@@ -9,7 +9,7 @@
     MinWidth="680"
     MinHeight="520"
     WindowStartupLocation="CenterOwner"
-    Icon="pack://application:,,,/Resources/logo.ico"
+    Icon="pack://application:,,,/Resources/logo.png"
     Background="{DynamicResource ApplicationBackgroundBrush}"
     TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
     FontFamily="Microsoft YaHei UI">
@@ -139,7 +139,9 @@
             </StackPanel>
 
             <ui:Button Grid.Column="5" Content="取消" Click="Cancel_Click" MinWidth="84" Margin="0,0,8,0" />
-            <ui:Button Grid.Column="6" Content="应用" Appearance="Primary" Click="Apply_Click" MinWidth="84" />
+            <ui:Button Grid.Column="6" Appearance="Primary" AutomationProperties.Name="应用" Click="Apply_Click" MinWidth="84">
+                <TextBlock Text="应用" Style="{StaticResource OnAccentText}" />
+            </ui:Button>
         </Grid>
     </Grid>
 </Window>

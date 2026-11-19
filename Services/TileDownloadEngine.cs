@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using NetTopologySuite.Geometries;
+using NetTopologySuite.Geometries.Prepared;
 using TileDownloader.Models;
 
 namespace TileDownloader.Services
@@ -65,34 +66,49 @@ namespace TileDownloader.Services
                 var geometryFactory = new GeometryFactory();
                 var clipGeometry = request.FullBlock ? null : request.ClipGeometry;
 
-                // 提前预先计算所有层级与总瓦片数，上报至进度汇报器建立预算
-                // （完整块模式下按 pak 分块边界扩展，与下方实际枚举保持一致）
-                for (var z = request.MinLevel; z <= request.MaxLevel; z++)
-                {
-                    var (firstCol, lastCol) = TileUrlBuilder.ColRange(request.Range.MinX, request.Range.MaxX, z, request.FullBlock);
-                    var (firstRow, lastRow) = TileUrlBuilder.RowRange(request.Range.MinY, request.Range.MaxY, z, request.FullBlock);
+                // 边界裁剪要对每个候选瓦片做一次几何相交：大范围高等级动辄上百万次，
+                // 直接跑会把调用线程（UI 线程）占住上百秒。这里放到后台线程并支持取消。
+                // 同时用 PreparedGeometry 预建索引（实测 500 万瓦片 130s → 8s）。
+                var preparedClip = clipGeometry == null ? null : PreparedGeometryFactory.Prepare(clipGeometry);
 
-                    long total = 0;
-                    if (clipGeometry == null)
+                await Task.Run(() =>
+                {
+                    // 提前预先计算所有层级与总瓦片数，上报至进度汇报器建立预算
+                    // （完整块模式下按 pak 分块边界扩展，与下方实际枚举保持一致）
+                    for (var z = request.MinLevel; z <= request.MaxLevel; z++)
                     {
-                        total = (long)(lastCol - firstCol + 1) * (lastRow - firstRow + 1);
-                    }
-                    else
-                    {
-                        for (var x = firstCol; x <= lastCol; x++)
+                        var (firstCol, lastCol) = TileUrlBuilder.ColRange(request.Range.MinX, request.Range.MaxX, z, request.FullBlock);
+                        var (firstRow, lastRow) = TileUrlBuilder.RowRange(request.Range.MinY, request.Range.MaxY, z, request.FullBlock);
+
+                        long total;
+                        if (preparedClip == null)
                         {
-                            for (var y = firstRow; y <= lastRow; y++)
+                            total = (long)(lastCol - firstCol + 1) * (lastRow - firstRow + 1);
+                        }
+                        else
+                        {
+                            total = 0;
+                            var tested = 0;
+                            for (var x = firstCol; x <= lastCol; x++)
                             {
-                                if (TileIntersects(clipGeometry, geometryFactory, z, x, y))
+                                for (var y = firstRow; y <= lastRow; y++)
                                 {
-                                    total++;
+                                    if ((++tested & 0xFFF) == 0)
+                                    {
+                                        ct.ThrowIfCancellationRequested();
+                                    }
+
+                                    if (TileIntersects(preparedClip, geometryFactory, z, x, y))
+                                    {
+                                        total++;
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    progress.ReportLevelTotal(z, total);
-                }
+                        progress.ReportLevelTotal(z, total);
+                    }
+                }, ct);
 
                 for (var z = request.MinLevel; z <= request.MaxLevel; z++)
                 {
@@ -103,7 +119,7 @@ namespace TileDownloader.Services
 
                     static IEnumerable<(int x, int y)> EnumerateTiles(
                         int fc, int lc, int fr, int lr, int level,
-                        Geometry? clip, GeometryFactory factory)
+                        IPreparedGeometry? clip, GeometryFactory factory)
                     {
                         for (var x = fc; x <= lc; x++)
                         {
@@ -117,7 +133,7 @@ namespace TileDownloader.Services
                         }
                     }
 
-                    await Parallel.ForEachAsync(EnumerateTiles(firstCol, lastCol, firstRow, lastRow, z, clipGeometry, geometryFactory), parallelOptions, async (tile, token) =>
+                    await Parallel.ForEachAsync(EnumerateTiles(firstCol, lastCol, firstRow, lastRow, z, preparedClip, geometryFactory), parallelOptions, async (tile, token) =>
                     {
                         await DownloadTileAsync(client, store, progress, source, subdomains, z, tile.x, tile.y, request.Retry, token);
                     });
@@ -132,8 +148,8 @@ namespace TileDownloader.Services
             }
         }
 
-        /// <summary>瓦片范围是否与行政区边界相交</summary>
-        private static bool TileIntersects(Geometry clip, GeometryFactory factory, int z, int x, int y)
+        /// <summary>瓦片范围是否与行政区边界相交（prepared 索引，可在多线程下复用）</summary>
+        private static bool TileIntersects(IPreparedGeometry clip, GeometryFactory factory, int z, int x, int y)
         {
             var (minLon, maxLon, minLat, maxLat) = TileUrlBuilder.TileBounds(z, x, y);
             var tile = factory.ToGeometry(new Envelope(minLon, maxLon, minLat, maxLat));

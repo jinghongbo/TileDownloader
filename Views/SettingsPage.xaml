@@ -119,10 +119,14 @@
                                 </StackPanel>
                                 <ui:Button Grid.Column="1"
                                            VerticalAlignment="Center"
-                                           Content="测速并应用最快 IP"
-                                           Icon="{ui:SymbolIcon GlobeSearch24}"
+                                           AutomationProperties.Name="测速并应用最快 IP"
                                            Command="{Binding ProbeGoogleHostsCommand}"
-                                           Appearance="Primary" />
+                                           Appearance="Primary">
+                                    <StackPanel Orientation="Horizontal">
+                                        <ui:SymbolIcon Symbol="GlobeSearch24" Style="{StaticResource OnAccentIcon}" Margin="0,0,6,0" />
+                                        <TextBlock Text="测速并应用最快 IP" Style="{StaticResource OnAccentText}" />
+                                    </StackPanel>
+                                </ui:Button>
                             </Grid>
                         </Border>
 

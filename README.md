@@ -64,10 +64,10 @@ dotnet publish TileDownloader.csproj -c Release -r win-x64 --self-contained true
 
 ## 自动构建与发布
 
-[.github/workflows/build.yml](.github/workflows/build.yml) 在 push / PR 到 `main`、`master` 时构建并产出两种 zip 包（自包含与框架依赖）；推送 `v*` 标签时会自动创建 GitHub Release：
+[.github/workflows/build.yml](.github/workflows/build.yml) 在 push / PR 到 `main`、`master` 时构建并产出一个自包含单文件 exe；推送 `v*` 标签时会自动创建 GitHub Release：
 
-- `TileDownloader-v{版本}-win-x64-self-contained.zip`：自带 .NET 运行时，解压即用
-- `TileDownloader-v{版本}-win-x64.zip`：体积更小，需已安装 .NET 10 Desktop Runtime
+- `TileDownloader-v{版本}-win-x64.exe`：自带 .NET 运行时，双击即用，无需安装 .NET
+- 地图源（`Sources/*.json`）与省市区数据已内嵌进程序集，单文件可直接运行；如需自定义来源，可在 exe 同目录新建 `Sources` 文件夹放入 JSON，目录存在时优先使用外部配置
 
 ## 技术栈
 

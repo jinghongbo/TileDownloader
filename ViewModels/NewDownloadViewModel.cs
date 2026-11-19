@@ -678,7 +678,9 @@ namespace TileDownloader.ViewModels
 
         /// <summary>开始下载按钮文本</summary>
         public string StartDownloadButtonText =>
-            EstimatedTileCount > 0 ? $"开始下载（共 {EstimatedTileCount:N0} 张）" : "开始下载";
+            IsDownloading
+                ? "下载中…（可在任务中心查看）"
+                : EstimatedTileCount > 0 ? $"开始下载（共 {EstimatedTileCount:N0} 张）" : "开始下载";
 
         /// <summary>输出路径</summary>
         [ObservableProperty]
@@ -739,6 +741,7 @@ namespace TileDownloader.ViewModels
 
         /// <summary>是否下载中</summary>
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(StartDownloadButtonText))]
         [NotifyCanExecuteChangedFor(nameof(StartDownloadCommand))]
         [NotifyCanExecuteChangedFor(nameof(CancelDownloadCommand))]
         private bool _isDownloading;

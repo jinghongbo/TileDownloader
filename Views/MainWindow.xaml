@@ -11,7 +11,7 @@
     WindowState="Maximized"
     ExtendsContentIntoTitleBar="True"
     WindowBackdropType="Mica"
-    Icon="pack://application:,,,/Resources/logo.ico"
+    Icon="pack://application:,,,/Resources/logo.png"
     TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <Grid Background="{DynamicResource ApplicationBackgroundBrush}">
         <Grid.Style>

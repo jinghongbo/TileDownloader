@@ -38,6 +38,9 @@ namespace TileDownloader.Models
         /// <summary>是否完整块（仅 pak 格式生效：blocks 写满该层级全部瓦片，blocks_{z}_{tx}_{ty} 写满 512×512 整块）</summary>
         public bool FullBlock { get; set; }
 
+        /// <summary>行政区边界（按多边形裁剪瓦片；为 null 时按外包框下载）</summary>
+        public NetTopologySuite.Geometries.Geometry? ClipGeometry { get; set; }
+
         /// <summary>提前计算该请求对应的瓦片总量</summary>
         public long CalculateTotalTiles()
         {
@@ -63,6 +66,9 @@ namespace TileDownloader.Models
                 Total = CalculateTotalTiles(),
                 Completed = 0,
                 FullBlock = FullBlock,
+                StyleText = Source?.StyleText,
+                StyleProvider = Source?.StyleProvider,
+                ClipWkt = ClipGeometry?.AsText(),
                 CreatedAt = System.DateTime.Now,
                 Status = (int)TaskStatus2.Running,
             };

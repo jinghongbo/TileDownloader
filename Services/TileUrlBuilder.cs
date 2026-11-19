@@ -126,6 +126,24 @@ namespace TileDownloader.Services
         }
 
         /// <summary>
+        /// 瓦片在 EPSG:4326 下的经纬度范围（用于按行政边界裁剪）
+        /// </summary>
+        public static (double MinLon, double MaxLon, double MinLat, double MaxLat) TileBounds(int z, int x, int y)
+        {
+            var n = Math.Pow(2, z);
+            var minLon = x / n * 360.0 - 180.0;
+            var maxLon = (x + 1) / n * 360.0 - 180.0;
+
+            static double LatOf(double row, double count)
+            {
+                var mercator = Math.PI - 2.0 * Math.PI * row / count;
+                return 180.0 / Math.PI * Math.Atan(Math.Sinh(mercator));
+            }
+
+            return (minLon, maxLon, LatOf(y + 1, n), LatOf(y, n));
+        }
+
+        /// <summary>
         /// 按来源配置创建 HttpClient（UA/Referer/Cookies），同一来源复用。
         /// useProxy=true 跟随系统代理（默认）；false 直连加速（当目标为 Google 瓦片域名时，内建直接连向最快可用 IP，无需 hosts 文件）。
         /// 忽略 HTTPS 证书错误：直连 IP 时只要能成功取到瓦片即可。

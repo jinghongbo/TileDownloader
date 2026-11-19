@@ -9,7 +9,9 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using TileDownloader.Models;
 using TileDownloader.Services;
+using TileDownloader.Services.Styles;
 using Microsoft.Extensions.DependencyInjection;
+using NetTopologySuite.IO;
 
 namespace TileDownloader.ViewModels
 {
@@ -22,17 +24,20 @@ namespace TileDownloader.ViewModels
         private readonly IServiceProvider _serviceProvider;
         private readonly SettingsViewModel _settings;
         private readonly SourcesConfigService _sourcesConfig;
+        private readonly MapStyleRegistry _styleRegistry;
 
         public TasksViewModel(
             ITaskManager taskManager,
             IServiceProvider serviceProvider,
             SettingsViewModel settings,
-            SourcesConfigService sourcesConfig)
+            SourcesConfigService sourcesConfig,
+            MapStyleRegistry styleRegistry)
         {
             _taskManager = taskManager;
             _serviceProvider = serviceProvider;
             _settings = settings;
             _sourcesConfig = sourcesConfig;
+            _styleRegistry = styleRegistry;
 
             // 订阅任务集合变化：同步钩子任务状态事件，保持顶部摘要最新
             Tasks.CollectionChanged += OnTasksCollectionChanged;
@@ -177,6 +182,19 @@ namespace TileDownloader.ViewModels
             {
                 return null; // 来源配置已不存在，无法续传
             }
+
+            // 续传时恢复样式：按原生文本重新注入 URL，保证新旧瓦片同色
+            if (!string.IsNullOrWhiteSpace(record.StyleText))
+            {
+                var adapter = _styleRegistry.Resolve(source);
+                if (adapter != null)
+                {
+                    source = source.Clone();
+                    source.StyleText = record.StyleText!;
+                    source.Url = adapter.Apply(source, record.StyleText!);
+                }
+            }
+
             return new TileDownloadRequest
             {
                 Source = source,
@@ -186,10 +204,29 @@ namespace TileDownloader.ViewModels
                 OutputPath = record.OutputPath,
                 FormatId = record.FormatId,
                 FullBlock = record.FullBlock == true,
+                ClipGeometry = ParseWkt(record.ClipWkt),
                 Concurrent = _settings.Concurrent,
                 Retry = _settings.Retry,
                 UseProxy = _settings.UseProxy,
             };
+        }
+
+        /// <summary>续传时恢复行政区边界（损坏则退回外包框）</summary>
+        private static NetTopologySuite.Geometries.Geometry? ParseWkt(string? wkt)
+        {
+            if (string.IsNullOrWhiteSpace(wkt))
+            {
+                return null;
+            }
+
+            try
+            {
+                return new WKTReader().Read(wkt);
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         /// <summary>

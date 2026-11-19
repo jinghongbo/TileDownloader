@@ -35,6 +35,12 @@ namespace TileDownloader.Services
         private int _curX;
         private int _curY;
 
+        /// <summary>是否已完成"已存在瓦片"预载；完成后 TileExistsAsync 只查内存，避免与写线程抢 SQLite 锁</summary>
+        private volatile bool _initialized;
+
+        /// <summary>实际瓦片图片格式（png/jpg/webp），由首张瓦片魔数识别</summary>
+        private string? _tileFormat;
+
         /// <summary>metadata 表实体（MBTiles 规范列名 name/value，name 为主键）</summary>
         [Table(Name = "metadata")]
         private class Metadata
@@ -79,6 +85,18 @@ namespace TileDownloader.Services
                 .UseAutoSyncStructure(true) // 按实体自动建 metadata/tiles 规范表
                 .Build();
 
+            // WAL + 忙等待：读（续传判断）与批量写（单写者）并存时不再直接抛 "database is locked"
+            try
+            {
+                _db.Ado.ExecuteNonQuery("PRAGMA journal_mode=WAL;");
+                _db.Ado.ExecuteNonQuery("PRAGMA synchronous=NORMAL;");
+                _db.Ado.ExecuteNonQuery("PRAGMA busy_timeout=5000;");
+            }
+            catch
+            {
+                // 个别文件系统不支持 WAL 时退回默认模式，仍可继续下载
+            }
+
             // 预载任务涉及层级的已存瓦片（只取列/行两列、不拉 blob），加速续传判定
             for (var z = options.MinLevel; z <= options.MaxLevel; z++)
             {
@@ -92,6 +110,8 @@ namespace TileDownloader.Services
                 }
             }
 
+            _initialized = true;
+
             // 启动单写者批量落盘通道，避免多线程 SQLite 锁争用并成百倍提升 IOPS
             _tileChannel = Channel.CreateBounded<Tile>(new BoundedChannelOptions(2000)
             {
@@ -104,15 +124,22 @@ namespace TileDownloader.Services
 
         public async Task<bool> TileExistsAsync(int z, int x, int y, CancellationToken ct)
         {
+            // 预载完成后，任务层级内的"已存在瓦片"全部在内存里：
+            // 有记录 = 已存在，无记录 = 新瓦片，无需再查库（查询会与写线程抢锁）
+            if (_initialized)
+            {
+                return _exists.ContainsKey(TileKey(z, x, y));
+            }
+
             var key = TileKey(z, x, y);
             if (_exists.TryGetValue(key, out var flag))
             {
                 return flag == 1;
             }
 
-            // 缓存未命中（如范围外层级的防御查询）回退查库：按 TMS 行号查询
+            // 初始化完成前的兜底查询（正常流程不会走到）
             var tmsRow = TmsRow(z, y);
-            var exists = await _db.Select<Tile>()
+            var exists = await _db!.Select<Tile>()
                 .Where(t => t.ZoomLevel == z && t.TileColumn == x && t.TileRow == tmsRow)
                 .AnyAsync(ct);
             _exists[key] = exists ? (byte)1 : (byte)0;
@@ -121,6 +148,7 @@ namespace TileDownloader.Services
 
         public async Task SaveTileAsync(int z, int x, int y, byte[] data, CancellationToken ct)
         {
+            _tileFormat ??= DetectFormat(data);
             _exists[TileKey(z, x, y)] = 1;
             _curLevel = z;
             _curX = x;
@@ -158,22 +186,35 @@ namespace TileDownloader.Services
 
                 if (batch.Count > 0)
                 {
-                    try
+                    var saved = false;
+                    string? lastError = null;
+                    for (var attempt = 0; attempt < 4 && !saved; attempt++)
                     {
-                        await _db.InsertOrUpdate<Tile>().SetSource(batch).ExecuteAffrowsAsync();
-                    }
-                    catch
-                    {
-                        // 遇到偶发锁竞争时重试一次
                         try
                         {
-                            await Task.Delay(50);
                             await _db.InsertOrUpdate<Tile>().SetSource(batch).ExecuteAffrowsAsync();
+                            saved = true;
                         }
-                        catch
+                        catch (Exception ex)
                         {
+                            lastError = ex.Message;
+                            await Task.Delay(100 * (attempt + 1));
                         }
                     }
+
+                    if (!saved)
+                    {
+                        // 批量写最终失败：逐张上报，避免静默丢瓦片
+                        var onWriteFailed = _options?.OnTileWriteFailed;
+                        if (onWriteFailed != null && lastError != null)
+                        {
+                            foreach (var tile in batch)
+                            {
+                                onWriteFailed(tile.ZoomLevel, tile.TileColumn, TmsRow(tile.ZoomLevel, tile.TileRow), lastError);
+                            }
+                        }
+                    }
+
                     batch.Clear();
                 }
             }
@@ -199,24 +240,80 @@ namespace TileDownloader.Services
             }
 
             // 规范 metadata：bounds/center 为 WGS84 经纬度（任务范围即 EPSG:4326）。
-            // format 固定写 "png"——常见瓦片源为 PNG，标准工具据此判定瓦片类型；
-            // 混合 jpeg 瓦片时多数读取端仍可按字节魔数自行识别
+            // 手动框选可能拖到 ±180 之外（地图横向环绕），这里按 WGS84 合法范围收敛，
+            // 否则 GDAL/QGIS 等读取端会拿到越界的 bounds。
             var o = _options;
-            var cx = (o.MinX + o.MaxX) / 2d;
-            var cy = (o.MinY + o.MaxY) / 2d;
+            const double maxLat = 85.05112878;
+            var minX = Math.Clamp(Math.Min(o.MinX, o.MaxX), -180d, 180d);
+            var maxX = Math.Clamp(Math.Max(o.MinX, o.MaxX), -180d, 180d);
+            var minY = Math.Clamp(Math.Min(o.MinY, o.MaxY), -maxLat, maxLat);
+            var maxY = Math.Clamp(Math.Max(o.MinY, o.MaxY), -maxLat, maxLat);
+            var cx = (minX + maxX) / 2d;
+            var cy = (minY + maxY) / 2d;
+            var cz = Math.Clamp((o.MinLevel + o.MaxLevel) / 2, o.MinLevel, o.MaxLevel);
+            var format = _tileFormat ?? DetectStoredFormat() ?? "png";
             var inv = CultureInfo.InvariantCulture;
             await _db.InsertOrUpdate<Metadata>().SetSource(new[]
             {
                 new Metadata { Name = "name", Value = o.SourceName },
-                new Metadata { Name = "format", Value = "png" },
-                new Metadata { Name = "bounds", Value = string.Format(inv, "{0},{1},{2},{3}", o.MinX, o.MinY, o.MaxX, o.MaxY) },
-                new Metadata { Name = "center", Value = string.Format(inv, "{0},{1},{2}", cx, cy, o.MinLevel) },
+                new Metadata { Name = "format", Value = format },
+                new Metadata { Name = "bounds", Value = string.Format(inv, "{0},{1},{2},{3}", minX, minY, maxX, maxY) },
+                new Metadata { Name = "center", Value = string.Format(inv, "{0},{1},{2}", cx, cy, cz) },
                 new Metadata { Name = "minzoom", Value = o.MinLevel.ToString(inv) },
                 new Metadata { Name = "maxzoom", Value = o.MaxLevel.ToString(inv) },
             }).ExecuteAffrowsAsync(ct);
 
+            // 合并 WAL 并切回单文件模式：MBTiles 交付时不应依赖 -wal/-shm 边车文件
+            try
+            {
+                _db.Ado.ExecuteNonQuery("PRAGMA wal_checkpoint(TRUNCATE);");
+                _db.Ado.ExecuteNonQuery("PRAGMA journal_mode=DELETE;");
+            }
+            catch
+            {
+                // 清理失败不影响已写入的数据
+            }
+
             _db.Dispose();
             _db = null;
+        }
+
+        /// <summary>按瓦片魔数识别图片格式</summary>
+        private static string DetectFormat(byte[] data)
+        {
+            if (data.Length >= 8 && data[0] == 0x89 && data[1] == 0x50 && data[2] == 0x4E && data[3] == 0x47)
+            {
+                return "png";
+            }
+
+            if (data.Length >= 2 && data[0] == 0xFF && data[1] == 0xD8)
+            {
+                return "jpg";
+            }
+
+            if (data.Length >= 12 && data[0] == 0x52 && data[1] == 0x49 && data[2] == 0x46 && data[3] == 0x46)
+            {
+                return "webp";
+            }
+
+            return "png";
+        }
+
+        /// <summary>续传旧文件时从已存瓦片推断格式（无新瓦片写入时用）</summary>
+        private string? DetectStoredFormat()
+        {
+            try
+            {
+                if (_db?.Ado.ExecuteScalar("SELECT tile_data FROM tiles LIMIT 1") is byte[] data)
+                {
+                    return DetectFormat(data);
+                }
+            }
+            catch
+            {
+            }
+
+            return null;
         }
 
         /// <summary>XYZ 行号 → TMS 行号：2^z - 1 - y（z≤22，int 无溢出）</summary>

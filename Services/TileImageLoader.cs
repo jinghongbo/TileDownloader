@@ -70,13 +70,13 @@ namespace TileDownloader.Services
 
         public async Task<byte[]?> GetTileAsync(
             string sourceName, string urlTemplate, string[]? subdomains, string? apiKey,
-            string userAgent, string referer, string cookies,
+            string userAgent, string referer, string cookies, string cacheTag,
             int z, int x, int y, CancellationToken ct)
         {
-            var diskFile = GetDiskPath(sourceName, z, x, y);
+            var diskFile = GetDiskPath(sourceName, cacheTag, z, x, y);
 
-            // 1. 内存缓存
-            var key = $"{sourceName}|{z}|{x}|{y}";
+            // 1. 内存缓存（cacheTag 参与 key：换色后不命中旧图）
+            var key = $"{sourceName}|{cacheTag}|{z}|{x}|{y}";
             if (_memory.TryGetValue(key, out var entry))
             {
                 entry.LastAccess = Environment.TickCount64;
@@ -183,7 +183,7 @@ namespace TileDownloader.Services
             _memory[key] = new CacheEntry { Data = data, LastAccess = Environment.TickCount64 };
         }
 
-        private string GetDiskPath(string sourceName, int z, int x, int y)
+        private string GetDiskPath(string sourceName, string? cacheTag, int z, int x, int y)
         {
             // 源名做文件名安全化
             var safeName = string.Join("_", sourceName.Split(Path.GetInvalidFileNameChars()));
@@ -191,6 +191,13 @@ namespace TileDownloader.Services
             {
                 safeName = "default";
             }
+
+            // 样式缓存标记并入目录名：换色后不会命中旧图，也不需要清缓存
+            if (!string.IsNullOrWhiteSpace(cacheTag) && !string.Equals(cacheTag, "native", StringComparison.Ordinal))
+            {
+                safeName += "@" + string.Join("_", cacheTag.Split(Path.GetInvalidFileNameChars()));
+            }
+
             return Path.Combine(_diskRoot, safeName, z.ToString(), x.ToString(), y + ".png");
         }
     }

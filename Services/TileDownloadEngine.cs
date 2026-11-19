@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using NetTopologySuite.Geometries;
 using TileDownloader.Models;
 
 namespace TileDownloader.Services
@@ -58,13 +59,36 @@ namespace TileDownloader.Services
                     CancellationToken = ct,
                 };
 
+                // 行政区边界：按多边形裁剪瓦片（完整块模式写满整块，不裁剪）
+                var geometryFactory = new GeometryFactory();
+                var clipGeometry = request.FullBlock ? null : request.ClipGeometry;
+
                 // 提前预先计算所有层级与总瓦片数，上报至进度汇报器建立预算
                 // （完整块模式下按 pak 分块边界扩展，与下方实际枚举保持一致）
                 for (var z = request.MinLevel; z <= request.MaxLevel; z++)
                 {
                     var (firstCol, lastCol) = TileUrlBuilder.ColRange(request.Range.MinX, request.Range.MaxX, z, request.FullBlock);
                     var (firstRow, lastRow) = TileUrlBuilder.RowRange(request.Range.MinY, request.Range.MaxY, z, request.FullBlock);
-                    var total = (long)(lastCol - firstCol + 1) * (lastRow - firstRow + 1);
+
+                    long total = 0;
+                    if (clipGeometry == null)
+                    {
+                        total = (long)(lastCol - firstCol + 1) * (lastRow - firstRow + 1);
+                    }
+                    else
+                    {
+                        for (var x = firstCol; x <= lastCol; x++)
+                        {
+                            for (var y = firstRow; y <= lastRow; y++)
+                            {
+                                if (TileIntersects(clipGeometry, geometryFactory, z, x, y))
+                                {
+                                    total++;
+                                }
+                            }
+                        }
+                    }
+
                     progress.ReportLevelTotal(z, total);
                 }
 
@@ -75,18 +99,23 @@ namespace TileDownloader.Services
                     var (firstCol, lastCol) = TileUrlBuilder.ColRange(request.Range.MinX, request.Range.MaxX, z, request.FullBlock);
                     var (firstRow, lastRow) = TileUrlBuilder.RowRange(request.Range.MinY, request.Range.MaxY, z, request.FullBlock);
 
-                    static IEnumerable<(int x, int y)> EnumerateTiles(int fc, int lc, int fr, int lr)
+                    static IEnumerable<(int x, int y)> EnumerateTiles(
+                        int fc, int lc, int fr, int lr, int level,
+                        Geometry? clip, GeometryFactory factory)
                     {
                         for (var x = fc; x <= lc; x++)
                         {
                             for (var y = fr; y <= lr; y++)
                             {
-                                yield return (x, y);
+                                if (clip == null || TileIntersects(clip, factory, level, x, y))
+                                {
+                                    yield return (x, y);
+                                }
                             }
                         }
                     }
 
-                    await Parallel.ForEachAsync(EnumerateTiles(firstCol, lastCol, firstRow, lastRow), parallelOptions, async (tile, token) =>
+                    await Parallel.ForEachAsync(EnumerateTiles(firstCol, lastCol, firstRow, lastRow, z, clipGeometry, geometryFactory), parallelOptions, async (tile, token) =>
                     {
                         await DownloadTileAsync(client, store, progress, source, subdomains, z, tile.x, tile.y, request.Retry, token);
                     });
@@ -99,6 +128,14 @@ namespace TileDownloader.Services
                 progress.SetState("正在写入元数据…");
                 await store.FinalizeAsync(CancellationToken.None);
             }
+        }
+
+        /// <summary>瓦片范围是否与行政区边界相交</summary>
+        private static bool TileIntersects(Geometry clip, GeometryFactory factory, int z, int x, int y)
+        {
+            var (minLon, maxLon, minLat, maxLat) = TileUrlBuilder.TileBounds(z, x, y);
+            var tile = factory.ToGeometry(new Envelope(minLon, maxLon, minLat, maxLat));
+            return clip.Intersects(tile);
         }
 
         /// <summary>下载单个瓦片（含存在性跳过与重试）</summary>

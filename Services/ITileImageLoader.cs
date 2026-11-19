@@ -31,6 +31,7 @@ namespace TileDownloader.Services
             string userAgent,
             string referer,
             string cookies,
+            string cacheTag,
             int z, int x, int y,
             CancellationToken ct);
     }

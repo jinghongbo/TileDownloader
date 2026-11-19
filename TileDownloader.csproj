@@ -11,7 +11,7 @@
     <!--  程序集元数据：项目仓库与版权信息（写入 exe 文件属性）  -->
     <Version>1.0.5</Version>
     <Authors>jinghongbo</Authors>
-    <Product>通用瓦片地图下载工具</Product>
+    <Product>地图瓦片下载器</Product>
     <Description>批量下载 XYZ 瓦片地图 · 支持多文件 pak / 单文件 pak / MBTiles / 瓦片目录输出</Description>
     <Copyright>Copyright © 2026 jinghongbo</Copyright>
     <RepositoryUrl>https://github.com/jinghongbo/TileDownloader</RepositoryUrl>
@@ -24,7 +24,7 @@
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
-    <PackageReference Include="WPF-UI" Version="4.3.0" />
+    <PackageReference Include="WPF-UI" Version="4.2.0" />
     <PackageReference Include="FreeSql.Provider.Sqlite" Version="3.5.311" />
     <PackageReference Include="BruTile" Version="6.0.0" />
     <PackageReference Include="NetTopologySuite" Version="2.6.0" />

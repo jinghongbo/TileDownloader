@@ -21,9 +21,9 @@ namespace TileDownloader.Controls
     /// <summary>
     /// 完全自研的 XYZ 瓦片地图控件（Web Mercator / EPSG:3857 投影，EPSG:4326 经纬度输入输出）。
     /// 交互约定：
-    /// - 左键拖拽 = 框选范围（松开后转换为 Envelope 写入 SelectedRange，支持双向绑定）；
-    /// - 右键拖拽（或 Ctrl+左键拖拽）= 平移地图；
-    /// - 滚轮 = 以鼠标位置为锚点整数级缩放（0–20）。
+    /// - 左键拖拽 = 平移地图；
+    /// - 右键拖拽 = 框选范围（松开后转换为 Envelope 写入 SelectedRange，支持双向绑定）；
+    /// - 滚轮 = 以鼠标位置为锚点整数级缩放（0–22）。
     /// 瓦片通过 ITileImageLoader 异步加载（复用其内存/磁盘缓存），当前级未就绪时自动回退绘制祖先瓦片。
     /// 直接以 XAML 使用：<code>xmlns:controls="clr-namespace:TileDownloader.Controls"</code>
     /// </summary>
@@ -32,7 +32,7 @@ namespace TileDownloader.Controls
         // ---------- 常量 ----------
 
         public const int MinZoom = 0;
-        public const int MaxZoom = 20;
+        public const int MaxZoom = 22;
 
         /// <summary>Web Mercator 可表示的最大纬度（度），lat 超出时 clamp 到该值</summary>
         public const double MaxLatitude = 85.05112878;
@@ -54,6 +54,9 @@ namespace TileDownloader.Controls
 
         /// <summary>瓦片网络请求并发上限</summary>
         private const int FetchConcurrency = 6;
+
+        /// <summary>瓦片绘制外扩量（DIP），用于消除相邻瓦片间的亚像素白缝</summary>
+        private const double TileSeamOverlap = 1.0;
 
         /// <summary>视野变化后延迟多久才重启瓦片请求（合并连续平移/缩放，避免请求风暴）</summary>
         private static readonly TimeSpan ViewDirtyDebounce = TimeSpan.FromMilliseconds(80);
@@ -125,7 +128,7 @@ namespace TileDownloader.Controls
                 FrameworkPropertyMetadataOptions.BindsTwoWayByDefault | FrameworkPropertyMetadataOptions.AffectsRender,
                 OnSelectedRangeChanged));
 
-        /// <summary>缩放级别（0–20，整数）</summary>
+        /// <summary>缩放级别（0–22，整数）</summary>
         public static readonly DependencyProperty ZoomProperty = DependencyProperty.Register(
             nameof(Zoom), typeof(int), typeof(TileMapControl),
             new FrameworkPropertyMetadata(4,
@@ -153,6 +156,28 @@ namespace TileDownloader.Controls
         {
             get => (Envelope?)GetValue(SelectedRangeProperty);
             set => SetValue(SelectedRangeProperty, value);
+        }
+
+        /// <summary>是否允许在地图上手动框选（仅“地图手动框选”模式为 true）</summary>
+        public static readonly DependencyProperty IsManualSelectionEnabledProperty = DependencyProperty.Register(
+            nameof(IsManualSelectionEnabled), typeof(bool), typeof(TileMapControl),
+            new FrameworkPropertyMetadata(false));
+
+        public bool IsManualSelectionEnabled
+        {
+            get => (bool)GetValue(IsManualSelectionEnabledProperty);
+            set => SetValue(IsManualSelectionEnabledProperty, value);
+        }
+
+        /// <summary>选区行政边界（多边形）；为空时退回绘制外包矩形</summary>
+        public static readonly DependencyProperty SelectedGeometryProperty = DependencyProperty.Register(
+            nameof(SelectedGeometry), typeof(NetTopologySuite.Geometries.Geometry), typeof(TileMapControl),
+            new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
+
+        public NetTopologySuite.Geometries.Geometry? SelectedGeometry
+        {
+            get => (NetTopologySuite.Geometries.Geometry?)GetValue(SelectedGeometryProperty);
+            set => SetValue(SelectedGeometryProperty, value);
         }
 
         public int Zoom
@@ -231,7 +256,6 @@ namespace TileDownloader.Controls
         // 交互状态（仅 UI 线程）
         private bool _isSelecting;
         private bool _isPanning;
-        private bool _panByRight;
         private Point _dragStart;
         private Point _dragCurrent;
         private Point _panLast;
@@ -240,7 +264,7 @@ namespace TileDownloader.Controls
         {
             ClipToBounds = true;
             Focusable = false;
-            Cursor = Cursors.Cross;
+            Cursor = Cursors.Hand;
             // 祖先回退放大绘制时使用较低质量插值，换取流畅度
             RenderOptions.SetBitmapScalingMode(this, BitmapScalingMode.LowQuality);
 
@@ -420,6 +444,7 @@ namespace TileDownloader.Controls
             var z = Zoom;
             var generation = _sourceGeneration;
             var sourceName = source.Name ?? string.Empty;
+            var cacheTag = source.CacheTag;
             var urlTemplate = source.Url ?? string.Empty;
             var subdomains = source.GetSubdomains();
             var apiKey = source.Key ?? string.Empty;
@@ -460,7 +485,7 @@ namespace TileDownloader.Controls
                             continue;
                         }
 
-                        _ = FetchTileAsync(loader, generation, sourceName, urlTemplate, subdomains, apiKey,
+                        _ = FetchTileAsync(loader, generation, sourceName, cacheTag, urlTemplate, subdomains, apiKey,
                             userAgent, referer, cookies, level, x, y, ct);
                     }
                 }
@@ -490,7 +515,7 @@ namespace TileDownloader.Controls
         /// </summary>
         private async Task FetchTileAsync(
             ITileImageLoader loader, int generation,
-            string sourceName, string urlTemplate, string[] subdomains, string apiKey,
+            string sourceName, string cacheTag, string urlTemplate, string[] subdomains, string apiKey,
             string userAgent, string referer, string cookies,
             int z, int x, int y, CancellationToken ct)
         {
@@ -502,7 +527,7 @@ namespace TileDownloader.Controls
                 try
                 {
                     bytes = await loader.GetTileAsync(sourceName, urlTemplate, subdomains, apiKey,
-                        userAgent, referer, cookies, z, x, y, ct);
+                        userAgent, referer, cookies, cacheTag, z, x, y, ct);
                 }
                 finally
                 {
@@ -689,7 +714,12 @@ namespace TileDownloader.Controls
                 for (var ty = firstRow; ty <= lastRow; ty++)
                 {
                     // 瓦片世界坐标 → 屏幕坐标（1 DIP = 1 世界像素）
-                    var dest = new Rect(tx * TileSize - viewLeft, ty * TileSize - viewTop, TileSize, TileSize);
+                    // 相邻瓦片各向外扩 1 DIP：抵消浮点定位/缩放造成的亚像素缝隙（否则会出现白线）
+                    var dest = new Rect(
+                        tx * TileSize - viewLeft,
+                        ty * TileSize - viewTop,
+                        TileSize + TileSeamOverlap,
+                        TileSize + TileSeamOverlap);
                     var image = GetCachedTile(z, tx, ty);
                     if (image != null)
                     {
@@ -697,11 +727,8 @@ namespace TileDownloader.Controls
                         continue;
                     }
 
-                    if (!DrawAncestorFallback(dc, dest, z, tx, ty))
-                    {
-                        // 瓦片与祖先均未就绪时绘制微光网格，提供精准地理定位参考
-                        dc.DrawRectangle(null, isDark ? DarkTileGridPen : LightTileGridPen, dest);
-                    }
+                    // 瓦片与祖先均未就绪时保持底色，不画网格线（网格会在视觉上表现为瓦片白缝）
+                    DrawAncestorFallback(dc, dest, z, tx, ty);
                 }
             }
         }
@@ -748,6 +775,12 @@ namespace TileDownloader.Controls
                 return;
             }
 
+            if (SelectedGeometry is { IsEmpty: false } geometry)
+            {
+                DrawSelectedGeometry(dc, geometry, width, height, z, isDark);
+                return;
+            }
+
             var viewLeft = LonToWorldX(CenterLon, z) - width / 2.0;
             var viewTop = LatToWorldY(CenterLat, z) - height / 2.0;
 
@@ -762,6 +795,79 @@ namespace TileDownloader.Controls
             var fillBrush = isDark ? DarkSelectionFillBrush : LightSelectionFillBrush;
             var pen = isDark ? DarkSelectionPen : LightSelectionPen;
             dc.DrawRectangle(fillBrush, pen, rect);
+        }
+
+        /// <summary>绘制行政区多边形选区（支持多边形与洞）</summary>
+        private void DrawSelectedGeometry(DrawingContext dc, NetTopologySuite.Geometries.Geometry geometry,
+            double width, double height, int z, bool isDark)
+        {
+            var viewLeft = LonToWorldX(CenterLon, z) - width / 2.0;
+            var viewTop = LatToWorldY(CenterLat, z) - height / 2.0;
+            var fillBrush = isDark ? DarkSelectionFillBrush : LightSelectionFillBrush;
+            var pen = isDark ? DarkSelectionPen : LightSelectionPen;
+
+            var stream = new StreamGeometry { FillRule = FillRule.EvenOdd };
+            using (var ctx = stream.Open())
+            {
+                AppendGeometry(ctx, geometry, z, viewLeft, viewTop);
+            }
+
+            stream.Freeze();
+            dc.DrawGeometry(fillBrush, pen, stream);
+        }
+
+        private void AppendGeometry(StreamGeometryContext ctx, NetTopologySuite.Geometries.Geometry geometry,
+            int z, double viewLeft, double viewTop)
+        {
+            switch (geometry)
+            {
+                case NetTopologySuite.Geometries.Polygon polygon:
+                    AppendPolygon(ctx, polygon, z, viewLeft, viewTop);
+                    break;
+                case NetTopologySuite.Geometries.MultiPolygon multi:
+                    for (var i = 0; i < multi.NumGeometries; i++)
+                    {
+                        if (multi.GetGeometryN(i) is NetTopologySuite.Geometries.Polygon p)
+                        {
+                            AppendPolygon(ctx, p, z, viewLeft, viewTop);
+                        }
+                    }
+                    break;
+                case NetTopologySuite.Geometries.GeometryCollection collection:
+                    for (var i = 0; i < collection.NumGeometries; i++)
+                    {
+                        AppendGeometry(ctx, collection.GetGeometryN(i), z, viewLeft, viewTop);
+                    }
+                    break;
+            }
+        }
+
+        private void AppendPolygon(StreamGeometryContext ctx, NetTopologySuite.Geometries.Polygon polygon,
+            int z, double viewLeft, double viewTop)
+        {
+            AppendRing(ctx, polygon.ExteriorRing.Coordinates, z, viewLeft, viewTop);
+            for (var i = 0; i < polygon.NumInteriorRings; i++)
+            {
+                AppendRing(ctx, polygon.GetInteriorRingN(i).Coordinates, z, viewLeft, viewTop);
+            }
+        }
+
+        private void AppendRing(StreamGeometryContext ctx, NetTopologySuite.Geometries.Coordinate[] coordinates,
+            int z, double viewLeft, double viewTop)
+        {
+            if (coordinates.Length < 3)
+            {
+                return;
+            }
+
+            Point ToScreen(NetTopologySuite.Geometries.Coordinate c)
+                => new(LonToWorldX(c.X, z) - viewLeft, LatToWorldY(c.Y, z) - viewTop);
+
+            ctx.BeginFigure(ToScreen(coordinates[0]), true, true);
+            for (var i = 1; i < coordinates.Length; i++)
+            {
+                ctx.LineTo(ToScreen(coordinates[i]), true, false);
+            }
         }
 
         /// <summary>绘制拖拽中的临时框选矩形（屏幕坐标）</summary>
@@ -783,7 +889,7 @@ namespace TileDownloader.Controls
                 string.Format(CultureInfo.InvariantCulture, "中心: {0:F4}, {1:F4}", CenterLon, CenterLat),
                 string.Format(CultureInfo.InvariantCulture, "缩放: {0}", Zoom),
                 "选区: " + BuildSelectionText(),
-                "左键拖拽框选 · 右键/Ctrl+左键拖拽平移 · 滚轮缩放",
+                "右键拖拽框选 · 左键拖拽平移 · 滚轮缩放",
             };
 
             const double padX = 10.0;
@@ -857,21 +963,9 @@ namespace TileDownloader.Controls
         {
             if (!_isPanning && !_isSelecting)
             {
-                var pos = e.GetPosition(this);
-                if ((Keyboard.Modifiers & ModifierKeys.Control) != 0)
-                {
-                    // Ctrl+左键 = 平移
-                    StartPan(pos, byRight: false);
-                }
-                else
-                {
-                    // 左键 = 框选（再次拖拽即重新选择）
-                    _isSelecting = true;
-                    _dragStart = pos;
-                    _dragCurrent = pos;
-                    CaptureMouse();
-                    InvalidateVisual();
-                }
+                // 左键 = 平移地图
+                StartPan(e.GetPosition(this));
+                Cursor = Cursors.SizeAll;
 
                 e.Handled = true;
             }
@@ -881,9 +975,23 @@ namespace TileDownloader.Controls
 
         protected override void OnMouseRightButtonDown(MouseButtonEventArgs e)
         {
+            // 只有切到“地图手动框选”模式才允许右键框选
+            if (!IsManualSelectionEnabled)
+            {
+                base.OnMouseRightButtonDown(e);
+                return;
+            }
+
             if (!_isPanning && !_isSelecting)
             {
-                StartPan(e.GetPosition(this), byRight: true);
+                // 右键 = 框选（再次拖拽即重新选择）
+                var pos = e.GetPosition(this);
+                _isSelecting = true;
+                _dragStart = pos;
+                _dragCurrent = pos;
+                Cursor = Cursors.Cross;
+                CaptureMouse();
+                InvalidateVisual();
                 e.Handled = true;
             }
 
@@ -914,6 +1022,18 @@ namespace TileDownloader.Controls
 
         protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
         {
+            if (_isPanning)
+            {
+                EndPan();
+                Cursor = Cursors.Hand;
+                e.Handled = true;
+            }
+
+            base.OnMouseLeftButtonUp(e);
+        }
+
+        protected override void OnMouseRightButtonUp(MouseButtonEventArgs e)
+        {
             if (_isSelecting)
             {
                 _isSelecting = false;
@@ -929,22 +1049,7 @@ namespace TileDownloader.Controls
                     SelectedRange = ScreenRectToEnvelope(rect);
                 }
 
-                e.Handled = true;
-            }
-            else if (_isPanning && !_panByRight)
-            {
-                EndPan();
-                e.Handled = true;
-            }
-
-            base.OnMouseLeftButtonUp(e);
-        }
-
-        protected override void OnMouseRightButtonUp(MouseButtonEventArgs e)
-        {
-            if (_isPanning && _panByRight)
-            {
-                EndPan();
+                Cursor = Cursors.Hand;
                 e.Handled = true;
             }
 
@@ -986,15 +1091,14 @@ namespace TileDownloader.Controls
             // 捕获被系统抢走（如切窗口）时复位交互状态，避免卡在拖拽中
             _isSelecting = false;
             _isPanning = false;
-            _panByRight = false;
+            Cursor = Cursors.Hand;
             InvalidateVisual();
             base.OnLostMouseCapture(e);
         }
 
-        private void StartPan(Point pos, bool byRight)
+        private void StartPan(Point pos)
         {
             _isPanning = true;
-            _panByRight = byRight;
             _panLast = pos;
             CaptureMouse();
         }
@@ -1002,7 +1106,6 @@ namespace TileDownloader.Controls
         private void EndPan()
         {
             _isPanning = false;
-            _panByRight = false;
             ReleaseCaptureIfAny();
         }
 

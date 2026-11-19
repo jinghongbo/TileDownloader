@@ -52,6 +52,8 @@
                 <controls:TileMapControl x:Name="Map"
                                          Source="{Binding EffectiveSource}"
                                          SelectedRange="{Binding Range, Mode=TwoWay}"
+                                         SelectedGeometry="{Binding SelectedGeometry}"
+                                         IsManualSelectionEnabled="{Binding IsManualMode}"
                                          Zoom="12" />
 
                 <!--  地图左上角悬浮工具岛（选区居中 + 全球/中国宏观视角）  -->
@@ -128,6 +130,43 @@
                                   SelectedItem="{Binding SelectedSource}"
                                   DisplayMemberPath="Name" />
 
+                        <!--  地图样式（仅声明了 StyleProvider 的来源显示）  -->
+                        <Border Margin="0,10,0,0"
+                                CornerRadius="8"
+                                Padding="10,8"
+                                Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                BorderThickness="1"
+                                Visibility="{Binding CanCustomizeStyle, Converter={StaticResource BoolToVis}}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <ui:SymbolIcon Symbol="Layer24"
+                                                   FontSize="14"
+                                                   Margin="0,0,6,0"
+                                                   Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+                                    <TextBlock Text="地图样式"
+                                               FontWeight="SemiBold"
+                                               VerticalAlignment="Center" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                    <ComboBox Width="118"
+                                              VerticalAlignment="Center"
+                                              AutomationProperties.AutomationId="StylePresetCombo"
+                                              ItemsSource="{Binding StyleChoices}"
+                                              SelectedItem="{Binding SelectedStyleChoice, Mode=TwoWay}"
+                                              DisplayMemberPath="Name" />
+                                    <ui:Button Content="编辑…"
+                                               Margin="6,0,0,0"
+                                               Padding="8,4"
+                                               Command="{Binding OpenStyleCommand}" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
                         <!--  需要密钥的来源：由用户填写（保存在本机，不写入来源配置）  -->
                         <StackPanel Margin="0,12,0,0"
                                     Visibility="{Binding HasKeyRequired, Converter={StaticResource BoolToVis}}">
@@ -140,9 +179,7 @@
                                         Text="{Binding RuntimeKey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                         </StackPanel>
 
-                        <TextBlock Style="{StaticResource HintText}"
-                                   Margin="0,8,0,0"
-                                   Text="💡 在 Sources 目录添加 JSON 文件即可配置更多地图源（一源一文件）" />
+
                     </StackPanel>
                 </ui:Card>
 
@@ -194,6 +231,7 @@
                         <StackPanel Visibility="{Binding IsRegionMode, Converter={StaticResource BoolToVis}}">
                             <!--  搜索检索框  -->
                             <ui:TextBox PlaceholderText="🔍 搜索省/市/区县（如：西湖区）"
+                                        AutomationProperties.AutomationId="RegionSearchBox"
                                         Text="{Binding SearchKeyword, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                         ClearButtonEnabled="True"
                                         Margin="0,0,0,6" />
@@ -216,6 +254,7 @@
                                                            Appearance="Transparent"
                                                            Padding="8,6"
                                                            Margin="0,1"
+                                                           AutomationProperties.Name="{Binding DisplayName}"
                                                            Command="{Binding DataContext.SelectSearchResultCommand, RelativeSource={RelativeSource AncestorType=Page}}"
                                                            CommandParameter="{Binding}">
                                                     <StackPanel Orientation="Horizontal">
@@ -263,7 +302,7 @@
                         <!--  地图手动框选模式提示说明  -->
                         <StackPanel Visibility="{Binding IsManualMode, Converter={StaticResource BoolToVis}}" Margin="0,2,0,6">
                             <TextBlock Style="{StaticResource HintText}"
-                                       Text="鼠标在左侧地图上按住左键拖拽框选矩形范围，再次拖拽可重新选定" />
+                                       Text="鼠标在左侧地图上按住右键拖拽框选矩形范围，再次拖拽可重新选定" />
                         </StackPanel>
 
                         <!--  已选范围信息展示卡片（两种模式共用）  -->
@@ -364,18 +403,18 @@
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0">
-                                    <TextBlock Style="{StaticResource HintText}" Text="最小层级（0–20）" />
+                                    <TextBlock Style="{StaticResource HintText}" Text="最小层级（0–22）" />
                                     <ui:NumberBox Margin="0,6,0,0"
                                                   Value="{Binding MinLevel, Mode=TwoWay}"
-                                                  Minimum="0" Maximum="20"
+                                                  Minimum="0" Maximum="22"
                                                   SmallChange="1"
                                                   ClearButtonEnabled="False" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="2">
-                                    <TextBlock Style="{StaticResource HintText}" Text="最大层级（0–20）" />
+                                    <TextBlock Style="{StaticResource HintText}" Text="最大层级（0–22）" />
                                     <ui:NumberBox Margin="0,6,0,0"
                                                   Value="{Binding MaxLevel, Mode=TwoWay}"
-                                                  Minimum="0" Maximum="20"
+                                                  Minimum="0" Maximum="22"
                                                   SmallChange="1"
                                                   ClearButtonEnabled="False" />
                                 </StackPanel>

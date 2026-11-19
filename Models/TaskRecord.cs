@@ -99,5 +99,17 @@ namespace TileDownloader.Models
         /// <summary>是否完整块（仅 pak 格式生效；历史记录为 NULL，按未勾选处理）</summary>
         [Column(Name = "full_block")]
         public bool? FullBlock { get; set; }
+
+        /// <summary>样式文本（原生格式；历史记录为 NULL，按原生配色处理）</summary>
+        [Column(Name = "style_text", StringLength = -1)]
+        public string? StyleText { get; set; }
+
+        /// <summary>样式适配器 Id（如 google-apistyle）</summary>
+        [Column(Name = "style_provider", StringLength = 50)]
+        public string? StyleProvider { get; set; }
+
+        /// <summary>行政区边界 WKT（按多边形裁剪；历史记录为 NULL，按外包框续传）</summary>
+        [Column(Name = "clip_wkt", StringLength = -1)]
+        public string? ClipWkt { get; set; }
     }
 }

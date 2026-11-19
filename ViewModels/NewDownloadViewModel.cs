@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -7,7 +8,10 @@ using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using TileDownloader.Models;
+using TileDownloader.Models.Styles;
 using TileDownloader.Services;
+using TileDownloader.Services.Styles;
+using TileDownloader.Views;
 using Microsoft.Win32;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
@@ -26,10 +30,17 @@ namespace TileDownloader.ViewModels
         private readonly ISnackbarService _snackbarService;
         private readonly IContentDialogService _dialogService;
         private readonly RegionService _regionService;
+        private readonly MapStyleRegistry _styleRegistry;
+        private readonly MapStyleStore _styleStore;
+        private readonly RegionBoundaryService _boundaryService;
 
         private TaskItem? _currentItem;
         private bool _isApplyingCascade;
         private bool _isInternalRangeUpdate;
+        private string _styleText = string.Empty;
+        private string _styleName = "原生";
+        private bool _isSyncingStyleChoice;
+        private CancellationTokenSource? _boundaryCts;
 
         /// <summary>请求地图平移并缩放到指定经纬度外包框事件</summary>
         public event Action<NetTopologySuite.Geometries.Envelope>? RequestZoomToRange;
@@ -41,7 +52,10 @@ namespace TileDownloader.ViewModels
             SettingsViewModel settings,
             ISnackbarService snackbarService,
             IContentDialogService dialogService,
-            RegionService regionService)
+            RegionService regionService,
+            MapStyleRegistry styleRegistry,
+            MapStyleStore styleStore,
+            RegionBoundaryService boundaryService)
         {
             _storeRegistry = storeRegistry;
             _tasksViewModel = tasksViewModel;
@@ -49,6 +63,9 @@ namespace TileDownloader.ViewModels
             _snackbarService = snackbarService;
             _dialogService = dialogService;
             _regionService = regionService;
+            _styleRegistry = styleRegistry;
+            _styleStore = styleStore;
+            _boundaryService = boundaryService;
 
             try
             {
@@ -192,8 +209,100 @@ namespace TileDownloader.ViewModels
         partial void OnSelectedSourceChanged(DownloadSource? value)
         {
             OnPropertyChanged(nameof(HasKeyRequired));
+            OnPropertyChanged(nameof(CanCustomizeStyle));
+            OnPropertyChanged(nameof(CurrentStyleName));
+
             RuntimeKey = value == null ? null : LoadUserKey(value.Name);
+            LoadStyleForSource(value);
             UpdateEffectiveSource();
+        }
+
+        /// <summary>当前来源是否支持自定义样式（由 Sources/*.json 的 StyleProvider 声明）</summary>
+        public bool CanCustomizeStyle => SelectedSource != null && _styleRegistry.Resolve(SelectedSource) != null;
+
+        /// <summary>当前样式名（原生 / 示例名 / 自定义）</summary>
+        public string CurrentStyleName => string.IsNullOrWhiteSpace(_styleText) ? "原生" : _styleName;
+
+        /// <summary>主界面样式下拉：原生 + 各内置示例</summary>
+        public ObservableCollection<StyleChoice> StyleChoices { get; } = new();
+
+        /// <summary>当前选中的样式（主界面直接切换，无需打开窗口）</summary>
+        [ObservableProperty]
+        private StyleChoice? _selectedStyleChoice;
+
+        partial void OnSelectedStyleChoiceChanged(StyleChoice? value)
+        {
+            if (_isSyncingStyleChoice || value == null)
+            {
+                return;
+            }
+
+            _styleText = value.Text ?? string.Empty;
+            _styleName = value.Name;
+
+            if (SelectedSource != null)
+            {
+                var adapter = _styleRegistry.Resolve(SelectedSource);
+                _styleStore.SetLast(
+                    SelectedSource.Name,
+                    string.IsNullOrWhiteSpace(_styleText) || adapter == null
+                        ? null
+                        : new MapStyleDocument { Name = _styleName, ProviderId = adapter.Id, Text = _styleText });
+            }
+
+            UpdateEffectiveSource();
+            OnPropertyChanged(nameof(CurrentStyleName));
+        }
+
+        /// <summary>让下拉选中项与当前样式文本保持一致（不触发应用）</summary>
+        private void SyncStyleChoice()
+        {
+            _isSyncingStyleChoice = true;
+            try
+            {
+                var match = StyleChoices.FirstOrDefault(c => string.Equals(c.Text, _styleText, StringComparison.Ordinal));
+                if (match == null && !string.IsNullOrWhiteSpace(_styleText))
+                {
+                    match = new StyleChoice { Name = _styleName, Text = _styleText };
+                    StyleChoices.Add(match);
+                }
+
+                SelectedStyleChoice = match ?? StyleChoices.FirstOrDefault();
+            }
+            finally
+            {
+                _isSyncingStyleChoice = false;
+            }
+        }
+
+        /// <summary>切换来源时恢复该来源上次使用的样式文本</summary>
+        private void LoadStyleForSource(DownloadSource? source)
+        {
+            _styleText = string.Empty;
+            _styleName = "原生";
+            StyleChoices.Clear();
+
+            var adapter = source == null ? null : _styleRegistry.Resolve(source);
+            if (adapter == null)
+            {
+                SyncStyleChoice();
+                return;
+            }
+
+            StyleChoices.Add(new StyleChoice { Name = "原生", Text = string.Empty });
+            foreach (var preset in adapter.Presets)
+            {
+                StyleChoices.Add(new StyleChoice { Name = preset.Name, Text = preset.Text });
+            }
+
+            var last = _styleStore.GetLast(source!.Name);
+            if (last != null && !string.IsNullOrWhiteSpace(last.Text) && adapter.Parse(last.Text).Ok)
+            {
+                _styleText = last.Text;
+                _styleName = string.IsNullOrWhiteSpace(last.Name) ? "自定义" : last.Name;
+            }
+
+            SyncStyleChoice();
         }
 
         partial void OnRuntimeKeyChanged(string? value)
@@ -217,6 +326,18 @@ namespace TileDownloader.ViewModels
             {
                 runtime.Key = RuntimeKey ?? string.Empty;
             }
+
+            // 样式文本是原生格式，只由当前来源的适配器负责注入
+            runtime.StyleText = _styleText;
+            if (!string.IsNullOrWhiteSpace(_styleText))
+            {
+                var adapter = _styleRegistry.Resolve(runtime);
+                if (adapter != null)
+                {
+                    runtime.Url = adapter.Apply(runtime, _styleText);
+                }
+            }
+
             EffectiveSource = runtime;
         }
 
@@ -301,12 +422,12 @@ namespace TileDownloader.ViewModels
             if (value != null)
             {
                 var desc = $"{SelectedProvince?.Name} {SelectedCity?.Name} {value.Name}".Trim();
-                ApplyRegionEnvelope(value.ToEnvelope(), desc);
+                ApplyRegionEnvelope(value.ToEnvelope(), desc, value.Code);
             }
             else if (SelectedCity != null)
             {
                 var desc = $"{SelectedProvince?.Name} {SelectedCity.Name}".Trim();
-                ApplyRegionEnvelope(SelectedCity.ToEnvelope(), desc);
+                ApplyRegionEnvelope(SelectedCity.ToEnvelope(), desc, SelectedCity.Code);
             }
         }
 
@@ -324,7 +445,7 @@ namespace TileDownloader.ViewModels
                     Cities = new List<AdministrativeRegion>();
                     if (IsRegionMode)
                     {
-                        ApplyRegionEnvelope(null, null);
+                        ApplyRegionEnvelope(null, null, null);
                     }
                     return;
                 }
@@ -352,7 +473,7 @@ namespace TileDownloader.ViewModels
                     distList.AddRange(singleCity.Children);
                     Districts = distList;
                     SelectedDistrict = distList[0];
-                    ApplyRegionEnvelope(singleCity.ToEnvelope(), prov.Name);
+                    ApplyRegionEnvelope(singleCity.ToEnvelope(), prov.Name, singleCity.Code);
                     return;
                 }
 
@@ -367,7 +488,7 @@ namespace TileDownloader.ViewModels
                 list.AddRange(prov.Children);
                 Cities = list;
                 SelectedCity = list[0];
-                ApplyRegionEnvelope(prov.ToEnvelope(), prov.Name);
+                ApplyRegionEnvelope(prov.ToEnvelope(), prov.Name, prov.Code);
             }
             finally
             {
@@ -387,7 +508,7 @@ namespace TileDownloader.ViewModels
                     Districts = new List<AdministrativeRegion>();
                     if (SelectedProvince != null)
                     {
-                        ApplyRegionEnvelope(SelectedProvince.ToEnvelope(), SelectedProvince.Name);
+                        ApplyRegionEnvelope(SelectedProvince.ToEnvelope(), SelectedProvince.Name, SelectedProvince.Code);
                     }
                     return;
                 }
@@ -408,7 +529,7 @@ namespace TileDownloader.ViewModels
                 SelectedDistrict = list.Count > 0 ? list[0] : null;
 
                 var desc = $"{SelectedProvince?.Name} {city.Name}".Trim();
-                ApplyRegionEnvelope(city.ToEnvelope(), desc);
+                ApplyRegionEnvelope(city.ToEnvelope(), desc, city.Code);
             }
             finally
             {
@@ -416,7 +537,41 @@ namespace TileDownloader.ViewModels
             }
         }
 
-        private void ApplyRegionEnvelope(NetTopologySuite.Geometries.Envelope? env, string? desc)
+        /// <summary>当前选区的行政边界多边形（异步加载；为空时界面退回外包框）</summary>
+        [ObservableProperty]
+        private NetTopologySuite.Geometries.Geometry? _selectedGeometry;
+
+        private async void LoadBoundaryAsync(string? code)
+        {
+            _boundaryCts?.Cancel();
+            var cts = new CancellationTokenSource();
+            _boundaryCts = cts;
+
+            SelectedGeometry = null;
+            if (string.IsNullOrWhiteSpace(code))
+            {
+                return;
+            }
+
+            try
+            {
+                var geometry = await _boundaryService.GetBoundaryAsync(code, cts.Token);
+                if (!cts.IsCancellationRequested)
+                {
+                    SelectedGeometry = geometry;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // 选区已切换
+            }
+            catch
+            {
+                // 边界获取失败时保持外包框，不影响下载
+            }
+        }
+
+        private void ApplyRegionEnvelope(NetTopologySuite.Geometries.Envelope? env, string? desc, string? boundaryCode = null)
         {
             _isInternalRangeUpdate = true;
             try
@@ -432,6 +587,8 @@ namespace TileDownloader.ViewModels
             {
                 _isInternalRangeUpdate = false;
             }
+
+            LoadBoundaryAsync(boundaryCode);
         }
 
         partial void OnRangeChanged(NetTopologySuite.Geometries.Envelope? value)
@@ -439,7 +596,18 @@ namespace TileDownloader.ViewModels
             OnPropertyChanged(nameof(SelectedRegionCoordinatesText));
             if (!_isInternalRangeUpdate)
             {
+                // 手动框选：选区是矩形，清掉上一次行政边界，避免下载仍按旧多边形裁剪
+                SelectedGeometry = null;
                 SelectedRegionText = value is { IsNull: false } ? "地图手动框选范围" : null;
+            }
+        }
+
+        partial void OnIsRegionModeChanged(bool value)
+        {
+            // 切到手动模式时，旧行政边界不再适用（选区仍是矩形高亮，等用户重新框选）
+            if (!value)
+            {
+                SelectedGeometry = null;
             }
         }
 
@@ -466,14 +634,14 @@ namespace TileDownloader.ViewModels
         [NotifyPropertyChangedFor(nameof(EstimatedTileCount))]
         [NotifyPropertyChangedFor(nameof(EstimatedTileCountText))]
         [NotifyPropertyChangedFor(nameof(StartDownloadButtonText))]
-        private int _minLevel = 2;
+        private int _minLevel = 0;
 
         /// <summary>最大层级</summary>
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(EstimatedTileCount))]
         [NotifyPropertyChangedFor(nameof(EstimatedTileCountText))]
         [NotifyPropertyChangedFor(nameof(StartDownloadButtonText))]
-        private int _maxLevel = 15;
+        private int _maxLevel = 18;
 
         /// <summary>是否勾选完整块（仅 pak 格式生效）</summary>
         [ObservableProperty]
@@ -657,7 +825,7 @@ namespace TileDownloader.ViewModels
                 _isApplyingCascade = false;
             }
 
-            ApplyRegionEnvelope(result.Region.ToEnvelope(), result.FullName);
+            ApplyRegionEnvelope(result.Region.ToEnvelope(), result.FullName, result.Region.Code);
         }
 
         /// <summary>定位地图到当前选区</summary>
@@ -682,7 +850,7 @@ namespace TileDownloader.ViewModels
                 SelectedDistrict = null;
                 Cities = new List<AdministrativeRegion>();
                 Districts = new List<AdministrativeRegion>();
-                ApplyRegionEnvelope(null, null);
+                ApplyRegionEnvelope(null, null, null);
             }
             finally
             {
@@ -702,6 +870,48 @@ namespace TileDownloader.ViewModels
         private void SwitchToManualMode()
         {
             IsRegionMode = false;
+        }
+
+        /// <summary>打开样式窗口：文本编辑、示例、样式库</summary>
+        [RelayCommand]
+        private void OpenStyle()
+        {
+            if (SelectedSource == null)
+            {
+                return;
+            }
+
+            var adapter = _styleRegistry.Resolve(SelectedSource);
+            if (adapter == null)
+            {
+                return;
+            }
+
+            var window = new MapStyleWindow(SelectedSource, adapter, _styleStore, _styleText, _styleName)
+            {
+                Owner = System.Windows.Application.Current.MainWindow,
+            };
+
+            if (window.ShowDialog() != true)
+            {
+                return;
+            }
+
+            _styleText = window.ResultText ?? string.Empty;
+            _styleName = string.IsNullOrWhiteSpace(window.ResultName) ? "自定义" : window.ResultName;
+
+            _styleStore.SetLast(SelectedSource.Name, new MapStyleDocument
+            {
+                Name = _styleName,
+                ProviderId = adapter.Id,
+                Text = _styleText,
+            });
+
+            SyncStyleChoice();
+            UpdateEffectiveSource();
+            OnPropertyChanged(nameof(CurrentStyleName));
+
+            ShowSnackbar("样式已应用", _styleName, ControlAppearance.Success, SymbolRegular.CheckmarkCircle24);
         }
 
         /// <summary>开始下载</summary>
@@ -743,6 +953,7 @@ namespace TileDownloader.ViewModels
                 OutputPath = OutputPath,
                 FormatId = FormatId,
                 FullBlock = EffectiveFullBlock,
+                ClipGeometry = SelectedGeometry,
                 Concurrent = _settings.Concurrent,
                 Retry = _settings.Retry,
                 UseProxy = _settings.UseProxy,
@@ -750,9 +961,10 @@ namespace TileDownloader.ViewModels
 
             var total = request.CalculateTotalTiles();
             var regionSuffix = !string.IsNullOrWhiteSpace(SelectedRegionText) ? $" [{SelectedRegionText}]" : "";
+            var styleSuffix = string.IsNullOrWhiteSpace(_styleText) ? "" : $"·{_styleName}";
             var item = new TaskItem
             {
-                Name = $"{SelectedSource.Name}{regionSuffix}（z{request.MinLevel}-z{request.MaxLevel}）",
+                Name = $"{SelectedSource.Name}{styleSuffix}{regionSuffix}（z{request.MinLevel}-z{request.MaxLevel}）",
                 Request = request,
                 Total = total,
             };
@@ -882,6 +1094,14 @@ namespace TileDownloader.ViewModels
         {
             _snackbarService.Show(title, message, appearance, new SymbolIcon(icon),
                 TimeSpan.FromSeconds(4));
+        }
+
+        /// <summary>主界面样式下拉项（原生 / 内置示例 / 自定义）</summary>
+        public sealed class StyleChoice
+        {
+            public string Name { get; set; } = string.Empty;
+
+            public string Text { get; set; } = string.Empty;
         }
     }
 }

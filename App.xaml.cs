@@ -2,6 +2,7 @@ using System;
 using System.Windows;
 using System.Windows.Threading;
 using TileDownloader.Services;
+using TileDownloader.Services.Styles;
 using TileDownloader.ViewModels;
 using TileDownloader.Views;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,6 +28,10 @@ namespace TileDownloader
             // Services
             services.AddSingleton<TileStoreRegistry>();
             services.AddSingleton<SourcesConfigService>();
+            services.AddSingleton<MapStyleStore>();
+            services.AddSingleton<IMapStyleAdapter, GoogleStyleAdapter>();
+            services.AddSingleton<MapStyleRegistry>();
+            services.AddSingleton<RegionBoundaryService>();
             services.AddSingleton<GoogleHostsService>();
             services.AddSingleton<ITileImageLoader, TileImageLoader>();
             services.AddSingleton<ITaskManager, TaskManager>();

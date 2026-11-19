@@ -4,7 +4,7 @@
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     xmlns:views="clr-namespace:TileDownloader.Views"
     x:Class="TileDownloader.Views.MainWindow"
-    Title="瓦片地图下载工具"
+    Title="地图瓦片下载器"
     Height="800" Width="1280"
     MinHeight="640" MinWidth="960"
     WindowStartupLocation="CenterScreen"
@@ -31,7 +31,7 @@
 
         <!--  自绘标题栏（带应用图标、标题与最小化/最大化/关闭按钮）  -->
         <ui:TitleBar Grid.Row="0"
-                     Title="瓦片地图下载工具"
+                     Title="地图瓦片下载器"
                      Height="40"
                      Padding="6,0,0,0">
             <ui:TitleBar.Icon>

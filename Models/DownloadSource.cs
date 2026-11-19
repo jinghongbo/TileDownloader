@@ -1,3 +1,8 @@
+using System;
+using System.Security.Cryptography;
+using System.Text;
+using Newtonsoft.Json;
+
 namespace TileDownloader.Models
 {
     /// <summary>
@@ -28,6 +33,19 @@ namespace TileDownloader.Models
 
         /// <summary>子域名列表（逗号分隔，对应 URL 模板中的 {s}）</summary>
         public string Subdomains { get; set; }
+
+        /// <summary>样式适配器 Id（如 google-apistyle）；为空表示该来源不支持自定义样式</summary>
+        public string StyleProvider { get; set; } = string.Empty;
+
+        /// <summary>运行时样式文本（原生格式；不写入来源配置文件）</summary>
+        [JsonIgnore]
+        public string StyleText { get; set; } = string.Empty;
+
+        /// <summary>样式缓存标记：原生为 native，否则为样式文本短哈希（避免换色后命中旧瓦片）</summary>
+        [JsonIgnore]
+        public string CacheTag => string.IsNullOrWhiteSpace(StyleText)
+            ? "native"
+            : Convert.ToHexString(SHA1.HashData(Encoding.UTF8.GetBytes(StyleText)))[..8].ToLowerInvariant();
 
         /// <summary>默认最小层级</summary>
         public int MinLevel { get; set; } = 2;

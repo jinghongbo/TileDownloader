@@ -1,0 +1,10 @@
+{
+  "Type": "Tile",
+  "Name": "Esri 浅灰画布（无标注）",
+  "Url": "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+  "Subdomains": "",
+  "MinLevel": 0,
+  "MaxLevel": 16,
+  "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+  "Referer": "https://www.arcgis.com/"
+}

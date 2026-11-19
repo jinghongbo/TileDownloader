@@ -1,0 +1,10 @@
+{
+  "Type": "Tile",
+  "Name": "CARTO Voyager 底图",
+  "Url": "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
+  "Subdomains": "a,b,c",
+  "MinLevel": 0,
+  "MaxLevel": 20,
+  "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+  "Referer": "https://carto.com/"
+}

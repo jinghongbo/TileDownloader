@@ -253,15 +253,27 @@ namespace TileDownloader.Services
             var cz = Math.Clamp((o.MinLevel + o.MaxLevel) / 2, o.MinLevel, o.MaxLevel);
             var format = _tileFormat ?? DetectStoredFormat() ?? "png";
             var inv = CultureInfo.InvariantCulture;
-            await _db.InsertOrUpdate<Metadata>().SetSource(new[]
+            var metadata = new List<Metadata>
             {
-                new Metadata { Name = "name", Value = o.SourceName },
-                new Metadata { Name = "format", Value = format },
-                new Metadata { Name = "bounds", Value = string.Format(inv, "{0},{1},{2},{3}", minX, minY, maxX, maxY) },
-                new Metadata { Name = "center", Value = string.Format(inv, "{0},{1},{2}", cx, cy, cz) },
-                new Metadata { Name = "minzoom", Value = o.MinLevel.ToString(inv) },
-                new Metadata { Name = "maxzoom", Value = o.MaxLevel.ToString(inv) },
-            }).ExecuteAffrowsAsync(ct);
+                new() { Name = "name", Value = o.SourceName },
+                new() { Name = "format", Value = format },
+                new() { Name = "bounds", Value = string.Format(inv, "{0},{1},{2},{3}", minX, minY, maxX, maxY) },
+                new() { Name = "center", Value = string.Format(inv, "{0},{1},{2}", cx, cy, cz) },
+                new() { Name = "minzoom", Value = o.MinLevel.ToString(inv) },
+                new() { Name = "maxzoom", Value = o.MaxLevel.ToString(inv) },
+            };
+
+            if (!string.IsNullOrWhiteSpace(o.Attribution))
+            {
+                metadata.Add(new Metadata { Name = "attribution", Value = o.Attribution });
+            }
+
+            if (!string.IsNullOrWhiteSpace(o.License))
+            {
+                metadata.Add(new Metadata { Name = "license", Value = o.License });
+            }
+
+            await _db.InsertOrUpdate<Metadata>().SetSource(metadata).ExecuteAffrowsAsync(ct);
 
             // 合并 WAL 并切回单文件模式：MBTiles 交付时不应依赖 -wal/-shm 边车文件
             try

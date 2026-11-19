@@ -209,6 +209,7 @@ namespace TileDownloader.ViewModels
         partial void OnSelectedSourceChanged(DownloadSource? value)
         {
             OnPropertyChanged(nameof(HasKeyRequired));
+            OnPropertyChanged(nameof(HasAttribution));
             OnPropertyChanged(nameof(CanCustomizeStyle));
             OnPropertyChanged(nameof(CurrentStyleName));
 
@@ -216,6 +217,9 @@ namespace TileDownloader.ViewModels
             LoadStyleForSource(value);
             UpdateEffectiveSource();
         }
+
+        /// <summary>当前来源是否有署名信息（显示在来源卡片下方）</summary>
+        public bool HasAttribution => !string.IsNullOrWhiteSpace(SelectedSource?.Attribution);
 
         /// <summary>当前来源是否支持自定义样式（由 Sources/*.json 的 StyleProvider 声明）</summary>
         public bool CanCustomizeStyle => SelectedSource != null && _styleRegistry.Resolve(SelectedSource) != null;

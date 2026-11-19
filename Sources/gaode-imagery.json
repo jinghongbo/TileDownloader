@@ -4,5 +4,7 @@
   "Url": "https://webst0{s}.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}",
   "Subdomains": "1,2,3,4",
   "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
-  "Referer": "https://www.amap.com/"
+  "Referer": "https://www.amap.com/",
+  "Attribution": "© 高德地图",
+  "License": "高德地图服务条款"
 }

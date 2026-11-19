@@ -6,5 +6,7 @@
   "MinLevel": 0,
   "MaxLevel": 20,
   "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
-  "Referer": "https://carto.com/"
+  "Referer": "https://carto.com/",
+  "Attribution": "© CARTO © OpenStreetMap contributors",
+  "License": "CARTO 条款 / ODbL 1.0"
 }

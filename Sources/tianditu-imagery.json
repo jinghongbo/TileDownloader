@@ -5,5 +5,7 @@
   "Subdomains": "t0,t1,t2,t3,t4,t5,t6,t7",
   "Key": "",
   "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
-  "Referer": "https://map.tianditu.gov.cn/"
+  "Referer": "https://map.tianditu.gov.cn/",
+  "Attribution": "© 天地图",
+  "License": "天地图服务条款"
 }

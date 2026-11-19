@@ -5,5 +5,7 @@
   "Url": "https://mt{s}.google.com/vt/lyrs=m&hl=zh&gl=cn&x={x}&y={y}&z={z}",
   "Subdomains": "0,1,2,3",
   "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
-  "Referer": "https://maps.google.com/"
+  "Referer": "https://maps.google.com/",
+  "Attribution": "© Google",
+  "License": "Google Maps 服务条款"
 }

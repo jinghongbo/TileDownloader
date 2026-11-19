@@ -34,6 +34,12 @@ namespace TileDownloader.Models
         /// <summary>子域名列表（逗号分隔，对应 URL 模板中的 {s}）</summary>
         public string Subdomains { get; set; }
 
+        /// <summary>署名（显示在界面，并写入 MBTiles metadata）</summary>
+        public string Attribution { get; set; } = string.Empty;
+
+        /// <summary>许可/使用条款说明（界面提示用）</summary>
+        public string License { get; set; } = string.Empty;
+
         /// <summary>样式适配器 Id（如 google-apistyle）；为空表示该来源不支持自定义样式</summary>
         public string StyleProvider { get; set; } = string.Empty;
 

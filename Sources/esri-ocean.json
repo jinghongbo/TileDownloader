@@ -6,5 +6,7 @@
   "MinLevel": 0,
   "MaxLevel": 13,
   "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
-  "Referer": "https://www.arcgis.com/"
+  "Referer": "https://www.arcgis.com/",
+  "Attribution": "",
+  "License": ""
 }

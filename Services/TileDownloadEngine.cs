@@ -42,6 +42,8 @@ namespace TileDownloader.Services
                 MinLevel = request.MinLevel,
                 MaxLevel = request.MaxLevel,
                 FullBlock = request.FullBlock,
+                Attribution = source.Attribution,
+                License = source.License,
                 // 落盘最终失败（重试仍失败）时把错误上报到进度/UI，避免静默丢瓦片
                 OnTileWriteFailed = progress.ReportError,
             };

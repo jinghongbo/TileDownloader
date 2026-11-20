@@ -6,7 +6,7 @@ namespace TileDownloader.Services
 {
     /// <summary>
     /// 下载引擎回调进度接口——由 ViewModel 侧实现并做 UI 线程调度，
-    /// 实现中同时调用 ITaskManager 持久化（检查点：每 ~50 个瓦片更新 CurLevel/CurX/CurY）
+    /// 实现中同时调用 ITaskManager 持久化（检查点按时间节流，最多每 2 秒写入一次）
     /// </summary>
     public interface IDownloadProgress
     {

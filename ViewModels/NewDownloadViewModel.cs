@@ -964,6 +964,8 @@ namespace TileDownloader.ViewModels
             // 并发下载：交给调度层校验输出路径互斥后立即启动，页面不等下载结束，可继续提交下一个任务
             if (!_tasksViewModel.TryStartTask(item, out var conflict))
             {
+                // 启动失败的任务不会进列表：手动注销静态主题事件，避免它连同边界几何被长期持有
+                item.DetachThemeHook();
                 await ShowParameterDialogAsync(conflict!, "无法开始下载");
                 return;
             }

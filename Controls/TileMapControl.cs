@@ -521,13 +521,15 @@ namespace TileDownloader.Controls
         {
             try
             {
-                await _fetchGate.WaitAsync(ct);
+                // ConfigureAwait(false)：后面的 PNG 解码（CreateBitmap）留在池线程。
+                // 否则从 UI 线程发起的请求，每个 await 后续体都回到 UI 线程，连续解码时界面会明显卡顿。
+                await _fetchGate.WaitAsync(ct).ConfigureAwait(false);
 
                 byte[]? bytes;
                 try
                 {
                     bytes = await loader.GetTileAsync(sourceName, urlTemplate, subdomains, apiKey,
-                        userAgent, referer, cookies, cacheTag, z, x, y, ct);
+                        userAgent, referer, cookies, cacheTag, z, x, y, ct).ConfigureAwait(false);
                 }
                 finally
                 {

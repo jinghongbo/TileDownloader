@@ -74,13 +74,27 @@ namespace TileDownloader.Models
     /// </summary>
     public partial class TaskItem : ObservableObject
     {
+        /// <summary>注册到静态主题事件的委托（保留引用以便注销，避免移除的任务被静态事件长期持有）</summary>
+        private Action? _themeChangedHandler;
+
         public TaskItem()
         {
-            ThemeChanged += () =>
+            _themeChangedHandler = () =>
             {
                 OnPropertyChanged(nameof(StateBrush));
                 OnPropertyChanged(nameof(StateBackgroundBrush));
             };
+            ThemeChanged += _themeChangedHandler;
+        }
+
+        /// <summary>从静态主题事件注销（任务被移除时调用；否则 TaskItem 连同边界几何会一直无法回收）</summary>
+        public void DetachThemeHook()
+        {
+            if (_themeChangedHandler is { } handler)
+            {
+                ThemeChanged -= handler;
+                _themeChangedHandler = null;
+            }
         }
 
         /// <summary>任务名称（默认取来源名+范围）</summary>

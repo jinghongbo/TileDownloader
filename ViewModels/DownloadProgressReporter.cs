@@ -12,12 +12,13 @@ namespace TileDownloader.ViewModels
     /// <summary>
     /// IDownloadProgress 的 ViewModel 侧实现：
     /// - 回调统一调度回 UI 线程更新 TaskItem（总进度/层级明细/速度/剩余时间）
-    /// - 同时调用 ITaskManager 持久化（检查点：每 ~50 个瓦片更新 CurLevel/CurX/CurY）
+    /// - 同时调用 ITaskManager 持久化（检查点：最多每 2 秒落一次盘，且同一任务只保留一个在途写入）
     /// - 速度按 5 秒滑动窗口（瓦片/秒）计算
     /// </summary>
     public class DownloadProgressReporter : IDownloadProgress
     {
-        private const int CheckpointInterval = 50;
+        /// <summary>检查点最小间隔：按时间而非瓦片数落盘，避免高并发下载时把 tasks.db 写爆</summary>
+        private const long CheckpointIntervalMs = 2000;
         private const long SpeedWindowMs = 5000;
         private const int FlushIntervalMs = 200;
 
@@ -28,7 +29,12 @@ namespace TileDownloader.ViewModels
         // 跨线程计数（引擎工作线程回调）
         private long _completed;
         private long _total;
-        private long _sinceCheckpoint;
+
+        /// <summary>上次检查点落盘时间（TickCount64），配合最小间隔做节流</summary>
+        private long _lastCheckpointTicks;
+
+        /// <summary>同一任务最多一个在途检查点写入（0=空闲），避免多任务并发把 tasks.db 写爆</summary>
+        private int _checkpointInFlight;
         private readonly ConcurrentDictionary<int, long> _levelCompleted = new();
 
         // 速度滑动窗口（瓦片/秒 + 字节/秒）
@@ -91,11 +97,13 @@ namespace TileDownloader.ViewModels
                 _doneTicks.Enqueue(now);
             }
 
-            // 检查点持久化（后台执行，不阻塞引擎）
-            var since = Interlocked.Increment(ref _sinceCheckpoint);
-            if (since >= CheckpointInterval)
+            // 检查点持久化（后台执行，不阻塞引擎）：
+            // 最多 2 秒落一次盘、同一任务同时只有一个在途写入——高并发时把 tasks.db 的写压力压到最低；
+            // 进度本身是近似值，丢弃中间值不影响续传（任务结束还会补写一次最终进度）
+            if (now - Volatile.Read(ref _lastCheckpointTicks) >= CheckpointIntervalMs
+                && Interlocked.CompareExchange(ref _checkpointInFlight, 1, 0) == 0)
             {
-                Interlocked.Exchange(ref _sinceCheckpoint, 0);
+                Volatile.Write(ref _lastCheckpointTicks, now);
                 _ = PersistCheckpointAsync(z, x, y);
             }
 
@@ -213,21 +221,25 @@ namespace TileDownloader.ViewModels
         /// <summary>写入检查点（Completed/CurLevel/CurX/CurY）</summary>
         private async Task PersistCheckpointAsync(int z, int x, int y)
         {
-            if (_item.RecordId <= 0)
-            {
-                return;
-            }
             try
             {
+                if (_item.RecordId <= 0)
+                {
+                    return;
+                }
                 await _taskManager.UpdateProgressAsync(
                     _item.RecordId,
                     Interlocked.Read(ref _completed),
                     Interlocked.Read(ref _total),
-                    z, x, y, CancellationToken.None);
+                    z, x, y, CancellationToken.None).ConfigureAwait(false);
             }
             catch
             {
                 // 检查点写入失败不阻塞下载
+            }
+            finally
+            {
+                Volatile.Write(ref _checkpointInFlight, 0);
             }
         }
 

@@ -146,12 +146,24 @@ namespace TileDownloader.ViewModels
         {
             try
             {
-                var records = await _taskManager.LoadAllAsync(CancellationToken.None);
-                var sources = _sourcesConfig.LoadSources();
+                var records = await _taskManager.LoadAllAsync(CancellationToken.None).ConfigureAwait(false);
+
+                // 历史恢复的重活（读来源配置、按 WKT 重建边界几何）放线程池：
+                // 直接在主线程解析大量 WKT / 读文件会让启动阶段明显卡顿
+                var rebuilt = await Task.Run(() =>
+                {
+                    var sources = _sourcesConfig.LoadSources();
+                    var list = new List<(TaskRecord Record, TileDownloadRequest? Request)>(records.Count);
+                    foreach (var record in records)
+                    {
+                        list.Add((record, RebuildRequest(record, sources)));
+                    }
+                    return list;
+                }).ConfigureAwait(false);
 
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    foreach (var record in records)
+                    foreach (var (record, request) in rebuilt)
                     {
                         var state = record.Status switch
                         {
@@ -161,7 +173,6 @@ namespace TileDownloader.ViewModels
                             _ => TaskState.Cancelled, // Running/Cancelled 重启后均为中断
                         };
 
-                        var request = RebuildRequest(record, sources);
                         long total = record.Total;
                         if (total <= 0 && request != null)
                         {
@@ -277,10 +288,12 @@ namespace TileDownloader.ViewModels
 
             try
             {
-                // 任务记录：新建或复用（续传）
+                // 任务记录：新建或复用（续传）。WKT 序列化 + 总量计算放线程池，
+                // 避免点「开始下载」时在主线程同步序列化大边界几何
                 if (item.RecordId <= 0)
                 {
-                    item.RecordId = await _taskManager.CreateAsync(request.ToRecord(item.Name), item.Cts.Token);
+                    var record = await Task.Run(() => request.ToRecord(item.Name), item.Cts.Token);
+                    item.RecordId = await _taskManager.CreateAsync(record, item.Cts.Token);
                 }
                 else
                 {
@@ -504,6 +517,7 @@ namespace TileDownloader.ViewModels
                 return;
             }
             Tasks.Remove(item);
+            item.DetachThemeHook();
             if (item.RecordId <= 0)
             {
                 return;
@@ -526,6 +540,7 @@ namespace TileDownloader.ViewModels
             foreach (var item in completed)
             {
                 Tasks.Remove(item);
+                item.DetachThemeHook();
                 if (item.RecordId <= 0)
                 {
                     continue;

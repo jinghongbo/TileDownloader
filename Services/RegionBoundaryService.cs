@@ -53,7 +53,9 @@ namespace TileDownloader.Services
             {
                 if (File.Exists(file))
                 {
-                    var cached = await File.ReadAllTextAsync(file, ct);
+                    // ConfigureAwait(false)：随后的 GeoJSON 解析（JObject + 几何构建）留在池线程，
+                    // 大边界文件不会占用 UI 线程
+                    var cached = await File.ReadAllTextAsync(file, ct).ConfigureAwait(false);
                     var geometry = ParseGeoJson(cached, _factory);
                     if (geometry != null)
                     {
@@ -72,12 +74,12 @@ namespace TileDownloader.Services
 
             try
             {
-                var json = await _http.GetStringAsync(string.Format(Endpoint, safeCode), ct);
+                var json = await _http.GetStringAsync(string.Format(Endpoint, safeCode), ct).ConfigureAwait(false);
                 var geometry = ParseGeoJson(json, _factory);
                 if (geometry != null)
                 {
                     Directory.CreateDirectory(_cacheDir);
-                    await File.WriteAllTextAsync(file, json, ct);
+                    await File.WriteAllTextAsync(file, json, ct).ConfigureAwait(false);
                 }
                 return geometry;
             }

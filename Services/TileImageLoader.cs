@@ -88,7 +88,7 @@ namespace TileDownloader.Services
             {
                 if (File.Exists(diskFile))
                 {
-                    var diskBytes = await File.ReadAllBytesAsync(diskFile, ct);
+                    var diskBytes = await File.ReadAllBytesAsync(diskFile, ct).ConfigureAwait(false);
                     PutMemory(key, diskBytes);
                     return diskBytes;
                 }
@@ -103,14 +103,14 @@ namespace TileDownloader.Services
             var client = GetClient(sourceName, urlTemplate, userAgent, referer, cookies);
             try
             {
-                using var resp = await client.GetAsync(url, HttpCompletionOption.ResponseContentRead, ct);
+                using var resp = await client.GetAsync(url, HttpCompletionOption.ResponseContentRead, ct).ConfigureAwait(false);
                 if (!resp.IsSuccessStatusCode)
                 {
                     // 404 等视为空瓦片，不缓存
                     return null;
                 }
 
-                var bytes = await resp.Content.ReadAsByteArrayAsync(ct);
+                var bytes = await resp.Content.ReadAsByteArrayAsync(ct).ConfigureAwait(false);
                 if (bytes.Length == 0)
                 {
                     return null;
@@ -122,7 +122,7 @@ namespace TileDownloader.Services
                 try
                 {
                     Directory.CreateDirectory(Path.GetDirectoryName(diskFile)!);
-                    await File.WriteAllBytesAsync(diskFile, bytes, ct);
+                    await File.WriteAllBytesAsync(diskFile, bytes, ct).ConfigureAwait(false);
                 }
                 catch
                 {

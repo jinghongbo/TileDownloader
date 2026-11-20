@@ -31,7 +31,7 @@ namespace TileDownloader.Services
         /// 按格式 Id 创建存储实例（未知格式回退为瓦片目录）。
         /// 存储实例生命周期与单次下载任务一致（引擎负责 Initialize/Finalize）
         /// </summary>
-        public ITileStore CreateStore(string formatId)
+        public virtual ITileStore CreateStore(string formatId)
         {
             return formatId switch
             {

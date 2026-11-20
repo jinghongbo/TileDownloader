@@ -319,40 +319,17 @@ namespace TileDownloader.Services.Styles
         {
             new()
             {
-                Name = "深夜蓝",
+                Name = "深蓝",
                 ProviderId = "google-apistyle",
                 IsBuiltIn = true,
-                Text = BuildJson(array =>
-                {
-                    Add(array, "landscape", "geometry", ("color", "#091220"));
-                    Add(array, "water", "geometry", ("color", "#113549"));
-                    Add(array, "poi.park", "geometry", ("color", "#0e1b30"));
-                    Add(array, "landscape.man_made", "geometry", ("color", "#0f1c30"));
-                    Add(array, "poi", "geometry", ("color", "#101f35"));
-                    Add(array, "road", "geometry", ("color", "#1b3350"));
-                    Add(array, "road.highway", "geometry", ("color", "#2a4a6a"));
-                    Add(array, "road.arterial", "geometry", ("color", "#23405f"));
-                    Add(array, "road.local", "geometry", ("color", "#1b3350"));
-                    Add(array, "transit", "geometry", ("visibility", "off"));
-                    Add(array, "all", "labels.text.fill", ("color", "#2dc4bb"));
-                    Add(array, "all", "labels.text.stroke", ("visibility", "off"));
-                    Add(array, "all", "labels.icon", ("visibility", "off"));
-                    Add(array, "road", "labels", ("visibility", "off"));
-                }),
+                Text = Pretty(DeepBlueStyle),
             },
             new()
             {
-                Name = "深蓝·精细",
+                Name = "浅灰",
                 ProviderId = "google-apistyle",
                 IsBuiltIn = true,
-                Text = Pretty(DeepBlueDetailedStyle),
-            },
-            new()
-            {
-                Name = "浅灰·精细",
-                ProviderId = "google-apistyle",
-                IsBuiltIn = true,
-                Text = Pretty(LightGrayDetailedStyle),
+                Text = Pretty(LightGrayStyle),
             },
         };
 
@@ -369,7 +346,7 @@ namespace TileDownloader.Services.Styles
             }
         }
 
-        private const string DeepBlueDetailedStyle = """
+        private const string DeepBlueStyle = """
             [
             {"featureType":"all","elementType":"labels.icon","stylers":[{"visibility":"off"}]},
             {"featureType":"all","elementType":"labels.text.fill","stylers":[{"color":"#A7C6DE"}]},
@@ -432,7 +409,7 @@ namespace TileDownloader.Services.Styles
             ]
             """;
 
-        private const string LightGrayDetailedStyle = """
+        private const string LightGrayStyle = """
             [
             {"featureType":"all","elementType":"labels.icon","stylers":[{"visibility":"off"}]},
             {"featureType":"all","elementType":"labels.text.fill","stylers":[{"color":"#46566A"}]},
@@ -494,29 +471,6 @@ namespace TileDownloader.Services.Styles
             {"featureType":"administrative.land_parcel","elementType":"labels","stylers":[{"visibility":"off"}]}
             ]
             """;
-
-        private static void Add(JArray array, string featureType, string elementType, params (string Key, object Value)[] stylers)
-        {
-            var stylerObject = new JObject();
-            foreach (var (key, value) in stylers)
-            {
-                stylerObject[key] = JToken.FromObject(value);
-            }
-
-            array.Add(new JObject
-            {
-                ["featureType"] = featureType,
-                ["elementType"] = elementType,
-                ["stylers"] = new JArray(stylerObject),
-            });
-        }
-
-        private static string BuildJson(Action<JArray> build)
-        {
-            var array = new JArray();
-            build(array);
-            return array.ToString(Newtonsoft.Json.Formatting.Indented);
-        }
 
         public string BuildAiPrompt(string scenario)
         {

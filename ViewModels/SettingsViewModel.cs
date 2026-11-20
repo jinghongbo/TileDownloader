@@ -25,21 +25,28 @@ namespace TileDownloader.ViewModels
 
         private readonly GoogleHostsService _googleHostsService;
         private readonly ITileImageLoader _tileImageLoader;
+        private readonly GlobalDownloadLimiter _limiter;
         private CancellationTokenSource? _probeCts;
 
         /// <summary>上次写入磁盘的设置 JSON（用于跳过内容未变的重复落盘）</summary>
         private string? _savedJson;
 
-        public SettingsViewModel(GoogleHostsService googleHostsService, ITileImageLoader tileImageLoader)
+        public SettingsViewModel(
+            GoogleHostsService googleHostsService,
+            ITileImageLoader tileImageLoader,
+            GlobalDownloadLimiter limiter)
         {
             _googleHostsService = googleHostsService;
             _tileImageLoader = tileImageLoader;
+            _limiter = limiter;
 
             _selectedThemeMode = ThemeModes[0];
 
             // 恢复持久化设置（并发/重试 / UseProxy / 可用 Google IP 列表 / 主题）
             var saved = LoadSettings();
             _concurrent = saved.Concurrent;
+            // 并发是全局上限：启动即同步到全局闸门
+            _limiter.SetLimit(_concurrent);
             _retry = saved.Retry;
             _useProxy = saved.UseProxy;
             _googleHosts = saved.BestGoogleHosts;
@@ -54,7 +61,12 @@ namespace TileDownloader.ViewModels
         [ObservableProperty]
         private int _concurrent = 64;
 
-        partial void OnConcurrentChanged(int value) => SaveSettings();
+        partial void OnConcurrentChanged(int value)
+        {
+            // 运行中调整立即生效：调大立刻放行等待请求，调小等既有请求结束再收敛
+            _limiter.SetLimit(value);
+            SaveSettings();
+        }
 
         /// <summary>失败重试次数</summary>
         [ObservableProperty]

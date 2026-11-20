@@ -45,9 +45,9 @@
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <StackPanel>
-                                <ui:TextBlock Style="{StaticResource SettingTitle}" Text="并发数" />
+                                <ui:TextBlock Style="{StaticResource SettingTitle}" Text="并发数（全部任务合计）" />
                                 <TextBlock Style="{StaticResource SettingHint}" Margin="0,2,0,0"
-                                           Text="同时下载瓦片的数量（1–4096），过高可能触发服务端限流" />
+                                           Text="所有任务加起来同时下载的瓦片数（1–4096）；同时开多个任务时共享这个上限，过高可能触发服务端限流" />
                             </StackPanel>
                             <ui:NumberBox Grid.Column="1"
                                           Width="140"

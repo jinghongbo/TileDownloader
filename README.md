@@ -13,8 +13,9 @@ Windows 桌面应用（WPF / .NET 10），支持按行政区划或地图框选�
 - **地图样式**：Google 道路源支持 apistyle 文本样式（内置「深夜蓝」「极简灰」），可按来源记忆并随任务续传；MapTiler / Mapbox / Stadia 可通过样式 ID 换肤
 - **多种输出格式**：多文件 pak（默认）/ 单文件 pak / MBTiles / 瓦片目录
 - **层级与预估**：自定义最小、最大层级（0–22），实时显示预估瓦片总量
-- **任务中心**：总体与分级进度、实时速度、剩余时间，支持取消、断点续传（仅补齐缺失瓦片）与历史任务记录
-- **并发与重试**：可配置并发数与失败重试次数
+- **任务中心**：总体与分级进度、实时速度（瓦片/秒与网速合并显示）、剩余时间，支持暂停/取消、断点续传（仅补齐缺失瓦片）与历史任务记录
+- **多任务并发**：新建下载页可连续提交多个任务并行下载，任务之间按输出路径互斥，避免同一文件被并发写入
+- **全局并发与重试**：并发数是全部任务合计的上限（调大即时放行、调小自然收敛），失败重试次数可配置
 - **Google Hosts 加速**：内置 Google IP 探测，一键复制 hosts 条目，改善谷歌地图源访问
 - **外观主题**：深色 / 浅色 / 跟随系统
 
@@ -54,6 +55,7 @@ git clone https://github.com/jinghongbo/TileDownloader.git
 cd TileDownloader
 dotnet restore TileDownloader.csproj
 dotnet build TileDownloader.csproj -c Release
+dotnet test TileDownloader.sln
 ```
 
 发布单文件版本：
@@ -86,4 +88,5 @@ Services/     下载引擎、任务管理、地图源与行政区划服务、瓦
 Sources/      地图源配置（一源一 JSON）
 ViewModels/   各页面视图模型
 Views/        主窗口与页面（新建下载 / 任务中心 / 设置）
+TileDownloader.Tests/  单元测试（输出路径互斥、全局并发闸门、网速格式化）
 ```

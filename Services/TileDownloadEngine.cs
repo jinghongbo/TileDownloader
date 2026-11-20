@@ -20,11 +20,16 @@ namespace TileDownloader.Services
     {
         private readonly TileStoreRegistry _storeRegistry;
         private readonly GoogleHostsService _googleHostsService;
+        private readonly GlobalDownloadLimiter _limiter;
 
-        public TileDownloadEngine(TileStoreRegistry storeRegistry, GoogleHostsService googleHostsService)
+        public TileDownloadEngine(
+            TileStoreRegistry storeRegistry,
+            GoogleHostsService googleHostsService,
+            GlobalDownloadLimiter limiter)
         {
             _storeRegistry = storeRegistry;
             _googleHostsService = googleHostsService;
+            _limiter = limiter;
         }
 
         public async Task RunAsync(TileDownloadRequest request, IDownloadProgress progress, CancellationToken ct)
@@ -58,7 +63,8 @@ namespace TileDownloader.Services
 
                 var parallelOptions = new ParallelOptions
                 {
-                    MaxDegreeOfParallelism = Math.Max(1, request.Concurrent),
+                    // 并发由全局闸门统一控制（所有任务合计），这里放开工作线程数
+                    MaxDegreeOfParallelism = Math.Max(1, _limiter.Limit),
                     CancellationToken = ct,
                 };
 
@@ -135,7 +141,7 @@ namespace TileDownloader.Services
 
                     await Parallel.ForEachAsync(EnumerateTiles(firstCol, lastCol, firstRow, lastRow, z, preparedClip, geometryFactory), parallelOptions, async (tile, token) =>
                     {
-                        await DownloadTileAsync(client, store, progress, source, subdomains, z, tile.x, tile.y, request.Retry, token);
+                        await DownloadTileAsync(client, store, progress, source, subdomains, z, tile.x, tile.y, request.Retry, _limiter, token);
                     });
                 }
             }
@@ -160,7 +166,7 @@ namespace TileDownloader.Services
         private static async Task DownloadTileAsync(
             HttpClient client, ITileStore store, IDownloadProgress progress,
             DownloadSource source, string[] subdomains,
-            int z, int x, int y, int retry, CancellationToken ct)
+            int z, int x, int y, int retry, GlobalDownloadLimiter limiter, CancellationToken ct)
         {
             // 断点续传：已存在则跳过并计完成
             if (await store.TileExistsAsync(z, x, y, ct))
@@ -175,30 +181,35 @@ namespace TileDownloader.Services
             {
                 try
                 {
-                    using var resp = await client.GetAsync(url, HttpCompletionOption.ResponseContentRead, ct);
-
-                    if (resp.StatusCode == HttpStatusCode.NotFound)
+                    // 全局并发闸门：所有任务合计不超过设置里的并发数；重试等待期间不占名额
+                    using (await limiter.AcquireAsync(ct))
                     {
-                        // 404 视为空瓦片：跳过但计完成
+                        using var resp = await client.GetAsync(url, HttpCompletionOption.ResponseContentRead, ct);
+
+                        if (resp.StatusCode == HttpStatusCode.NotFound)
+                        {
+                            // 404 视为空瓦片：跳过但计完成
+                            progress.ReportTileDone(z, x, y, skipped: false);
+                            return;
+                        }
+                        if (!resp.IsSuccessStatusCode)
+                        {
+                            throw new Exception($"请求错误:{(int)resp.StatusCode} {resp.StatusCode}");
+                        }
+
+                        var data = await resp.Content.ReadAsByteArrayAsync(ct);
+                        if (data.Length == 0)
+                        {
+                            // 空响应也计为完成，避免死循环
+                            progress.ReportTileDone(z, x, y, skipped: false);
+                            return;
+                        }
+
+                        progress.ReportBytes(data.Length);
+                        await store.SaveTileAsync(z, x, y, data, ct);
                         progress.ReportTileDone(z, x, y, skipped: false);
                         return;
                     }
-                    if (!resp.IsSuccessStatusCode)
-                    {
-                        throw new Exception($"请求错误:{(int)resp.StatusCode} {resp.StatusCode}");
-                    }
-
-                    var data = await resp.Content.ReadAsByteArrayAsync(ct);
-                    if (data.Length == 0)
-                    {
-                        // 空响应也计为完成，避免死循环
-                        progress.ReportTileDone(z, x, y, skipped: false);
-                        return;
-                    }
-
-                    await store.SaveTileAsync(z, x, y, data, ct);
-                    progress.ReportTileDone(z, x, y, skipped: false);
-                    return;
                 }
                 catch (OperationCanceledException)
                 {

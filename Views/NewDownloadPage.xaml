@@ -480,20 +480,7 @@
                                 <TextBlock Text="{Binding StartDownloadButtonText, Mode=OneWay}" Style="{StaticResource OnAccentText}" />
                             </StackPanel>
                         </ui:Button>
-                        <TextBlock Margin="0,8,0,0"
-                                   Text="{Binding Message}"
-                                   FontSize="12"
-                                   TextWrapping="Wrap"
-                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVis}}" />
-                        <ui:Button Content="取消下载"
-                                   Icon="{ui:SymbolIcon Dismiss24}"
-                                   MinHeight="38"
-                                   Margin="0,10,0,0"
-                                   HorizontalAlignment="Stretch"
-                                   HorizontalContentAlignment="Center"
-                                   Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVis}}"
-                                   Command="{Binding CancelDownloadCommand}" />
+
                     </StackPanel>
                 </ui:Card>
 

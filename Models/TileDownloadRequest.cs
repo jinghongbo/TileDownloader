@@ -26,9 +26,6 @@ namespace TileDownloader.Models
         /// <summary>输出格式 Id</summary>
         public string FormatId { get; set; }
 
-        /// <summary>并发数</summary>
-        public int Concurrent { get; set; } = 4;
-
         /// <summary>失败重试次数</summary>
         public int Retry { get; set; } = 4;
 

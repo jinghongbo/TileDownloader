@@ -127,7 +127,50 @@ namespace TileDownloader.Models
         public string Speed
         {
             get => _speed;
-            set => SetProperty(ref _speed, value);
+            set
+            {
+                if (SetProperty(ref _speed, value))
+                {
+                    OnPropertyChanged(nameof(SpeedDisplay));
+                }
+            }
+        }
+
+        private double _speedTilesPerSecond;
+
+        /// <summary>实时速度数值（瓦片/秒，0 表示暂无数据；供页面/任务中心汇总合计速度）</summary>
+        public double SpeedTilesPerSecond
+        {
+            get => _speedTilesPerSecond;
+            set => SetProperty(ref _speedTilesPerSecond, value);
+        }
+
+        private string _netSpeed = "--";
+
+        /// <summary>实时网速文本（如 2.3 MB/s，按从网络读到的字节数计算）</summary>
+        public string NetSpeed
+        {
+            get => _netSpeed;
+            set
+            {
+                if (SetProperty(ref _netSpeed, value))
+                {
+                    OnPropertyChanged(nameof(SpeedDisplay));
+                }
+            }
+        }
+
+        /// <summary>速度与网速合并展示（如 12.9 瓦片/秒（9.6 KB/s））</summary>
+        public string SpeedDisplay =>
+            _speed == "--" ? $"--（{_netSpeed}）" : $"{_speed}（{_netSpeed}）";
+
+        private double _speedBytesPerSecond;
+
+        /// <summary>实时网速数值（字节/秒，0 表示暂无数据；供任务中心汇总合计网速）</summary>
+        public double SpeedBytesPerSecond
+        {
+            get => _speedBytesPerSecond;
+            set => SetProperty(ref _speedBytesPerSecond, value);
         }
 
         private string _remaining = "--";

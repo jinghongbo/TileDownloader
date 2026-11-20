@@ -31,9 +31,11 @@ namespace TileDownloader.ViewModels
         private long _sinceCheckpoint;
         private readonly ConcurrentDictionary<int, long> _levelCompleted = new();
 
-        // 速度滑动窗口
+        // 速度滑动窗口（瓦片/秒 + 字节/秒）
         private readonly object _speedLock = new();
         private readonly Queue<long> _doneTicks = new();
+        private readonly Queue<(long Ticks, long Bytes)> _byteSamples = new();
+        private long _bytes;
 
         // UI 刷新节流
         private long _lastFlush;
@@ -105,6 +107,21 @@ namespace TileDownloader.ViewModels
             }
         }
 
+        public void ReportBytes(long bytes)
+        {
+            if (bytes <= 0)
+            {
+                return;
+            }
+
+            Interlocked.Add(ref _bytes, bytes);
+            var now = Environment.TickCount64;
+            lock (_speedLock)
+            {
+                _byteSamples.Enqueue((now, bytes));
+            }
+        }
+
         public void ReportError(int z, int x, int y, string message)
         {
             Post(() => _item.Error = message);
@@ -155,6 +172,7 @@ namespace TileDownloader.ViewModels
             // 速度与剩余时间
             var now = Environment.TickCount64;
             double speed = 0;
+            double byteSpeed = 0;
             lock (_speedLock)
             {
                 while (_doneTicks.Count > 0 && now - _doneTicks.Peek() > SpeedWindowMs)
@@ -166,9 +184,27 @@ namespace TileDownloader.ViewModels
                     var elapsedSec = Math.Max(0.5, (now - _doneTicks.Peek()) / 1000.0);
                     speed = _doneTicks.Count / elapsedSec;
                 }
+
+                while (_byteSamples.Count > 0 && now - _byteSamples.Peek().Ticks > SpeedWindowMs)
+                {
+                    _byteSamples.Dequeue();
+                }
+                if (_byteSamples.Count > 0)
+                {
+                    long bytesInWindow = 0;
+                    foreach (var sample in _byteSamples)
+                    {
+                        bytesInWindow += sample.Bytes;
+                    }
+                    var byteElapsedSec = Math.Max(0.5, (now - _byteSamples.Peek().Ticks) / 1000.0);
+                    byteSpeed = bytesInWindow / byteElapsedSec;
+                }
             }
 
+            _item.SpeedTilesPerSecond = speed;
             _item.Speed = speed > 0 ? $"{speed:F1} 瓦片/秒" : "--";
+            _item.SpeedBytesPerSecond = byteSpeed;
+            _item.NetSpeed = SpeedFormat.BytesPerSecond(byteSpeed);
             _item.Remaining = speed > 0 && _item.Total > _item.Completed
                 ? FormatTime(TimeSpan.FromSeconds((_item.Total - _item.Completed) / speed))
                 : "正在计算";

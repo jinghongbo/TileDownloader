@@ -16,6 +16,9 @@ namespace TileDownloader.Services
         /// <summary>报告单个瓦片完成（skipped 表示已存在被跳过）</summary>
         void ReportTileDone(int z, int x, int y, bool skipped);
 
+        /// <summary>报告本次从网络读到的字节数（用于计算实时网速）</summary>
+        void ReportBytes(long bytes);
+
         /// <summary>报告瓦片下载失败（重试耗尽后）</summary>
         void ReportError(int z, int x, int y, string message);
 

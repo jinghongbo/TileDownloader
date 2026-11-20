@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
@@ -25,6 +26,9 @@ namespace TileDownloader.ViewModels
         private readonly SettingsViewModel _settings;
         private readonly SourcesConfigService _sourcesConfig;
         private readonly MapStyleRegistry _styleRegistry;
+
+        /// <summary>运行中任务的输出路径占用登记（规范化路径 → 任务），防止两个任务并发写同一输出</summary>
+        private readonly Dictionary<string, TaskItem> _activeOutputs = new(StringComparer.OrdinalIgnoreCase);
 
         public TasksViewModel(
             ITaskManager taskManager,
@@ -64,6 +68,20 @@ namespace TileDownloader.ViewModels
         [ObservableProperty]
         private bool _hasCompleted;
 
+        /// <summary>运行中任务合计速度（瓦片/秒）</summary>
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(SpeedSummaryText))]
+        private double _totalSpeed;
+
+        /// <summary>合计速度文案（顶栏仪表盘展示：瓦片/秒 + 合计网速合并）</summary>
+        public string SpeedSummaryText =>
+            TotalSpeed > 0 ? $"{TotalSpeed:N1} 瓦片/秒（{SpeedFormat.BytesPerSecond(TotalBytesPerSecond)}）" : "--";
+
+        /// <summary>运行中任务合计网速（字节/秒）</summary>
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(SpeedSummaryText))]
+        private double _totalBytesPerSecond;
+
         private void OnTasksCollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
             if (e.NewItems != null)
@@ -87,7 +105,8 @@ namespace TileDownloader.ViewModels
 
         private void OnTaskItemPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
-            if (e.PropertyName is nameof(TaskItem.State) or nameof(TaskItem.Completed) or nameof(TaskItem.Total))
+            if (e.PropertyName is nameof(TaskItem.State) or nameof(TaskItem.Completed) or nameof(TaskItem.Total)
+                or nameof(TaskItem.SpeedTilesPerSecond) or nameof(TaskItem.SpeedBytesPerSecond))
             {
                 UpdateSummary();
             }
@@ -115,6 +134,8 @@ namespace TileDownloader.ViewModels
             }
 
             RunningCount = running;
+            TotalSpeed = Tasks.Where(t => t.State == TaskState.Running).Sum(t => t.SpeedTilesPerSecond);
+            TotalBytesPerSecond = Tasks.Where(t => t.State == TaskState.Running).Sum(t => t.SpeedBytesPerSecond);
             OverallProgress = total > 0 ? completed * 100.0 / total : 0;
             HasCompleted = finishedCount > 0;
             OnPropertyChanged(nameof(HasRunning));
@@ -205,7 +226,6 @@ namespace TileDownloader.ViewModels
                 FormatId = record.FormatId,
                 FullBlock = record.FullBlock == true,
                 ClipGeometry = ParseWkt(record.ClipWkt),
-                Concurrent = _settings.Concurrent,
                 Retry = _settings.Retry,
                 UseProxy = _settings.UseProxy,
             };
@@ -235,6 +255,15 @@ namespace TileDownloader.ViewModels
         public async Task RunTaskAsync(TaskItem item)
         {
             var request = item.Request ?? throw new InvalidOperationException("任务缺少下载请求");
+
+            // 输出路径互斥：同一路径并发写同一个 SQLite 输出会互相抢锁/覆盖，必须在启动前拦下
+            if (!TryReserveOutput(item, out var conflict))
+            {
+                item.State = TaskState.Failed;
+                item.Error = conflict;
+                return;
+            }
+
             item.Cts = new CancellationTokenSource();
             item.PauseRequested = false;
             item.Error = null;
@@ -265,6 +294,8 @@ namespace TileDownloader.ViewModels
 
                 item.State = TaskState.Completed;
                 item.Speed = "--";
+                item.NetSpeed = "--";
+                item.SpeedBytesPerSecond = 0;
                 item.Remaining = "--";
                 item.FinishedText = $"完成于 {DateTime.Now:yyyy-MM-dd HH:mm}";
                 await PersistStopAsync(item, TaskStatus2.Completed, null);
@@ -275,6 +306,8 @@ namespace TileDownloader.ViewModels
                 var paused = item.PauseRequested;
                 item.State = paused ? TaskState.Paused : TaskState.Cancelled;
                 item.Speed = "--";
+                item.NetSpeed = "--";
+                item.SpeedBytesPerSecond = 0;
                 item.Remaining = "--";
                 item.FinishedText = paused
                     ? $"暂停于 {DateTime.Now:yyyy-MM-dd HH:mm}"
@@ -287,15 +320,99 @@ namespace TileDownloader.ViewModels
                 item.State = TaskState.Failed;
                 item.Error = msg;
                 item.Speed = "--";
+                item.NetSpeed = "--";
+                item.SpeedBytesPerSecond = 0;
                 item.Remaining = "--";
                 item.FinishedText = $"失败于 {DateTime.Now:yyyy-MM-dd HH:mm}";
                 await PersistStopAsync(item, TaskStatus2.Failed, msg);
             }
             finally
             {
+                ReleaseOutput(item);
                 item.Cts.Dispose();
                 item.Cts = null;
                 OnPropertyChanged(nameof(HasRunning));
+            }
+        }
+
+        /// <summary>
+        /// 新建下载页入口：检查输出路径互斥 → 加入任务集合 → 后台启动。
+        /// 立即返回，页面可以接着提交下一个任务（多个任务真正并发执行）。
+        /// </summary>
+        public bool TryStartTask(TaskItem item, out string? error)
+        {
+            error = GetOutputConflict(item.Request?.OutputPath, item);
+            if (error != null)
+            {
+                return false;
+            }
+
+            if (!Tasks.Contains(item))
+            {
+                Tasks.Add(item);
+            }
+
+            _ = RunTaskAsync(item);
+            return true;
+        }
+
+        /// <summary>查询输出路径是否正被其他运行中任务占用（返回冲突说明，null 表示可用）</summary>
+        private string? GetOutputConflict(string? outputPath, TaskItem self)
+        {
+            if (string.IsNullOrWhiteSpace(outputPath))
+            {
+                return null;
+            }
+
+            lock (_activeOutputs)
+            {
+                foreach (var pair in _activeOutputs)
+                {
+                    if (ReferenceEquals(pair.Value, self))
+                    {
+                        continue;
+                    }
+
+                    if (OutputPathGuard.Conflicts(pair.Key, outputPath))
+                    {
+                        return $"输出路径正被任务「{pair.Value.Name}」使用，请换一个输出路径或等它结束";
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>登记输出路径占用（同一任务重复登记视为成功）</summary>
+        private bool TryReserveOutput(TaskItem item, out string? conflict)
+        {
+            conflict = GetOutputConflict(item.Request?.OutputPath, item);
+            if (conflict != null)
+            {
+                return false;
+            }
+
+            var path = item.Request?.OutputPath;
+            if (!string.IsNullOrWhiteSpace(path))
+            {
+                lock (_activeOutputs)
+                {
+                    _activeOutputs[OutputPathGuard.Normalize(path)] = item;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>任务结束（完成/中断/暂停/失败）后释放输出路径占用</summary>
+        private void ReleaseOutput(TaskItem item)
+        {
+            lock (_activeOutputs)
+            {
+                foreach (var key in _activeOutputs.Where(p => ReferenceEquals(p.Value, item)).Select(p => p.Key).ToList())
+                {
+                    _activeOutputs.Remove(key);
+                }
             }
         }
 
@@ -341,7 +458,14 @@ namespace TileDownloader.ViewModels
                 item.Error = "无法继续下载：未在来源配置中找到该任务的地图来源（Sources 目录），请恢复来源配置";
                 return;
             }
-            item.Request.Concurrent = _settings.Concurrent;
+            // 并发保护：同一输出路径正被别的任务写入时不允许再续传到同一文件
+            var conflict = GetOutputConflict(item.Request.OutputPath, item);
+            if (conflict != null)
+            {
+                item.Error = conflict;
+                return;
+            }
+
             item.Request.Retry = _settings.Retry;
             item.Request.UseProxy = _settings.UseProxy;
             _ = RunTaskAsync(item);

@@ -9,7 +9,7 @@
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
 
     <!--  程序集元数据：项目仓库与版权信息（写入 exe 文件属性）  -->
-    <Version>1.2.0</Version>
+    <Version>1.3.0</Version>
     <Authors>jinghongbo</Authors>
     <Product>地图瓦片下载器</Product>
     <Description>批量下载 XYZ 瓦片地图 · 支持多文件 pak / 单文件 pak / MBTiles / 瓦片目录输出</Description>
@@ -17,6 +17,14 @@
     <RepositoryUrl>https://github.com/jinghongbo/TileDownloader</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
   </PropertyGroup>
+  <ItemGroup>
+    <!--  测试项目位于同一目录下，主工程默认通配会把它编译进来，这里排除  -->
+    <Compile Remove="TileDownloader.Tests\**" />
+    <Page Remove="TileDownloader.Tests\**" />
+    <Resource Remove="TileDownloader.Tests\**" />
+    <EmbeddedResource Remove="TileDownloader.Tests\**" />
+    <None Remove="TileDownloader.Tests\**" />
+  </ItemGroup>
   <ItemGroup>
     <None Remove="Resources\logo.png" />
     <None Remove="Resources\logo.ico" />

@@ -35,6 +35,8 @@ namespace TileDownloader
             services.AddSingleton<GoogleHostsService>();
             services.AddSingleton<ITileImageLoader, TileImageLoader>();
             services.AddSingleton<ITaskManager, TaskManager>();
+            // 全局下载并发闸门：所有任务共用设置里的并发上限（具体值由 SettingsViewModel 启动时注入）
+            services.AddSingleton<GlobalDownloadLimiter>();
             services.AddSingleton<RegionService>();
             services.AddTransient<IDownloadEngine, TileDownloadEngine>();
 

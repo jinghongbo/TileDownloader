@@ -34,7 +34,6 @@ namespace TileDownloader.ViewModels
         private readonly MapStyleStore _styleStore;
         private readonly RegionBoundaryService _boundaryService;
 
-        private TaskItem? _currentItem;
         private bool _isApplyingCascade;
         private bool _isInternalRangeUpdate;
         private string _styleText = string.Empty;
@@ -676,11 +675,9 @@ namespace TileDownloader.ViewModels
         public string EstimatedTileCountText =>
             EstimatedTileCount > 0 ? $"{EstimatedTileCount:N0} 张瓦片" : "0 张瓦片";
 
-        /// <summary>开始下载按钮文本</summary>
+        /// <summary>开始下载按钮文本（并发下载：提交后按钮立即可再次点击）</summary>
         public string StartDownloadButtonText =>
-            IsDownloading
-                ? "下载中…（可在任务中心查看）"
-                : EstimatedTileCount > 0 ? $"开始下载（共 {EstimatedTileCount:N0} 张）" : "开始下载";
+            EstimatedTileCount > 0 ? $"开始下载（共 {EstimatedTileCount:N0} 张）" : "开始下载";
 
         /// <summary>输出路径</summary>
         [ObservableProperty]
@@ -739,16 +736,6 @@ namespace TileDownloader.ViewModels
             }
         }
 
-        /// <summary>是否下载中</summary>
-        [ObservableProperty]
-        [NotifyPropertyChangedFor(nameof(StartDownloadButtonText))]
-        [NotifyCanExecuteChangedFor(nameof(StartDownloadCommand))]
-        [NotifyCanExecuteChangedFor(nameof(CancelDownloadCommand))]
-        private bool _isDownloading;
-
-        /// <summary>状态消息</summary>
-        [ObservableProperty]
-        private string? _message;
 
         /// <summary>可选输出格式（来自存储注册表）</summary>
         public System.Collections.Generic.IReadOnlyList<ITileStoreDescriptor> Formats => _storeRegistry.Descriptors;
@@ -961,7 +948,6 @@ namespace TileDownloader.ViewModels
                 FormatId = FormatId,
                 FullBlock = EffectiveFullBlock,
                 ClipGeometry = SelectedGeometry,
-                Concurrent = _settings.Concurrent,
                 Retry = _settings.Retry,
                 UseProxy = _settings.UseProxy,
             };
@@ -975,65 +961,20 @@ namespace TileDownloader.ViewModels
                 Request = request,
                 Total = total,
             };
-            _currentItem = item;
-            _tasksViewModel.Tasks.Add(item);
-
-            IsDownloading = true;
-            Message = "下载中…";
-            ShowSnackbar("开始下载", $"{SelectedSource.Name} · {request.MinLevel}-{request.MaxLevel} 级",
-                ControlAppearance.Info, SymbolRegular.ArrowDownload24);
-            try
+            // 并发下载：交给调度层校验输出路径互斥后立即启动，页面不等下载结束，可继续提交下一个任务
+            if (!_tasksViewModel.TryStartTask(item, out var conflict))
             {
-                await _tasksViewModel.RunTaskAsync(item);
-                Message = item.State switch
-                {
-                    TaskState.Completed => $"下载完成，用时见任务中心（共 {item.Total} 瓦片）",
-                    TaskState.Cancelled => "下载已中断，可在任务中心继续",
-                    TaskState.Paused => "下载已暂停，可在任务中心继续",
-                    TaskState.Failed => $"下载失败：{item.Error}",
-                    _ => "下载结束",
-                };
+                await ShowParameterDialogAsync(conflict!, "无法开始下载");
+                return;
+            }
 
-                // 结果提示（完成/中断/暂停/失败）
-                switch (item.State)
-                {
-                    case TaskState.Completed:
-                        ShowSnackbar("下载完成", $"共 {item.Total} 瓦片，已保存至输出路径",
-                            ControlAppearance.Success, SymbolRegular.CheckmarkCircle24);
-                        break;
-                    case TaskState.Cancelled:
-                        ShowSnackbar("下载已中断", "可在任务中心点击「继续」补齐缺失瓦片",
-                            ControlAppearance.Caution, SymbolRegular.Warning24);
-                        break;
-                    case TaskState.Paused:
-                        ShowSnackbar("下载已暂停", "可在任务中心点击「继续」补齐缺失瓦片",
-                            ControlAppearance.Caution, SymbolRegular.Pause24);
-                        break;
-                    case TaskState.Failed:
-                        ShowSnackbar("下载失败", item.Error ?? "未知错误",
-                            ControlAppearance.Danger, SymbolRegular.ErrorCircle24);
-                        break;
-                }
-            }
-            finally
-            {
-                IsDownloading = false;
-            }
+            ShowSnackbar("已加入下载", $"{item.Name} · {request.MinLevel}-{request.MaxLevel} 级",
+                ControlAppearance.Success, SymbolRegular.ArrowDownload24);
         }
 
-        private bool CanStartDownload() => !IsDownloading
-            && SelectedSource != null
+        private bool CanStartDownload() => SelectedSource != null
             && HasRange
             && !string.IsNullOrWhiteSpace(OutputPath);
-
-        /// <summary>取消当前下载</summary>
-        [RelayCommand(CanExecute = nameof(CanCancelDownload))]
-        private void CancelDownload()
-        {
-            _currentItem?.Cts?.Cancel();
-        }
-
-        private bool CanCancelDownload() => IsDownloading;
 
         /// <summary>浏览输出路径（目录格式选文件夹，其余保存文件）</summary>
         [RelayCommand]
@@ -1078,14 +1019,14 @@ namespace TileDownloader.ViewModels
             }
         }
 
-        /// <summary>参数错误弹窗（ContentDialog）</summary>
-        private async Task ShowParameterDialogAsync(string message)
+        /// <summary>参数错误/无法开始下载弹窗（ContentDialog）</summary>
+        private async Task ShowParameterDialogAsync(string message, string title = "参数不完整")
         {
             try
             {
                 await _dialogService.ShowSimpleDialogAsync(new SimpleContentDialogCreateOptions
                 {
-                    Title = "参数不完整",
+                    Title = title,
                     Content = message,
                     CloseButtonText = "知道了",
                 });

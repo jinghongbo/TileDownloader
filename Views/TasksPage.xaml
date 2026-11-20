@@ -134,7 +134,7 @@
                         </Grid>
                         <TextBlock Margin="0,8,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}">
                             <Run Text="已完成 " /><Run Text="{Binding Completed, Mode=OneWay, StringFormat={}{0:N0}}" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" /><Run Text=" / " /><Run Text="{Binding Total, Mode=OneWay, StringFormat={}{0:N0}}" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                            <Run Text="  ·  ⚡ 速度: " /><Run Text="{Binding Speed, Mode=OneWay}" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                            <Run Text="  ·  ⚡ 速度: " /><Run Text="{Binding SpeedDisplay, Mode=OneWay}" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                             <Run Text="  ·  ⏱ 剩余: " /><Run Text="{Binding Remaining, Mode=OneWay}" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                         </TextBlock>
 
@@ -282,6 +282,22 @@
                         <TextBlock VerticalAlignment="Center">
                             <Run Text="总进度: " Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                             <Run Text="{Binding OverallProgress, Mode=OneWay, StringFormat={}{0:F1}%}" FontWeight="Bold" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+
+                <!--  合计实时速度（并发任务速度之和）  -->
+                <Border Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                        BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="12,6"
+                        Margin="10,0,0,0">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <ui:SymbolIcon Symbol="Flash24" Foreground="{DynamicResource ThemeSuccessBrush}" Margin="0,0,6,0" />
+                        <TextBlock VerticalAlignment="Center">
+                            <Run Text="合计速度: " Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            <Run Text="{Binding SpeedSummaryText, Mode=OneWay}" FontWeight="Bold" Foreground="{DynamicResource ThemeSuccessBrush}" />
                         </TextBlock>
                     </StackPanel>
                 </Border>

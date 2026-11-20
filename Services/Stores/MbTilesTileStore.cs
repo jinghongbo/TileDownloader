@@ -14,7 +14,8 @@ namespace TileDownloader.Services
     /// MBTiles 1.x 存储：
     /// SQLite 文件含规范 metadata（name/value）与 tiles（zoom_level/tile_column/tile_row/tile_data，
     /// 复合主键）表，表结构由实体（AutoSyncStructure）生成、与规范一致。
-    /// 注意 tile_row 使用 TMS 方案（原点左下）：存储/查询时与 XYZ 行号做 2^z-1-y 翻转
+    /// 注意 tile_row 使用 TMS 方案（原点左下）：存储/查询时与 XYZ 行号做 2^z-1-y 翻转。
+    /// 续传存在性用 512×512 分块位图（32KB/块，约 0.125 字节/瓦片），不再为每张瓦片建字符串键
     /// </summary>
     public class MbTilesTileStore : ITileStore
     {
@@ -22,21 +23,21 @@ namespace TileDownloader.Services
         public string DisplayName => "MBTiles";
         public string DefaultExtension => ".mbtiles";
 
+        /// <summary>分块边长（瓦片数），与 Pak 各存储共用的分块规则一致</summary>
+        private const int BlockSize = TileUrlBuilder.BlockSize;
+
         private TileTaskOptions? _options;
         private IFreeSql? _db;
         private Channel<Tile>? _tileChannel;
         private Task? _writerTask;
 
-        /// <summary>瓦片存在缓存（"z_x_y"，XYZ 行号；落库时翻转 TMS）</summary>
-        private readonly ConcurrentDictionary<string, byte> _exists = new();
+        /// <summary>分块缓存：(z, tx, ty) → 已确认矩形 + 存在性位图（懒分配，没有数据的块不占内存）</summary>
+        private readonly ConcurrentDictionary<(int z, int tx, int ty), PakBlockCache> _blocks = new();
 
         // 检查点：最后保存的瓦片位置（近似记录）
         private int _curLevel;
         private int _curX;
         private int _curY;
-
-        /// <summary>是否已完成"已存在瓦片"预载；完成后 TileExistsAsync 只查内存，避免与写线程抢 SQLite 锁</summary>
-        private volatile bool _initialized;
 
         /// <summary>实际瓦片图片格式（png/jpg/webp），由首张瓦片魔数识别</summary>
         private string? _tileFormat;
@@ -97,20 +98,40 @@ namespace TileDownloader.Services
                 // 个别文件系统不支持 WAL 时退回默认模式，仍可继续下载
             }
 
-            // 预载任务涉及层级的已存瓦片（只取列/行两列、不拉 blob），加速续传判定
+            // 预载任务涉及瓦片的存在性：按 512×512 分块登记「已确认矩形 + 位图」。
+            // 旧实现给每张已存在瓦片建一个 "z_x_y" 字符串键（实测约 106 字节/瓦片，700 万瓦片约 740MB），
+            // 位图固定 32KB/分块（约 0.125 字节/瓦片），百万级瓦片的内存开销可以忽略。
             for (var z = options.MinLevel; z <= options.MaxLevel; z++)
             {
-                var rows = await _db.Select<Tile>().Where(t => t.ZoomLevel == z)
-                    .ToListAsync(t => new { t.TileColumn, t.TileRow }, ct);
-                foreach (var row in rows)
+                var (firstCol, lastCol) = TileUrlBuilder.ColRange(options.MinX, options.MaxX, z, options.FullBlock);
+                var (firstRow, lastRow) = TileUrlBuilder.RowRange(options.MinY, options.MaxY, z, options.FullBlock);
+
+                for (var tx = firstCol / BlockSize; tx <= lastCol / BlockSize; tx++)
                 {
-                    // TMS 行号翻回 XYZ 行号后登记，与其它存储的缓存 key 保持一致
-                    var y = TmsRow(z, row.TileRow);
-                    _exists.TryAdd(TileKey(z, row.TileColumn, y), 1);
+                    for (var ty = firstRow / BlockSize; ty <= lastRow / BlockSize; ty++)
+                    {
+                        var blockX = tx * BlockSize;
+                        var blockY = ty * BlockSize;
+                        var cache = new PakBlockCache(
+                            Math.Max(firstCol, blockX), Math.Min(lastCol, blockX + BlockSize - 1),
+                            Math.Max(firstRow, blockY), Math.Min(lastRow, blockY + BlockSize - 1));
+                        _blocks[(z, tx, ty)] = cache;
+
+                        // 只取矩形内的主键两列（不拉 tile_data）：TMS 行号与 XYZ 行号互为镜像，区间查询后翻回 XYZ 置位
+                        var tmsRowMin = TmsRow(z, cache.Y1);
+                        var tmsRowMax = TmsRow(z, cache.Y0);
+                        var rows = await _db.Select<Tile>()
+                            .Where(t => t.ZoomLevel == z
+                                        && t.TileColumn >= cache.X0 && t.TileColumn <= cache.X1
+                                        && t.TileRow >= tmsRowMin && t.TileRow <= tmsRowMax)
+                            .ToListAsync(t => new { t.TileColumn, t.TileRow }, ct);
+                        foreach (var row in rows)
+                        {
+                            cache.Set(row.TileColumn, TmsRow(z, row.TileRow));
+                        }
+                    }
                 }
             }
-
-            _initialized = true;
 
             // 启动单写者批量落盘通道，避免多线程 SQLite 锁争用并成百倍提升 IOPS
             _tileChannel = Channel.CreateBounded<Tile>(new BoundedChannelOptions(2000)
@@ -124,32 +145,38 @@ namespace TileDownloader.Services
 
         public async Task<bool> TileExistsAsync(int z, int x, int y, CancellationToken ct)
         {
-            // 预载完成后，任务层级内的"已存在瓦片"全部在内存里：
-            // 有记录 = 已存在，无记录 = 新瓦片，无需再查库（查询会与写线程抢锁）
-            if (_initialized)
+            if (_blocks.TryGetValue((z, x / BlockSize, y / BlockSize), out var cache))
             {
-                return _exists.ContainsKey(TileKey(z, x, y));
+                if (cache.Test(x, y))
+                {
+                    return true;
+                }
+                if (cache.InRange(x, y))
+                {
+                    // 已确认矩形内未置位即确认不存在（初始化已按同一枚举范围预加载）
+                    return false;
+                }
             }
 
-            var key = TileKey(z, x, y);
-            if (_exists.TryGetValue(key, out var flag))
+            // 未登记分块 / 确认矩形外（引擎按枚举范围查询，正常不会走到）：回源查库兜底
+            var db = _db;
+            if (db == null)
             {
-                return flag == 1;
+                return false;
             }
-
-            // 初始化完成前的兜底查询（正常流程不会走到）
             var tmsRow = TmsRow(z, y);
-            var exists = await _db!.Select<Tile>()
+            return await db.Select<Tile>()
                 .Where(t => t.ZoomLevel == z && t.TileColumn == x && t.TileRow == tmsRow)
                 .AnyAsync(ct);
-            _exists[key] = exists ? (byte)1 : (byte)0;
-            return exists;
         }
 
         public async Task SaveTileAsync(int z, int x, int y, byte[] data, CancellationToken ct)
         {
             _tileFormat ??= DetectFormat(data);
-            _exists[TileKey(z, x, y)] = 1;
+            if (_blocks.TryGetValue((z, x / BlockSize, y / BlockSize), out var cache))
+            {
+                cache.Set(x, y);
+            }
             _curLevel = z;
             _curX = x;
             _curY = y;
@@ -330,7 +357,5 @@ namespace TileDownloader.Services
 
         /// <summary>XYZ 行号 → TMS 行号：2^z - 1 - y（z≤22，int 无溢出）</summary>
         private static int TmsRow(int z, int y) => (1 << z) - 1 - y;
-
-        private static string TileKey(int z, int x, int y) => $"{z}_{x}_{y}";
     }
 }
